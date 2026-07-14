@@ -12,12 +12,12 @@ export function pluginEvaluationSource(plugin: PluginSource): string {
   const candidate = module.exports && module.exports.__esModule
     ? module.exports.default
     : module.exports;
-  if (
-    typeof candidate === "function" ||
-    (candidate && typeof candidate === "object" &&
-      (typeof candidate.setup === "function" || typeof candidate.start === "function"))
-  ) {
-    globalThis.Klack.loadPlugin(${JSON.stringify(plugin.name)}, candidate);
+  if (!candidate || typeof candidate !== "object" ||
+      typeof candidate.name !== "string" || typeof candidate.setup !== "function") {
+    throw new TypeError(${JSON.stringify(
+      `[Klack] ${plugin.name} must default-export definePlugin({ name, setup })`,
+    )});
   }
+  globalThis.Klack.loadPlugin(candidate);
 })()\n//# sourceURL=${sourceUrl}`;
 }

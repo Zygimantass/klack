@@ -1,5 +1,34 @@
 export type Cleanup = () => void;
 
+export type KlackEventOptions = boolean | AddEventListenerOptions;
+
+export type KlackOn = {
+  <Type extends keyof WindowEventMap>(
+    target: Window,
+    type: Type,
+    listener: (event: WindowEventMap[Type]) => void,
+    options?: KlackEventOptions,
+  ): Cleanup;
+  <Type extends keyof DocumentEventMap>(
+    target: Document,
+    type: Type,
+    listener: (event: DocumentEventMap[Type]) => void,
+    options?: KlackEventOptions,
+  ): Cleanup;
+  <Type extends keyof GlobalEventHandlersEventMap>(
+    target: Element,
+    type: Type,
+    listener: (event: GlobalEventHandlersEventMap[Type]) => void,
+    options?: KlackEventOptions,
+  ): Cleanup;
+  <EventType extends Event>(
+    target: EventTarget,
+    type: string,
+    listener: (event: EventType) => void,
+    options?: KlackEventOptions,
+  ): Cleanup;
+};
+
 export type KlackUiTarget =
   | string
   | Element
@@ -8,18 +37,14 @@ export type KlackUiTarget =
 export type KlackUiPosition = "append" | "prepend" | "before" | "after";
 
 export type KlackMountContext = {
+  cleanup(cleanup: Cleanup): Cleanup;
+  on: KlackOn;
   plugin: string;
   target: Element;
 };
 
-export type KlackMountResult =
-  | Element
-  | {
-      cleanup?: Cleanup;
-      element: Element;
-    };
-
 export type KlackMountOptions = {
+  observeAttributes?: boolean | readonly string[];
   position?: KlackUiPosition;
 };
 
@@ -42,39 +67,54 @@ export type KlackButtonOptions = KlackMountOptions & {
 export type KlackUi = {
   addButton(options: KlackButtonOptions): Cleanup;
   addStyle(css: string, options?: { id?: string }): Cleanup;
+  hide(selectors: string | readonly string[], options?: { id?: string }): Cleanup;
   mount(
     target: KlackUiTarget,
-    render: (context: KlackMountContext) => KlackMountResult,
+    render: (context: KlackMountContext) => Element,
     options?: KlackMountOptions,
   ): Cleanup;
-  observe(selector: string, callback: (element: Element) => void | Cleanup): Cleanup;
+};
+
+export type KlackDom = {
+  observe(
+    target: Node,
+    callback: MutationCallback,
+    options: MutationObserverInit,
+  ): Cleanup;
+  watch(
+    selector: string,
+    callback: (element: Element) => void | Cleanup,
+    options?: { attributes?: boolean | readonly string[] },
+  ): Cleanup;
+};
+
+export type KlackEvents = {
+  on: KlackOn;
+};
+
+export type KlackTimers = {
+  animationFrame(callback: FrameRequestCallback): Cleanup;
+  interval(callback: () => void, delay: number): Cleanup;
+  timeout(callback: () => void, delay: number): Cleanup;
 };
 
 export type KlackApi = {
-  /** @deprecated Use `ui.addStyle()` in new extensions. */
-  addStyle(css: string, id?: string): Cleanup;
+  cleanup(cleanup: Cleanup): Cleanup;
+  dom: KlackDom;
+  events: KlackEvents;
   logger: Console;
-  /** @deprecated Use `ui.observe()` in new extensions. */
-  observe(selector: string, callback: (element: Element) => void | Cleanup): Cleanup;
+  timers: KlackTimers;
   ui: KlackUi;
   version: string;
 };
-
-export type KlackExtension = (klack: KlackApi) => void | Cleanup;
 
 export type KlackPlugin = {
   defaultEnabled?: boolean;
   description?: string;
   name: string;
-  setup: KlackExtension;
+  setup(klack: KlackApi): void;
   version?: string;
 };
-
-export type KlackLegacyPlugin = Omit<KlackPlugin, "setup"> & {
-  start: KlackExtension;
-};
-
-export type KlackPluginDefinition = KlackPlugin | KlackLegacyPlugin;
 
 /**
  * Adds type checking and autocomplete to a plugin definition. At runtime this
