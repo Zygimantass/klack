@@ -1,0 +1,33 @@
+{
+  "name": "klack",
+  "version": "0.1.0",
+  "description": "An experimental plugin loader for the Slack desktop app",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "klack": "dist/cli.cjs"
+  },
+  "exports": {
+    "./sdk": {
+      "types": "./src/sdk.ts",
+      "import": "./dist/sdk.js",
+      "require": "./dist/sdk.cjs"
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "check": "tsc --noEmit",
+    "klack": "node dist/cli.cjs",
+    "test": "pnpm build && node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@electron/asar": "^4.2.0",
+    "esbuild": "^0.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "packageManager": "pnpm@10.12.1"
+}
