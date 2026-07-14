@@ -17,8 +17,8 @@ test("loads the default export from a bundled TypeScript plugin", () => {
 
   vm.runInNewContext(pluginEvaluationSource(plugin), {
     Klack: {
-      loadPlugin(sourceName: string, extension: unknown) {
-        loaded = { extension, sourceName };
+      loadPlugin(extension: unknown) {
+        loaded = { extension, sourceName: plugin.name };
       },
     },
   });
@@ -29,10 +29,13 @@ test("loads the default export from a bundled TypeScript plugin", () => {
   assert.equal(typeof (loaded.extension as { setup?: unknown }).setup, "function");
 });
 
-test("loads a zero-build CommonJS extension factory", (t) => {
+test("loads a zero-build CommonJS plugin definition", (t) => {
   let loaded: { extension: unknown; sourceName: string } | undefined;
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "klack-commonjs-plugin-"));
-  fs.writeFileSync(path.join(directory, "plain-plugin.js"), "module.exports = function () {};");
+  fs.writeFileSync(
+    path.join(directory, "plain-plugin.js"),
+    'module.exports = { name: "PlainPlugin", setup() {} };',
+  );
   t.after(() => fs.rmSync(directory, { force: true, recursive: true }));
 
   const [plugin] = loadPlugins({
@@ -42,15 +45,33 @@ test("loads a zero-build CommonJS extension factory", (t) => {
 
   vm.runInNewContext(pluginEvaluationSource(plugin), {
     Klack: {
-      loadPlugin(sourceName: string, extension: unknown) {
-        loaded = { extension, sourceName };
+      loadPlugin(extension: unknown) {
+        loaded = { extension, sourceName: plugin.name };
       },
     },
   });
 
   assert.ok(loaded);
   assert.equal(loaded.sourceName, "plain-plugin.js");
-  assert.equal(typeof loaded.extension, "function");
+  assert.equal((loaded.extension as { name?: unknown }).name, "PlainPlugin");
+  assert.equal(typeof (loaded.extension as { setup?: unknown }).setup, "function");
+});
+
+test("rejects legacy plugin shapes", () => {
+  for (const legacySource of [
+    "module.exports = function () {};",
+    'module.exports = { name: "Legacy", start() {} };',
+  ]) {
+    const source = pluginEvaluationSource({
+      name: "legacy-plugin.js",
+      source: legacySource,
+    });
+
+    assert.throws(
+      () => vm.runInNewContext(source, { Klack: { loadPlugin() {} } }),
+      /must default-export definePlugin/,
+    );
+  }
 });
 
 test("loads TypeScript from a user plugin directory and overrides matching built-ins", (t) => {
@@ -78,7 +99,7 @@ test("loads TypeScript from a user plugin directory and overrides matching built
   let extension: { name?: unknown } | undefined;
   vm.runInNewContext(pluginEvaluationSource(plugin), {
     Klack: {
-      loadPlugin(_sourceName: string, candidate: { name?: unknown }) {
+      loadPlugin(candidate: { name?: unknown }) {
         extension = candidate;
       },
     },

@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f6f0" />
+    <meta
+      name="description"
+      content="Klack is an experimental, typed plugin loader for the Slack desktop app with hot reload and reversible installation."
+    />
+    <meta property="og:title" content="Klack — Make Slack yours" />
+    <meta
+      property="og:description"
+      content="Build local Slack extensions with typed APIs, automatic cleanup, and instant reloads."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://klack.sh/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Klack — Make Slack yours</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c8f35d'/%3E%3Cpath d='M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z' fill='%23161a0c'/%3E%3C/svg%3E"
+    />
+    <script>
+      try {
+        const saved = localStorage.getItem("klack-theme");
+        document.documentElement.dataset.theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.querySelector('meta[name="theme-color"]').content = document.documentElement.dataset.theme === "dark" ? "#10110f" : "#f6f6f0";
+      } catch {}
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <noscript><div class="noscript">Klack’s site works without JavaScript; search, copy buttons, and theme switching need it.</div></noscript>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./" aria-label="Klack home">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="#c8f35d"></rect>
+            <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path>
+          </svg>
+          <span>klack</span>
+        </a>
+
+        <nav class="header-nav" aria-label="Main navigation">
+          <a href="./docs/">Docs</a>
+          <a href="#features">Features</a>
+          <a href="#plugins">Plugins</a>
+          <a href="https://github.com/zygimantass/klack" rel="noreferrer">GitHub</a>
+        </nav>
+
+        <div class="header-actions">
+          <button class="search-trigger" type="button" data-search-trigger aria-label="Search documentation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5"></circle>
+              <path d="m16 16 4 4"></path>
+            </svg>
+            <span>Search docs…</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <span class="version-pill">v0.1.0</span>
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Change color theme">
+            <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"></path>
+            </svg>
+            <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5"></circle>
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+            </svg>
+          </button>
+          <button class="mobile-menu-button" type="button" data-menu-toggle aria-label="Toggle navigation" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="mobile-nav" data-mobile-nav aria-label="Mobile navigation">
+      <a href="./docs/">Docs</a>
+      <a href="#features">Features</a>
+      <a href="#plugins">Plugins</a>
+      <a href="https://github.com/zygimantass/klack" rel="noreferrer">GitHub</a>
+      <button class="mobile-search" type="button" data-search-trigger>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path>
+        </svg>
+        Search documentation
+      </button>
+    </nav>
+
+    <div class="announcement">
+      <a href="./docs/#security">
+        <span class="announcement-dot" aria-hidden="true"></span>
+        Experimental software for local use — read the security notes first
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <main id="main">
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="hero-copy-block">
+            <p class="eyebrow">A plugin loader for Slack desktop</p>
+            <h1>Your Slack.<br /><span class="accent-word">Your rules.</span></h1>
+            <p class="hero-copy">
+              Build typed local extensions that add UI, watch the DOM, and reload as you work—without switching off Slack’s renderer sandbox.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="./docs/#installation">Get started <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="button button-secondary" href="https://github.com/zygimantass/klack" rel="noreferrer">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                  <path d="M12 .8a11.4 11.4 0 0 0-3.6 22.2c.6.1.8-.2.8-.5v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.2 11.2 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.9 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.5A11.4 11.4 0 0 0 12 .8Z"></path>
+                </svg>
+                View on GitHub
+              </a>
+            </div>
+            <div class="install-command">
+              <code id="install-command"><span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh</code>
+              <button class="copy-inline" type="button" data-copy="#install-command" aria-label="Copy to clipboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="product-window" aria-label="Illustration of Klack adding a plugin to Slack">
+            <div class="window-bar">
+              <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
+              <span class="window-title">Slack + Klack</span>
+            </div>
+            <div class="product-body">
+              <div class="mock-rail" aria-hidden="true">
+                <span class="workspace-dot active">K</span>
+                <span class="workspace-dot">W</span>
+                <span class="workspace-dot">D</span>
+              </div>
+              <div class="mock-app" aria-hidden="true">
+                <div class="mock-app-header">
+                  <strong># dev-tools</strong>
+                  <span class="mock-status">Klack active</span>
+                </div>
+                <div class="mock-messages">
+                  <div class="mock-message">
+                    <span class="mock-avatar"></span>
+                    <div><div class="mock-name"></div><div class="mock-line"></div><div class="mock-line short"></div></div>
+                  </div>
+                  <div class="mock-message">
+                    <span class="mock-avatar purple"></span>
+                    <div><div class="mock-name"></div><div class="mock-line"></div><div class="mock-line"></div><div class="mock-line short"></div></div>
+                  </div>
+                  <div class="mock-message">
+                    <span class="mock-avatar"></span>
+                    <div><div class="mock-name"></div><div class="mock-line short"></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="plugin-card" aria-hidden="true">
+              <div class="plugin-card-header"><span>quick-reply.ts</span><span>● reloaded</span></div>
+              <pre class="mini-code"><span class="syntax-keyword">export default</span> <span class="syntax-fn">definePlugin</span>({
+  <span class="syntax-property">name</span>: <span class="syntax-string">"QuickReply"</span>,
+  <span class="syntax-fn">setup</span>(klack) {
+    klack.ui.<span class="syntax-fn">addButton</span>({
+      <span class="syntax-property">id</span>: <span class="syntax-string">"reply"</span>,
+      <span class="syntax-property">target</span>: <span class="syntax-string">"[data-qa='message']"</span>,
+      <span class="syntax-property">label</span>: <span class="syntax-string">"Reply"</span>,
+    })
+  },
+})</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="trust-strip" aria-label="Project highlights">
+        <div class="trust-strip-inner">
+          <div class="trust-item">
+            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 8.2 7 10 4.1-1.8 7-5.5 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+            <div><strong>Sandbox preserved</strong><span>Isolation stays enabled</span></div>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"></path></svg></span>
+            <div><strong>Instant reloads</strong><span>Edit, save, see it</span></div>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M7 4v6M17 4v6M5 11h14v9H5z"></path><path d="m9 15 2 2 4-4"></path></svg></span>
+            <div><strong>Automatic cleanup</strong><span>Every resource is scoped</span></div>
+          </div>
+          <div class="trust-item">
+            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"></path><path d="M4 4v4.6h4.6"></path></svg></span>
+            <div><strong>Reversible install</strong><span>Restore the original ASAR</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="section-inner">
+          <div class="section-heading">
+            <p class="eyebrow">Built for tinkering</p>
+            <h2>Small API.<br />Serious extensions.</h2>
+            <p>Klack owns the lifecycle around your plugin, so you can focus on the behavior you actually want to add.</p>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature-card">
+              <span class="feature-number">01 / Typed from the start</span>
+              <span class="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="7" y="7" width="50" height="50"></rect><path d="M17 23h30M17 32h20M17 41h26"></path><path d="m44 16 4 4-4 4"></path></svg></span>
+              <h3>Autocomplete included</h3>
+              <p>Import <code>definePlugin</code> from <code>klack/sdk</code> for typed definitions, setup context, button options, and cleanup contracts.</p>
+            </article>
+            <article class="feature-card">
+              <span class="feature-number">02 / Hot reload</span>
+              <span class="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M14 34a18 18 0 1 0 4.4-11.8L14 27"></path><path d="M14 15v12h12"></path><path d="m35 20-9 15h9l-2 10 9-15h-9l2-10Z"></path></svg></span>
+              <h3>Zero restart workflow</h3>
+              <p>TypeScript and JavaScript plugins are bundled in memory. Save a file and Klack applies the working set to every Slack window.</p>
+            </article>
+            <article class="feature-card">
+              <span class="feature-number">03 / Resilient UI</span>
+              <span class="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><rect x="9" y="12" width="46" height="39" rx="3"></rect><path d="M9 22h46M19 17h1M25 17h1M31 17h1"></path><rect x="19" y="31" width="26" height="10" rx="5"></rect></svg></span>
+              <h3>UI that stays mounted</h3>
+              <p>Buttons and custom mounts are recreated when Slack’s React-managed DOM replaces a target or contribution.</p>
+            </article>
+            <article class="feature-card">
+              <span class="feature-number">04 / Clean ownership</span>
+              <span class="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M21 18h22l-2 33H23L21 18Z"></path><path d="M17 18h30M27 18v-5h10v5M28 25v18M36 25v18"></path></svg></span>
+              <h3>Disable means gone</h3>
+              <p>Styles, DOM watchers, mounts, listeners, timers, and registered cleanup callbacks are tracked in reverse order and removed automatically.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section architecture">
+        <div class="section-inner architecture-grid">
+          <div class="architecture-copy">
+            <p class="eyebrow">Keep the guardrails</p>
+            <h2>Injected without tearing the walls down.</h2>
+            <p>
+              Klack wraps Slack’s startup and prepends its generated preload while leaving <code>sandbox: true</code> and <code>contextIsolation: true</code> unchanged.
+            </p>
+            <a class="button button-secondary" href="./docs/#architecture">How injection works <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+
+          <div class="flow-diagram" aria-label="Klack injection architecture">
+            <span class="flow-line" aria-hidden="true"></span>
+            <div class="flow-item">
+              <span class="flow-node">01</span>
+              <div class="flow-text"><strong>Bootstrap ASAR</strong><span>Tiny, reversible entry point</span></div>
+            </div>
+            <div class="flow-item">
+              <span class="flow-node">02</span>
+              <div class="flow-text"><strong>Main-process patcher</strong><span>Wraps BrowserWindow creation</span></div>
+            </div>
+            <div class="flow-item">
+              <span class="flow-node">03</span>
+              <div class="flow-text"><strong>Combined preload</strong><span>Klack + Slack’s exact original</span></div>
+            </div>
+            <div class="flow-item">
+              <span class="flow-node">04</span>
+              <div class="flow-text"><strong>Your plugins</strong><span>Scoped, typed, hot reloaded</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section code-section" id="plugins">
+        <div class="section-inner">
+          <div class="section-heading">
+            <p class="eyebrow">The plugin API</p>
+            <h2>One file is enough.</h2>
+            <p>Drop a TypeScript file into <code>~/.klack/plugins</code>. Klack takes it from there.</p>
+          </div>
+
+          <div class="code-layout">
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>~/.klack/plugins/hello.ts</span></div>
+              <pre><code><span class="syntax-keyword">import</span> { definePlugin } <span class="syntax-keyword">from</span> <span class="syntax-string">"klack/sdk"</span>
+
+<span class="syntax-keyword">export default</span> <span class="syntax-fn">definePlugin</span>({
+  <span class="syntax-property">name</span>: <span class="syntax-string">"Hello"</span>,
+  <span class="syntax-property">description</span>: <span class="syntax-string">"Adds a friendly action"</span>,
+  <span class="syntax-fn">setup</span>(klack) {
+    klack.ui.<span class="syntax-fn">addStyle</span>(<span class="syntax-string">`
+      [data-klack-button="Hello:wave"] {
+        border-radius: 999px;
+        padding: 6px 10px;
+      }
+    `</span>)
+
+    klack.ui.<span class="syntax-fn">addButton</span>({
+      <span class="syntax-property">id</span>: <span class="syntax-string">"wave"</span>,
+      <span class="syntax-property">target</span>: <span class="syntax-string">"[data-qa='message_input']"</span>,
+      <span class="syntax-property">position</span>: <span class="syntax-string">"before"</span>,
+      <span class="syntax-property">label</span>: <span class="syntax-string">"Wave 👋"</span>,
+      <span class="syntax-fn">onClick</span>(_event, { button }) {
+        button.textContent = <span class="syntax-string">"Waved!"</span>
+      },
+    })
+  },
+})</code></pre>
+            </div>
+            <div class="code-notes">
+              <div class="code-note"><span>01</span><h3>Type-safe setup</h3><p>Definitions are checked against the SDK and retain precise inference.</p></div>
+              <div class="code-note"><span>02</span><h3>Plugin-scoped UI</h3><p>Every contribution receives ownership metadata and tracked cleanup.</p></div>
+              <div class="code-note"><span>03</span><h3>Reactive targets</h3><p>Selectors are watched so UI returns when Slack replaces the DOM.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="final-cta">
+        <div class="section-inner">
+          <div class="cta-panel">
+            <h2>Make your first plugin.</h2>
+            <p>Download Klack, install it into a test copy of Slack, and go from idea to working UI in one TypeScript file.</p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="./docs/#quick-start">Read the quick start <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse examples</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a class="brand" href="./">
+              <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#c8f35d"></rect><path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path></svg>
+              <span>klack</span>
+            </a>
+            <p>An experimental plugin loader for Slack desktop. Unofficial, local-first, and built for people who like to tinker.</p>
+          </div>
+          <div class="footer-column"><strong>Start</strong><a href="./docs/#installation">Installation</a><a href="./docs/#quick-start">Quick start</a><a href="./docs/#your-first-plugin">First plugin</a></div>
+          <div class="footer-column"><strong>Reference</strong><a href="./docs/#ui-api">UI API</a><a href="./docs/#cli">CLI</a><a href="./docs/#devtools">DevTools</a></div>
+          <div class="footer-column"><strong>Project</strong><a href="https://github.com/zygimantass/klack">GitHub</a><a href="https://github.com/zygimantass/klack/issues">Issues</a><a href="./docs/#security">Security</a></div>
+        </div>
+        <div class="footer-bottom">
+          <span>© <span data-year>2026</span> Klack contributors</span>
+          <span>Not affiliated with or endorsed by Slack Technologies, LLC.</span>
+        </div>
+      </div>
+    </footer>
+
+    <div hidden aria-hidden="true">
+      <a href="./docs/#overview" data-search-item data-search-group="Introduction" data-search-title="Overview" data-search-description="What Klack is and how it works"></a>
+      <a href="./docs/#installation" data-search-item data-search-group="Introduction" data-search-title="Installation" data-search-description="Download and install Klack on macOS"></a>
+      <a href="./docs/#quick-start" data-search-item data-search-group="Introduction" data-search-title="Quick start" data-search-description="Verify Klack and create a plugin"></a>
+      <a href="./docs/#your-first-plugin" data-search-item data-search-group="Plugins" data-search-title="Your first plugin" data-search-description="Plugin anatomy and setup"></a>
+      <a href="./docs/#ui-api" data-search-item data-search-group="Plugins" data-search-title="UI contributions" data-search-description="Buttons, mounts, styles, and observers"></a>
+      <a href="./docs/#hot-reload" data-search-item data-search-group="Plugins" data-search-title="Hot reload" data-search-description="How live plugin updates work"></a>
+      <a href="./docs/#cli" data-search-item data-search-group="Reference" data-search-title="CLI reference" data-search-description="status, install, and uninstall commands"></a>
+      <a href="./docs/#plugin-api" data-search-item data-search-group="Reference" data-search-title="Plugin API" data-search-description="Definitions, metadata, and globals"></a>
+      <a href="./docs/#security" data-search-item data-search-group="Reference" data-search-title="Security" data-search-description="Trust model and macOS signing implications"></a>
+      <a href="./docs/#architecture" data-search-item data-search-group="Reference" data-search-title="Architecture" data-search-description="How Klack injects while preserving the sandbox"></a>
+    </div>
+
+    <dialog class="command-dialog" data-command-dialog aria-label="Search documentation">
+      <div class="command-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+        <input type="search" name="docs-search" data-command-input placeholder="Search the docs…" autocomplete="off" aria-label="Search documentation" />
+        <kbd>esc</kbd>
+      </div>
+      <div class="command-results" data-command-results aria-live="polite"></div>
+      <div class="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span></div>
+    </dialog>
+
+    <script src="./assets/site.js"></script>
+  </body>
+</html>

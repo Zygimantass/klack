@@ -21,13 +21,14 @@ The MVP supports:
 - automatic updates to Electron's embedded ASAR-integrity metadata;
 - outer-app ad-hoc signing while preserving Slack's vendor-signed helpers;
 - injection without disabling Slack's renderer sandbox;
-- typed extension factories with automatically scoped UI contributions;
+- typed plugin definitions with automatically scoped UI contributions;
 - plugin enablement overrides stored in the renderer's local storage;
-- resilient buttons, custom DOM mounts, styles, and DOM observers;
+- a built-in plugin manager;
+- resilient buttons, custom DOM mounts, styles, events, timers, and DOM watchers;
 - `--klack-vanilla` for starting through the bootstrap without injection.
 
 It has been developed against Slack `4.50.143` on macOS. It does not yet patch
-Slack's remote Webpack modules or add a settings UI.
+Slack's remote Webpack modules or provide a plugin marketplace.
 
 ## Install
 
@@ -63,6 +64,16 @@ pnpm install
 pnpm check
 pnpm test
 ```
+
+## Website
+
+The static site for `klack.sh` lives in `site/`. It has no build step or runtime
+dependencies. Run `pnpm site:dev` and open `http://localhost:4173` to preview it.
+
+For Vercel, import this repository with the repository root as the project root.
+The checked-in `vercel.json` skips dependency installation and the CLI build,
+then serves `site/` directly. Add `klack.sh` under the Vercel project's Domains
+settings after the first deployment.
 
 ## Manage Slack
 
@@ -110,10 +121,14 @@ original ASAR and remain ad-hoc signed after uninstall.
 
 ## Plugin API
 
-Klack follows Pi's extension-factory model: a plugin exports one setup function
-or a typed definition. Everything registered through the provided API belongs
-to that plugin. Disabling the plugin automatically removes its buttons, mounts,
-styles, observers, and button listeners.
+Klack follows Pi's extension model: a plugin default-exports one typed
+`definePlugin({ name, setup })` definition. Everything registered through the
+provided API belongs to that plugin. Disabling the plugin automatically removes
+its UI, DOM watchers, listeners, and timers.
+
+See [BUILDING_PLUGINS.md](BUILDING_PLUGINS.md) for plugin patterns, selector
+guidance, lifecycle rules, performance constraints, and a verification
+checklist.
 
 At startup, Klack loads its built-in plugins and then scans
 `~/.klack/plugins/*.{ts,tsx,js,jsx}`. TypeScript and JavaScript modules are
@@ -149,7 +164,7 @@ export default definePlugin({
       },
     });
 
-    klack.ui.observe("[data-qa='message_container']", (message) => {
+    klack.dom.watch("[data-qa='message_container']", (message) => {
       klack.logger.debug("Message rendered", message);
     });
   },
@@ -163,19 +178,14 @@ other resources are cleaned up before the new plugin set starts. If a plugin
 does not compile, Klack logs the error and keeps the last working set running.
 No manual build or Slack restart is required.
 
-For a zero-build JavaScript plugin, export the factory directly; the filename
-becomes its plugin name:
+For a zero-build JavaScript plugin, export the same definition object directly:
 
 ```js
-module.exports = function (klack) {
-  klack.ui.addButton({
-    id: "hello",
-    target: "body",
-    label: "Hello",
-    onClick() {
-      console.log("Hello from Klack");
-    },
-  });
+module.exports = {
+  name: "Example",
+  setup(klack) {
+    klack.ui.hide('[data-qa="some-target"]');
+  },
 };
 ```
 
@@ -184,14 +194,27 @@ module.exports = function (klack) {
 - `ui.addButton(options)` mounts a button at every matching target. `target`
   can be a CSS selector, an `Element`, or a function returning elements.
 - `ui.mount(target, render, { position })` mounts arbitrary DOM. `render`
-  returns an `Element` or `{ element, cleanup }`.
+  returns an `Element`; its context provides mount-scoped `on()` and `cleanup()`.
 - `ui.addStyle(css, { id })` injects plugin-owned CSS.
-- `ui.observe(selector, callback)` observes matching Slack elements and calls
-  an optional callback cleanup when an element disappears.
+- `ui.hide(selector | selectors, { id })` hides matching Slack UI with
+  plugin-owned CSS.
+- `dom.watch(selector, callback, { attributes })` initializes matching elements
+  incrementally and calls optional per-element cleanup when they disappear.
+- `dom.observe(target, callback, options)` creates a plugin-owned mutation
+  observer.
+- `events.on(target, type, listener, options)` adds a plugin-owned listener.
+- `timers.timeout()`, `timers.interval()`, and `timers.animationFrame()` return
+  cancellation functions and are cancelled automatically when the plugin stops.
+- `cleanup(callback)` owns any cleanup not covered by another SDK method.
 
 Buttons and custom mounts support `append` (default), `prepend`, `before`, and
 `after`. Klack watches Slack's React-managed DOM and recreates a contribution if
 Slack replaces either its target or the contribution itself.
+
+Klack's built-in **PluginManager** adds a **Plugins** button to Slack's top bar.
+It provides searchable, persistent enable/disable controls for built-in and
+user plugins. The manager itself stays enabled so the controls remain
+accessible.
 
 From Slack DevTools:
 
@@ -207,8 +230,7 @@ Slack has no View menu). Its shortcut is `Cmd+Option+I` on macOS and
 Slack's DOM and find stable selectors for plugin mounts.
 
 Plugins are not sandboxed from Slack or from one another. Do not install code
-you have not reviewed. The old `globalThis.Klack.register({ start(api) {} })`,
-`api.addStyle()`, and `api.observe()` forms remain supported for compatibility.
+you have not reviewed.
 
 ## How injection works
 
