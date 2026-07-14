@@ -29,7 +29,32 @@ The MVP supports:
 It has been developed against Slack `4.50.143` on macOS. It does not yet patch
 Slack's remote Webpack modules or add a settings UI.
 
-## Build
+## Install
+
+Release installs require macOS and Node.js 24 or newer. Downloading Klack and
+patching Slack are separate steps so modifying the application remains an
+explicit action:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh
+~/.local/bin/klack install
+```
+
+The installer selects the Apple silicon or Intel release, verifies its SHA-256
+checksum, and stores it under `~/Library/Application Support/Klack`. It does
+not require pnpm or build anything locally. To download Klack and patch Slack
+in one command, pass `--install`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh -s -- --install
+```
+
+Re-run the download command to update Klack, then run `klack install` to apply
+the new version. Previously installed releases are retained because a patched
+Slack installation contains an absolute path to the Klack version that created
+it.
+
+## Build from source
 
 Requires Node.js 24 or newer and pnpm.
 
@@ -39,18 +64,23 @@ pnpm check
 pnpm test
 ```
 
-## Inspect status
+## Manage Slack
+
+Quit Slack completely before install or uninstall. Do not install this into a
+managed work computer without authorization.
+
+For a release installation:
+
+```sh
+klack status
+klack install
+klack uninstall
+```
+
+When running from a source checkout, use the equivalent pnpm commands:
 
 ```sh
 pnpm klack status
-```
-
-## Install and restore
-
-Quit Slack completely first. Do not install this into a managed work computer
-without authorization.
-
-```sh
 pnpm klack install
 pnpm klack uninstall
 ```

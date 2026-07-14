@@ -145,7 +145,10 @@ function uninstallApp(appPath: string, resign: boolean) {
 
 async function main(): Promise<void> {
   const { appPath, command, resign } = parseArguments(process.argv.slice(2));
-  const klackRoot = path.resolve(__dirname, "..");
+  // Release installs use a `current` symlink for the CLI. Resolve it before
+  // writing the runtime path into Slack's bootstrap so an update cannot move
+  // an existing Slack installation to a version it has not installed yet.
+  const klackRoot = fs.realpathSync(path.resolve(__dirname, ".."));
 
   if (command === "help") {
     console.log(usage());
