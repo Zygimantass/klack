@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f6f0" />
+    <meta
+      name="description"
+      content="Install Klack, build your first Slack desktop plugin, and explore the typed UI API."
+    />
+    <meta property="og:title" content="Klack documentation" />
+    <meta property="og:description" content="Get started with the experimental Slack desktop plugin loader." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://klack.sh/docs/" />
+    <title>Documentation — Klack</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c8f35d'/%3E%3Cpath d='M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z' fill='%23161a0c'/%3E%3C/svg%3E"
+    />
+    <script>
+      try {
+        const saved = localStorage.getItem("klack-theme");
+        document.documentElement.dataset.theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.querySelector('meta[name="theme-color"]').content = document.documentElement.dataset.theme === "dark" ? "#10110f" : "#f6f6f0";
+      } catch {}
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="../assets/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <noscript><div class="noscript">Klack’s docs work without JavaScript; search, copy buttons, and theme switching need it.</div></noscript>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="../" aria-label="Klack home">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="#c8f35d"></rect>
+            <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path>
+          </svg>
+          <span>klack</span>
+        </a>
+
+        <nav class="header-nav" aria-label="Main navigation">
+          <a href="./" aria-current="page">Docs</a>
+          <a href="../#features">Features</a>
+          <a href="../#plugins">Plugins</a>
+          <a href="https://github.com/zygimantass/klack" rel="noreferrer">GitHub</a>
+        </nav>
+
+        <div class="header-actions">
+          <button class="search-trigger" type="button" data-search-trigger aria-label="Search documentation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path>
+            </svg>
+            <span>Search docs…</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <span class="version-pill">v0.1.0</span>
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Change color theme">
+            <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"></path></svg>
+            <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="3.5"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+          </button>
+          <button class="mobile-menu-button" type="button" data-menu-toggle aria-label="Toggle navigation" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="mobile-nav" data-mobile-nav aria-label="Mobile navigation">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#features">Features</a>
+      <a href="../#plugins">Plugins</a>
+      <a href="https://github.com/zygimantass/klack" rel="noreferrer">GitHub</a>
+      <button class="mobile-search" type="button" data-search-trigger>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+        Search documentation
+      </button>
+    </nav>
+
+    <div class="docs-shell">
+      <aside class="docs-sidebar" data-docs-sidebar aria-label="Documentation navigation">
+        <div class="sidebar-group">
+          <p class="sidebar-title">Introduction</p>
+          <a class="sidebar-link active" href="#overview" data-search-item data-search-group="Introduction" data-search-title="Overview" data-search-description="What Klack is and when to use it">Overview</a>
+          <a class="sidebar-link" href="#installation" data-search-item data-search-group="Introduction" data-search-title="Installation" data-search-description="Download and install Klack on macOS">Installation</a>
+          <a class="sidebar-link" href="#quick-start" data-search-item data-search-group="Introduction" data-search-title="Quick start" data-search-description="Verify Klack and create a plugin">Quick start</a>
+          <a class="sidebar-link" href="#architecture" data-search-item data-search-group="Introduction" data-search-title="Architecture" data-search-description="How Klack injects into Slack">How it works</a>
+        </div>
+        <div class="sidebar-group">
+          <p class="sidebar-title">Plugins</p>
+          <a class="sidebar-link" href="#your-first-plugin" data-search-item data-search-group="Plugins" data-search-title="Your first plugin" data-search-description="Create a typed plugin from one file">Your first plugin</a>
+          <a class="sidebar-link" href="#ui-api" data-search-item data-search-group="Plugins" data-search-title="UI contributions" data-search-description="Buttons, mounts, styles, and observers">UI contributions</a>
+          <a class="sidebar-link" href="#hot-reload" data-search-item data-search-group="Plugins" data-search-title="Hot reload" data-search-description="Live plugin compilation and updates">Hot reload <span class="sidebar-badge">live</span></a>
+          <a class="sidebar-link" href="#devtools" data-search-item data-search-group="Plugins" data-search-title="DevTools" data-search-description="Inspect Slack and manage plugins">DevTools</a>
+        </div>
+        <div class="sidebar-group">
+          <p class="sidebar-title">Reference</p>
+          <a class="sidebar-link" href="#cli" data-search-item data-search-group="Reference" data-search-title="CLI reference" data-search-description="status, install, and uninstall commands">CLI</a>
+          <a class="sidebar-link" href="#plugin-api" data-search-item data-search-group="Reference" data-search-title="Plugin API" data-search-description="Metadata, setup context, and browser globals">Plugin API</a>
+          <a class="sidebar-link" href="#security" data-search-item data-search-group="Reference" data-search-title="Security" data-search-description="Trust model and code-signing implications">Security</a>
+          <a class="sidebar-link" href="#troubleshooting" data-search-item data-search-group="Reference" data-search-title="Troubleshooting" data-search-description="Common install and plugin issues">Troubleshooting</a>
+        </div>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <article class="docs-content">
+          <div class="docs-breadcrumb">
+            <span>Docs</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+            <span>Get started</span>
+          </div>
+          <header class="docs-intro">
+            <h1>Klack documentation</h1>
+            <p class="docs-lead">A practical guide to installing Klack, creating local Slack extensions, and using its typed plugin API.</p>
+            <div class="docs-meta"><span class="status-tag">Experimental</span><span>Last updated for v0.1.0</span></div>
+          </header>
+
+          <section class="docs-section" id="overview">
+            <h2>Overview</h2>
+            <p>
+              Klack is an experimental plugin loader for Slack’s Electron desktop app. It inserts a small bootstrap into the application bundle, loads local plugins before Slack finishes starting, and keeps the current renderer sandbox and context isolation settings intact.
+            </p>
+            <p>
+              Use it to prototype personal workflows, add small interface contributions, or observe Slack’s DOM from code you control. Klack is not a marketplace or a security boundary: every installed plugin is trusted code.
+            </p>
+            <div class="callout warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg>
+              <strong>Start with a disposable Slack copy.</strong>
+              Installing Klack changes Slack’s application bundle and invalidates its vendor signature. Do not install it on a managed work computer without authorization.
+            </div>
+            <h3>What the MVP supports</h3>
+            <ul>
+              <li>Reversible <code>app.asar</code> bootstrap installation.</li>
+              <li>Typed TypeScript plugin definitions and zero-build JavaScript definitions.</li>
+              <li>Plugin-scoped buttons, custom DOM mounts, styles, events, timers, and DOM watchers.</li>
+              <li>Automatic recompilation and reload across every open Slack window.</li>
+              <li>A built-in plugin manager, enablement overrides, and automatic resource cleanup.</li>
+              <li>A vanilla launch flag for starting through the bootstrap without injection.</li>
+            </ul>
+            <p>Klack does not yet patch Slack’s remote Webpack modules or provide a plugin marketplace.</p>
+          </section>
+
+          <section class="docs-section" id="installation">
+            <h2>Installation</h2>
+            <p>Klack currently supports release installs on macOS for Apple silicon and Intel. It has been developed against Slack <code>4.50.143</code> and requires Node.js 24 or newer.</p>
+
+            <div class="steps">
+              <div class="step">
+                <h3>Download Klack</h3>
+                <p>The installer selects the release for your Mac, verifies its SHA-256 checksum, and adds a launcher at <code>~/.local/bin/klack</code>. It does not patch Slack yet.</p>
+                <div class="code-frame" data-code>
+                  <div class="code-header"><span>Terminal</span></div>
+                  <pre><code>curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh</code></pre>
+                </div>
+              </div>
+              <div class="step">
+                <h3>Quit Slack completely</h3>
+                <p>Use <strong>Slack → Quit Slack</strong> and confirm no other Slack copy is running. Klack intentionally refuses to modify an app while Slack is open.</p>
+              </div>
+              <div class="step">
+                <h3>Inspect before changing anything</h3>
+                <div class="code-frame" data-code>
+                  <div class="code-header"><span>Terminal</span></div>
+                  <pre><code>~/.local/bin/klack status
+
+# Use a separate app path while testing:
+~/.local/bin/klack status --app "$HOME/Applications/Slack-Klack.app"</code></pre>
+                </div>
+              </div>
+              <div class="step">
+                <h3>Install the bootstrap</h3>
+                <div class="code-frame" data-code>
+                  <div class="code-header"><span>Terminal</span></div>
+                  <pre><code>~/.local/bin/klack install
+
+# Or install into a disposable copy:
+~/.local/bin/klack install --app "$HOME/Applications/Slack-Klack.app"</code></pre>
+                </div>
+              </div>
+            </div>
+
+            <div class="callout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg>
+              <strong>After a Slack update</strong>
+              Slack replaces its application resources when it updates. Quit Slack and run <code>klack install</code> again to regenerate the combined preload.
+            </div>
+
+            <p>To download Klack and patch Slack in one command, add <code>--install</code> to the installer:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Terminal</span></div>
+              <pre><code>curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh -s -- --install</code></pre>
+            </div>
+
+            <h3>Restore Slack</h3>
+            <p>Quit every Slack copy, then run:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Terminal</span></div>
+              <pre><code>klack uninstall
+
+# Match the custom app path if you used one:
+klack uninstall --app "$HOME/Applications/Slack-Klack.app"</code></pre>
+            </div>
+            <p>For protected canonical installs, Klack restores the complete vendor-signed bundle it preserved. Directly writable copies restore the original ASAR but remain ad-hoc signed.</p>
+
+            <h3>Build from source</h3>
+            <p>Source builds additionally require pnpm. Clone the repository, run its checks, then use <code>pnpm klack</code> in place of the release launcher.</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Terminal</span></div>
+              <pre><code>git clone https://github.com/zygimantass/klack.git
+cd klack
+pnpm install
+pnpm check
+pnpm test
+pnpm klack status</code></pre>
+            </div>
+          </section>
+
+          <section class="docs-section" id="quick-start">
+            <h2>Quick start</h2>
+            <p>Once Slack launches through Klack, verify the runtime and add a tiny plugin.</p>
+
+            <h3>1. Confirm Klack loaded</h3>
+            <p>Open Slack’s DevTools with <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> and run:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Slack DevTools</span></div>
+              <pre><code>Klack.version
+Klack.list()</code></pre>
+            </div>
+            <p>The built-in <code>LoadedIndicator</code> plugin also adds a small badge in the lower-right corner of Slack.</p>
+
+            <h3>2. Create the plugin directory</h3>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Terminal</span></div>
+              <pre><code>mkdir -p ~/.klack/plugins</code></pre>
+            </div>
+
+            <h3>3. Add a plugin</h3>
+            <p>Create <code>~/.klack/plugins/hello.ts</code>:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>hello.ts</span></div>
+              <pre><code><span class="syntax-keyword">import</span> { definePlugin } <span class="syntax-keyword">from</span> <span class="syntax-string">"klack/sdk"</span>;
+
+<span class="syntax-keyword">export default</span> <span class="syntax-fn">definePlugin</span>({
+  <span class="syntax-property">name</span>: <span class="syntax-string">"Hello"</span>,
+  <span class="syntax-property">description</span>: <span class="syntax-string">"My first Klack plugin"</span>,
+  <span class="syntax-fn">setup</span>(klack) {
+    klack.ui.<span class="syntax-fn">addButton</span>({
+      <span class="syntax-property">id</span>: <span class="syntax-string">"hello"</span>,
+      <span class="syntax-property">target</span>: <span class="syntax-string">"body"</span>,
+      <span class="syntax-property">label</span>: <span class="syntax-string">"Hello from Klack"</span>,
+      <span class="syntax-fn">onClick</span>(_event, { button }) {
+        button.textContent = <span class="syntax-string">"Clicked!"</span>;
+      },
+    });
+  },
+});</code></pre>
+            </div>
+            <p>Save the file. Klack bundles it in memory and applies the new plugin without a manual build or Slack restart.</p>
+          </section>
+
+          <section class="docs-section" id="architecture">
+            <h2>How injection works</h2>
+            <p>Klack uses a small bootstrap rather than disabling Electron’s renderer protections.</p>
+            <ol>
+              <li>The installer renames Slack’s <code>app.asar</code> to <code>_app.asar</code> and puts a tiny bootstrap archive in its place.</li>
+              <li>On macOS, it updates Electron’s embedded ASAR-integrity metadata and ad-hoc signs the outer app while leaving Slack’s signed helpers and frameworks untouched.</li>
+              <li>The bootstrap starts Klack’s main-process patcher, redirects Electron to Slack’s original package, and wraps <code>BrowserWindow</code>.</li>
+              <li>Windows using Slack’s primary preload receive a generated file containing Klack followed by Slack’s exact original preload.</li>
+              <li>Klack injects the renderer and the compiled local plugin set before Slack finishes loading.</li>
+            </ol>
+            <div class="callout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 8.2 7 10 4.1-1.8 7-5.5 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>
+              <strong>Renderer settings remain unchanged.</strong>
+              Slack still launches windows with <code>sandbox: true</code> and <code>contextIsolation: true</code>. This is a compatibility property, not a sandbox for Klack plugins.
+            </div>
+          </section>
+
+          <section class="docs-section" id="your-first-plugin">
+            <h2>Your first plugin</h2>
+            <p>A typed plugin exports a definition created with <code>definePlugin</code>. The helper is intentionally an identity function at runtime; its job is to provide type checking and autocomplete.</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>plugin.ts</span></div>
+              <pre><code><span class="syntax-keyword">import</span> { definePlugin } <span class="syntax-keyword">from</span> <span class="syntax-string">"klack/sdk"</span>;
+
+<span class="syntax-keyword">export default</span> <span class="syntax-fn">definePlugin</span>({
+  <span class="syntax-property">name</span>: <span class="syntax-string">"Example"</span>,           <span class="syntax-comment">// A-Z, a-z, 0-9, _ and -</span>
+  <span class="syntax-property">description</span>: <span class="syntax-string">"Example plugin"</span>,
+  <span class="syntax-property">version</span>: <span class="syntax-string">"1.0.0"</span>,
+  <span class="syntax-property">defaultEnabled</span>: <span class="syntax-keyword">true</span>,
+  <span class="syntax-fn">setup</span>(klack) {
+    klack.logger.<span class="syntax-fn">info</span>(<span class="syntax-string">"Example started"</span>);
+
+    klack.<span class="syntax-fn">cleanup</span>(() => {
+      klack.logger.<span class="syntax-fn">info</span>(<span class="syntax-string">"Example stopped"</span>);
+    });
+  },
+});</code></pre>
+            </div>
+            <p>The filename is the source identity. A file in the user plugin directory replaces a built-in plugin with the same filename.</p>
+
+            <h3>JavaScript without a build step</h3>
+            <p>A CommonJS definition also works. It uses the same required <code>name</code> and <code>setup</code> fields:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>simple.js</span></div>
+              <pre><code>module.exports = {
+  <span class="syntax-property">name</span>: <span class="syntax-string">"Simple"</span>,
+  <span class="syntax-fn">setup</span>(klack) {
+    klack.logger.<span class="syntax-fn">info</span>(<span class="syntax-string">"Simple plugin loaded"</span>);
+  },
+};</code></pre>
+            </div>
+          </section>
+
+          <section class="docs-section" id="ui-api">
+            <h2>UI contributions</h2>
+            <p>Everything registered through <code>klack.ui</code>, <code>klack.dom</code>, <code>klack.events</code>, and <code>klack.timers</code> belongs to the current plugin. Disabling or reloading that plugin removes the contribution automatically.</p>
+
+            <div class="method-grid">
+              <article class="method-card"><code>ui.addButton(options)</code><p>Mount a resilient button at every matching target, with click context and accessible attributes.</p></article>
+              <article class="method-card"><code>ui.mount(target, render, options)</code><p>Mount an arbitrary element with mount-scoped events and cleanup.</p></article>
+              <article class="method-card"><code>ui.addStyle(css, options?)</code><p>Inject plugin-owned CSS with an optional style identifier.</p></article>
+              <article class="method-card"><code>ui.hide(selectors, options?)</code><p>Hide one or more selectors with plugin-owned CSS.</p></article>
+              <article class="method-card"><code>dom.watch(selector, callback)</code><p>Initialize current and future matches incrementally, with per-element cleanup.</p></article>
+              <article class="method-card"><code>events.on(target, type, listener)</code><p>Add a listener that is removed automatically.</p></article>
+            </div>
+
+            <h3>Targets and positions</h3>
+            <p>A UI target can be a CSS selector, one <code>Element</code>, or a function that returns an element or iterable of elements. Buttons and mounts support four positions:</p>
+            <div class="api-table-wrap">
+              <table class="api-table">
+                <thead><tr><th>Position</th><th>Behavior</th></tr></thead>
+                <tbody>
+                  <tr><td><code>append</code></td><td>Add inside the target, after its existing children. This is the default.</td></tr>
+                  <tr><td><code>prepend</code></td><td>Add inside the target, before its existing children.</td></tr>
+                  <tr><td><code>before</code></td><td>Add as the target’s previous sibling.</td></tr>
+                  <tr><td><code>after</code></td><td>Add as the target’s next sibling.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Mount custom DOM</h3>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>custom-mount.ts</span></div>
+              <pre><code>klack.ui.<span class="syntax-fn">mount</span>(
+  <span class="syntax-string">"[data-qa='message_input']"</span>,
+  ({ cleanup, plugin, target }) => {
+    <span class="syntax-keyword">const</span> badge = document.<span class="syntax-fn">createElement</span>(<span class="syntax-string">"span"</span>);
+    badge.textContent = <span class="syntax-string">`Mounted by ${plugin}`</span>;
+    <span class="syntax-fn">cleanup</span>(() => {
+      klack.logger.<span class="syntax-fn">debug</span>(<span class="syntax-string">"Removed from"</span>, target);
+    });
+    <span class="syntax-keyword">return</span> badge;
+  },
+  { <span class="syntax-property">position</span>: <span class="syntax-string">"before"</span> },
+);</code></pre>
+            </div>
+
+            <h3>Observe Slack’s DOM</h3>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>observer.ts</span></div>
+              <pre><code>klack.dom.<span class="syntax-fn">watch</span>(<span class="syntax-string">"[data-qa='message_container']"</span>, (message) => {
+  message.classList.<span class="syntax-fn">add</span>(<span class="syntax-string">"my-plugin-message"</span>);
+
+  <span class="syntax-keyword">return</span> () => {
+    message.classList.<span class="syntax-fn">remove</span>(<span class="syntax-string">"my-plugin-message"</span>);
+  };
+});</code></pre>
+            </div>
+            <p>Klack reconciles contributions when Slack changes the DOM. If the target or mounted element disappears, cleanup runs and the contribution is recreated when a target returns.</p>
+          </section>
+
+          <section class="docs-section" id="hot-reload">
+            <h2>Hot reload</h2>
+            <p>At startup, Klack loads its built-in plugins, then scans <code>~/.klack/plugins/*.{ts,tsx,js,jsx}</code>. TypeScript and JavaScript modules are bundled in memory, so no generated files appear beside your source.</p>
+            <ul>
+              <li>Changes, additions, and deletions trigger a new plugin set.</li>
+              <li>Current plugin resources are cleaned up before the replacement set starts.</li>
+              <li>Every Slack window receives the update.</li>
+              <li>If compilation fails, Klack logs the error and keeps the last working set active.</li>
+            </ul>
+            <h3>Use a different plugin directory</h3>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Terminal</span></div>
+              <pre><code>KLACK_PLUGIN_DIR="$HOME/code/slack-plugins" open /Applications/Slack.app</code></pre>
+            </div>
+            <p>The environment variable must be present in the process that launches Slack.</p>
+          </section>
+
+          <section class="docs-section" id="devtools">
+            <h2>DevTools</h2>
+            <p>Klack adds <strong>Toggle DevTools</strong> to Slack’s <strong>View</strong> menu—or to a <strong>Klack</strong> menu if Slack has no View menu.</p>
+            <p>Use <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd> on Windows and Linux. The element picker helps find stable selectors for UI targets.</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Slack DevTools</span></div>
+              <pre><code>Klack.<span class="syntax-fn">list</span>()
+Klack.<span class="syntax-fn">disable</span>(<span class="syntax-string">"Example"</span>)
+Klack.<span class="syntax-fn">enable</span>(<span class="syntax-string">"Example"</span>)
+Klack.<span class="syntax-fn">isEnabled</span>(<span class="syntax-string">"Example"</span>)</code></pre>
+            </div>
+            <p>Enablement choices are stored in Slack renderer local storage under <code>klack:plugin-overrides</code>.</p>
+          </section>
+
+          <section class="docs-section" id="cli">
+            <h2>CLI reference</h2>
+            <p>Use <code>klack</code> after a release installation. From a source checkout, prefix the same commands with <code>pnpm</code>.</p>
+            <div class="api-table-wrap">
+              <table class="api-table">
+                <thead><tr><th>Command</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td><code>klack status</code></td><td>Print the app path, Klack state, and detected Slack version.</td></tr>
+                  <tr><td><code>klack install</code></td><td>Install or refresh the bootstrap and generated preload.</td></tr>
+                  <tr><td><code>klack uninstall</code></td><td>Remove Klack and restore Slack’s original application resources.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Options</h3>
+            <div class="api-table-wrap">
+              <table class="api-table">
+                <thead><tr><th>Option</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td><code>--app &lt;path&gt;</code></td><td>Operate on a Slack app other than <code>/Applications/Slack.app</code>.</td></tr>
+                  <tr><td><code>--no-resign</code></td><td>Skip macOS ad-hoc signing. The changed app will not launch until it is signed.</td></tr>
+                  <tr><td><code>-h</code>, <code>--help</code></td><td>Print command usage.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Launch without injection</h3>
+            <p>To start through the installed bootstrap without Klack’s renderer or local plugins, pass <code>--klack-vanilla</code> directly to Slack:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Terminal</span></div>
+              <pre><code>/Applications/Slack.app/Contents/MacOS/Slack --klack-vanilla</code></pre>
+            </div>
+          </section>
+
+          <section class="docs-section" id="plugin-api">
+            <h2>Plugin API</h2>
+            <h3>Definition fields</h3>
+            <div class="api-table-wrap">
+              <table class="api-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+                <tbody>
+                  <tr><td><code>name</code></td><td>string</td><td>Required. Letters, numbers, underscores, and hyphens only.</td></tr>
+                  <tr><td><code>setup</code></td><td>function</td><td>Required. Receives <code>KlackApi</code>; register cleanup with the provided methods.</td></tr>
+                  <tr><td><code>description</code></td><td>string</td><td>Optional human-readable summary.</td></tr>
+                  <tr><td><code>version</code></td><td>string</td><td>Optional plugin version shown by <code>Klack.list()</code>.</td></tr>
+                  <tr><td><code>defaultEnabled</code></td><td>boolean</td><td>Defaults to <code>true</code>. A saved user override takes precedence.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Setup context</h3>
+            <div class="api-table-wrap">
+              <table class="api-table">
+                <thead><tr><th>Property</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td><code>klack.ui</code></td><td>The scoped UI methods described above.</td></tr>
+                  <tr><td><code>klack.dom</code></td><td>Incremental selector watching and scoped mutation observers.</td></tr>
+                  <tr><td><code>klack.events</code></td><td>Plugin-owned event listeners.</td></tr>
+                  <tr><td><code>klack.timers</code></td><td>Plugin-owned timeouts, intervals, and animation frames.</td></tr>
+                  <tr><td><code>klack.cleanup</code></td><td>Registers cleanup for direct changes and third-party APIs.</td></tr>
+                  <tr><td><code>klack.logger</code></td><td>Slack renderer’s <code>console</code>, suitable for namespaced development logs.</td></tr>
+                  <tr><td><code>klack.version</code></td><td>The currently running Klack version.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Browser global</h3>
+            <p>The frozen <code>window.Klack</code> object exposes:</p>
+            <div class="code-frame" data-code>
+              <div class="code-header"><span>Global API</span></div>
+              <pre><code>Klack.version
+Klack.<span class="syntax-fn">list</span>()
+Klack.<span class="syntax-fn">isEnabled</span>(name)
+Klack.<span class="syntax-fn">enable</span>(name)
+Klack.<span class="syntax-fn">disable</span>(name)</code></pre>
+            </div>
+            <p>Plugin modules must default-export a definition with <code>name</code> and <code>setup</code>.</p>
+          </section>
+
+          <section class="docs-section" id="security">
+            <h2>Security</h2>
+            <p>Klack is unofficial, unsupported, and intended for local experimentation. Its plugin system is deliberately powerful.</p>
+            <ul>
+              <li><strong>Plugins are trusted code.</strong> They can inspect or modify anything visible to Slack’s renderer. Never install a plugin you have not reviewed.</li>
+              <li><strong>Plugins are not isolated from one another.</strong> Plugin ownership provides lifecycle cleanup, not a security boundary.</li>
+              <li><strong>Installation changes Slack’s bundle.</strong> This invalidates Slack’s vendor signature and may violate Slack or workspace policies.</li>
+              <li><strong>Ad-hoc signing has consequences.</strong> Keychain, notifications, updates, and device permissions can behave differently.</li>
+              <li><strong>Managed devices may block changes.</strong> Get explicit authorization before using Klack on workplace hardware.</li>
+            </ul>
+            <div class="callout warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Z"></path><path d="M12 9v5M12 17.5v.5"></path></svg>
+              <strong>Preserving Electron’s sandbox does not sandbox plugins.</strong>
+              Klack’s injection is compatible with Slack’s existing renderer protections, but plugin code still runs with access to the renderer environment.
+            </div>
+          </section>
+
+          <section class="docs-section" id="troubleshooting">
+            <h2>Troubleshooting</h2>
+            <h3>“A Slack app is running”</h3>
+            <p>Quit every Slack copy, including test copies. Klack checks for the Slack process before install and uninstall operations.</p>
+
+            <h3>The modified app does not launch</h3>
+            <p>If you passed <code>--no-resign</code> on macOS, the bundle needs a valid signature before it can launch. Re-run installation without that option or restore Slack.</p>
+
+            <h3>Browser sign-in opens another Slack copy</h3>
+            <p>macOS chooses a <code>slack://</code> handler by bundle identifier, not app path. Quit all other Slack copies during sign-in or use the canonical <code>/Applications/Slack.app</code>.</p>
+
+            <h3>A plugin edit does not apply</h3>
+            <p>Open DevTools and inspect the console for a compile error. Klack intentionally keeps the last working plugin set active when a new source file fails to bundle.</p>
+
+            <h3>Slack updated and Klack disappeared</h3>
+            <p>Slack updates replace application resources. Re-run the release download if you want to update Klack too, quit Slack, and run <code>klack install</code> again.</p>
+
+            <div class="docs-pager">
+              <a class="next-card" href="../"><span>Back</span><strong>← Klack home</strong></a>
+              <a class="next-card" href="https://github.com/zygimantass/klack/issues"><span>Need more help?</span><strong>Open an issue →</strong></a>
+            </div>
+          </section>
+        </article>
+      </main>
+
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="toc-title">On this page</p>
+        <a class="toc-link active" href="#overview">Overview</a>
+        <a class="toc-link" href="#installation">Installation</a>
+        <a class="toc-link" href="#quick-start">Quick start</a>
+        <a class="toc-link" href="#architecture">How injection works</a>
+        <a class="toc-link" href="#your-first-plugin">Your first plugin</a>
+        <a class="toc-link" href="#ui-api">UI contributions</a>
+        <a class="toc-link" href="#hot-reload">Hot reload</a>
+        <a class="toc-link" href="#devtools">DevTools</a>
+        <a class="toc-link" href="#cli">CLI reference</a>
+        <a class="toc-link" href="#plugin-api">Plugin API</a>
+        <a class="toc-link" href="#security">Security</a>
+        <a class="toc-link" href="#troubleshooting">Troubleshooting</a>
+        <hr class="toc-divider" />
+        <a class="toc-external" href="https://github.com/zygimantass/klack/blob/main/site/docs/index.html">
+          Edit this page
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 5h5v5M19 5l-9 9"></path><path d="M18 13v6H5V6h6"></path></svg>
+        </a>
+        <a class="toc-external" href="https://github.com/zygimantass/klack/issues">
+          Report an issue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 5h5v5M19 5l-9 9"></path><path d="M18 13v6H5V6h6"></path></svg>
+        </a>
+      </aside>
+    </div>
+
+    <button class="docs-mobile-trigger" type="button" data-docs-toggle aria-label="Toggle documentation navigation" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 5h14M5 12h14M5 19h14"></path></svg>
+      Browse docs
+    </button>
+
+    <dialog class="command-dialog" data-command-dialog aria-label="Search documentation">
+      <div class="command-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+        <input type="search" name="docs-search" data-command-input placeholder="Search the docs…" autocomplete="off" aria-label="Search documentation" />
+        <kbd>esc</kbd>
+      </div>
+      <div class="command-results" data-command-results aria-live="polite"></div>
+      <div class="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span></div>
+    </dialog>
+
+    <script src="../assets/site.js"></script>
+  </body>
+</html>

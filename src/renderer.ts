@@ -1,27 +1,24 @@
 declare const __KLACK_VERSION__: string;
 
 import {
-  definePlugin,
   type Cleanup,
   type KlackApi,
   type KlackButtonOptions,
-  type KlackExtension,
-  type KlackLegacyPlugin,
-  type KlackMountResult,
+  type KlackMountContext,
+  type KlackMountOptions,
+  type KlackOn,
   type KlackPlugin,
-  type KlackPluginDefinition,
   type KlackUiPosition,
   type KlackUiTarget,
 } from "./sdk";
 
 type PluginState = {
-  plugin: KlackPluginDefinition;
+  plugin: KlackPlugin;
   resources: Set<Cleanup>;
   started: boolean;
 };
 
 type KlackGlobal = {
-  definePlugin: typeof definePlugin;
   disable(name: string): void;
   enable(name: string): void;
   isEnabled(name: string): boolean;
@@ -32,8 +29,7 @@ type KlackGlobal = {
     started: boolean;
     version?: string;
   }>;
-  loadPlugin(sourceName: string, extension: unknown): void;
-  register(plugin: KlackPluginDefinition): void;
+  loadPlugin(plugin: unknown): void;
   resetPlugins(): void;
   version: string;
 };
@@ -105,6 +101,17 @@ function addStyle(plugin: string, css: string, id?: string): Cleanup {
   return () => style.remove();
 }
 
+function hide(plugin: string, selectors: string | readonly string[], id?: string): Cleanup {
+  const selectorList = typeof selectors === "string" ? [selectors] : selectors;
+  if (selectorList.length === 0) return () => {};
+  selectorList.forEach((selector) => document.querySelector(selector));
+  return addStyle(
+    plugin,
+    `${selectorList.join(",\n")} {\n  display: none !important;\n}`,
+    id,
+  );
+}
+
 function resolveTargets(target: KlackUiTarget): Element[] {
   if (typeof target === "string") return Array.from(document.querySelectorAll(target));
   if (target instanceof Element) return [target];
@@ -115,7 +122,25 @@ function resolveTargets(target: KlackUiTarget): Element[] {
   return [...resolved].filter((element): element is Element => element instanceof Element);
 }
 
-function watchMutations(reconcile: () => void): Cleanup {
+function observerOptions(
+  attributes?: boolean | readonly string[],
+): MutationObserverInit {
+  if (attributes === true) return { attributes: true, childList: true, subtree: true };
+  if (attributes) {
+    return {
+      attributeFilter: Array.from(attributes),
+      attributes: true,
+      childList: true,
+      subtree: true,
+    };
+  }
+  return { childList: true, subtree: true };
+}
+
+function watchMutations(
+  reconcile: () => void,
+  attributes?: boolean | readonly string[],
+): Cleanup {
   let active = true;
   let scheduled = false;
   const schedule = (): void => {
@@ -129,49 +154,114 @@ function watchMutations(reconcile: () => void): Cleanup {
   };
 
   const observer = new MutationObserver(schedule);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  observer.observe(document.documentElement, observerOptions(attributes));
   return () => {
     active = false;
     observer.disconnect();
   };
 }
 
-function observe(selector: string, callback: (element: Element) => void | Cleanup): Cleanup {
-  const records = new Map<Element, Cleanup | undefined>();
+type ElementWatchResult =
+  | void
+  | Cleanup
+  | {
+      cleanup?: Cleanup;
+      isActive?: () => boolean;
+      retryOnAdd?: boolean;
+    };
 
-  const clean = (element: Element, cleanup?: Cleanup): void => {
+type ElementWatchRecord = Exclude<ElementWatchResult, void | Cleanup>;
+
+function matchingElements(node: Node, selector: string): Element[] {
+  if (!(node instanceof Element)) return [];
+  const matches: Element[] = [];
+  if (node.matches(selector)) matches.push(node);
+  matches.push(...Array.from(node.querySelectorAll(selector)));
+  return matches;
+}
+
+function watchElements(
+  selector: string,
+  callback: (element: Element) => ElementWatchResult,
+  options?: { attributes?: boolean | readonly string[] },
+): Cleanup {
+  const records = new Map<Element, ElementWatchRecord>();
+
+  const activate = (element: Element): void => {
+    if (records.has(element)) return;
     try {
-      cleanup?.();
+      const result = callback(element);
+      records.set(
+        element,
+        typeof result === "function" ? { cleanup: result } : result || {},
+      );
     } catch (error) {
-      console.error(`[Klack] Failed to clean up observer for ${selector}`, error);
+      records.set(element, { retryOnAdd: true });
+      console.error(`[Klack] Failed to initialize DOM watcher for ${selector}`, error);
+    }
+  };
+
+  const clean = (element: Element): void => {
+    const record = records.get(element);
+    try {
+      record?.cleanup?.();
+    } catch (error) {
+      console.error(`[Klack] Failed to clean up DOM watcher for ${selector}`, error);
     } finally {
       records.delete(element);
     }
   };
 
-  const reconcile = (): void => {
-    const matches = new Set(Array.from(document.querySelectorAll(selector)));
-
-    for (const [element, cleanup] of records) {
-      if (element.isConnected && matches.has(element)) continue;
-      clean(element, cleanup);
+  document.querySelectorAll(selector).forEach(activate);
+  const observer = new MutationObserver((mutations) => {
+    for (const [element, record] of records) {
+      const stillMatches = element.isConnected && element.matches(selector);
+      if (stillMatches && record.isActive?.() !== false) continue;
+      clean(element);
+      if (stillMatches) activate(element);
     }
 
-    for (const element of matches) {
-      if (records.has(element)) continue;
-      const cleanup = callback(element);
-      records.set(element, typeof cleanup === "function" ? cleanup : undefined);
-    }
-  };
+    const activateFromMutation = (element: Element): void => {
+      if (records.get(element)?.retryOnAdd) clean(element);
+      activate(element);
+    };
 
-  reconcile();
-  const stopWatching = watchMutations(reconcile);
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes") {
+        matchingElements(mutation.target, selector).forEach(activateFromMutation);
+      }
+      mutation.addedNodes.forEach((node) => {
+        if (!node.isConnected) return;
+        matchingElements(node, selector).forEach(activateFromMutation);
+      });
+    }
+  });
+  observer.observe(document.documentElement, observerOptions(options?.attributes));
 
   return () => {
-    stopWatching();
-    [...records].forEach(([element, cleanup]) => clean(element, cleanup));
-    records.clear();
+    observer.disconnect();
+    [...records.keys()].forEach(clean);
   };
+}
+
+function listen(
+  target: EventTarget,
+  type: string,
+  listener: EventListener,
+  options?: boolean | AddEventListenerOptions,
+): Cleanup {
+  target.addEventListener(type, listener, options);
+  return () => target.removeEventListener(type, listener, options);
+}
+
+function observeMutations(
+  target: Node,
+  callback: MutationCallback,
+  options: MutationObserverInit,
+): Cleanup {
+  const observer = new MutationObserver(callback);
+  observer.observe(target, options);
+  return () => observer.disconnect();
 }
 
 function insert(element: Element, target: Element, position: KlackUiPosition): void {
@@ -193,22 +283,85 @@ function insert(element: Element, target: Element, position: KlackUiPosition): v
 function mount(
   plugin: string,
   target: KlackUiTarget,
-  render: (context: { plugin: string; target: Element }) => KlackMountResult,
-  position: KlackUiPosition = "append",
+  render: (context: KlackMountContext) => Element,
+  options: KlackMountOptions = {},
 ): Cleanup {
-  const records = new Map<Element, { cleanup?: Cleanup; element: Element }>();
+  const create = (targetElement: Element): ElementWatchRecord => {
+    const resources = new Set<Cleanup>();
+    const cleanup = (resource: Cleanup): Cleanup => {
+      let active = true;
+      const tracked = (): void => {
+        if (!active) return;
+        active = false;
+        resources.delete(tracked);
+        resource();
+      };
+      resources.add(tracked);
+      return tracked;
+    };
 
+    try {
+      const on = ((
+        eventTarget: EventTarget,
+        type: string,
+        listener: EventListener,
+        eventOptions?: boolean | AddEventListenerOptions,
+      ) => cleanup(listen(eventTarget, type, listener, eventOptions))) as KlackOn;
+      const element = render({
+        cleanup,
+        on,
+        plugin,
+        target: targetElement,
+      });
+      if (!(element instanceof Element)) {
+        throw new TypeError("ui.mount() render functions must return an Element");
+      }
+      element.setAttribute("data-klack-plugin", plugin);
+      insert(element, targetElement, options.position || "append");
+
+      return {
+        cleanup: () => {
+          for (const resource of [...resources].reverse()) {
+            try {
+              resource();
+            } catch (error) {
+              console.error(`[Klack] Failed to clean up mounted UI for ${plugin}`, error);
+            }
+          }
+          element.remove();
+        },
+        isActive: () => {
+          if (!element.isConnected) return false;
+          if (options.position === "before") return element.nextElementSibling === targetElement;
+          if (options.position === "after") return element.previousElementSibling === targetElement;
+          return element.parentElement === targetElement;
+        },
+      };
+    } catch (error) {
+      for (const resource of [...resources].reverse()) {
+        try {
+          resource();
+        } catch (cleanupError) {
+          console.error(`[Klack] Failed to clean up mounted UI for ${plugin}`, cleanupError);
+        }
+      }
+      console.error(`[Klack] Failed to mount UI for ${plugin}`, error);
+      return { retryOnAdd: true };
+    }
+  };
+
+  if (typeof target === "string") {
+    return watchElements(target, (targetElement) => {
+      if (targetElement.closest("[data-klack-plugin]")) return;
+      return create(targetElement);
+    }, { attributes: options.observeAttributes });
+  }
+
+  const records = new Map<Element, ElementWatchRecord>();
   const remove = (targetElement: Element): void => {
     const record = records.get(targetElement);
-    if (!record) return;
     records.delete(targetElement);
-    try {
-      record.cleanup?.();
-    } catch (error) {
-      console.error(`[Klack] Failed to clean up mounted UI for ${plugin}`, error);
-    } finally {
-      record.element.remove();
-    }
+    record?.cleanup?.();
   };
 
   const reconcile = (): void => {
@@ -219,30 +372,24 @@ function mount(
     );
 
     for (const [targetElement, record] of records) {
-      if (targets.has(targetElement) && record.element.isConnected) continue;
+      if (
+        targets.has(targetElement) &&
+        !record.retryOnAdd &&
+        record.isActive?.() !== false
+      ) {
+        continue;
+      }
       remove(targetElement);
     }
 
     for (const targetElement of targets) {
       if (records.has(targetElement)) continue;
-
-      try {
-        const result = render({ plugin, target: targetElement });
-        const record = result instanceof Element ? { element: result } : result;
-        if (!(record.element instanceof Element)) {
-          throw new TypeError("ui.mount() render functions must return an Element");
-        }
-        record.element.setAttribute("data-klack-plugin", plugin);
-        records.set(targetElement, record);
-        insert(record.element, targetElement, position);
-      } catch (error) {
-        console.error(`[Klack] Failed to mount UI for ${plugin}`, error);
-      }
+      records.set(targetElement, create(targetElement));
     }
   };
 
   reconcile();
-  const stopWatching = watchMutations(reconcile);
+  const stopWatching = watchMutations(reconcile, options.observeAttributes);
   return () => {
     stopWatching();
     [...records.keys()].forEach(remove);
@@ -257,7 +404,7 @@ function addButton(plugin: string, options: KlackButtonOptions): Cleanup {
   return mount(
     plugin,
     options.target,
-    ({ target }) => {
+    ({ cleanup, on, target }) => {
       const button = document.createElement("button");
       for (const [name, value] of Object.entries(options.attributes || {})) {
         button.setAttribute(name, value);
@@ -275,43 +422,102 @@ function addButton(plugin: string, options: KlackButtonOptions): Cleanup {
 
       const onClick = (event: MouseEvent): void => {
         try {
-          void Promise.resolve(options.onClick?.(event, { button, plugin, target })).catch((error) => {
+          void Promise.resolve(
+            options.onClick?.(event, { button, cleanup, on, plugin, target }),
+          ).catch((error) => {
             console.error(`[Klack] Button ${plugin}:${options.id} failed`, error);
           });
         } catch (error) {
           console.error(`[Klack] Button ${plugin}:${options.id} failed`, error);
         }
       };
-      button.addEventListener("click", onClick);
-      return {
-        cleanup: () => button.removeEventListener("click", onClick),
-        element: button,
-      };
+      on(button, "click", onClick);
+      return button;
     },
-    options.position,
+    options,
   );
 }
 
 const KLACK_VERSION = window.KlackNative?.version || __KLACK_VERSION__;
 
 function createPluginApi(state: PluginState): KlackApi {
+  const cleanup = (resource: Cleanup): Cleanup => track(state, resource);
+  const on = ((
+    target: EventTarget,
+    type: string,
+    listener: EventListener,
+    options?: boolean | AddEventListenerOptions,
+  ) => cleanup(listen(target, type, listener, options))) as KlackOn;
+  const reportTimerError = (timerType: string, error: unknown): void => {
+    console.error(`[Klack] ${timerType} callback failed for ${state.plugin.name}`, error);
+  };
+  const timeout = (callback: () => void, delay: number): Cleanup => {
+    let cancel: Cleanup;
+    const timer = window.setTimeout(() => {
+      cancel();
+      try {
+        callback();
+      } catch (error) {
+        reportTimerError("Timeout", error);
+      }
+    }, delay);
+    cancel = cleanup(() => window.clearTimeout(timer));
+    return cancel;
+  };
+  const animationFrame = (callback: FrameRequestCallback): Cleanup => {
+    let cancel: Cleanup;
+    const frame = window.requestAnimationFrame((time) => {
+      cancel();
+      try {
+        callback(time);
+      } catch (error) {
+        reportTimerError("Animation frame", error);
+      }
+    });
+    cancel = cleanup(() => window.cancelAnimationFrame(frame));
+    return cancel;
+  };
+
   const ui = Object.freeze({
-    addButton: (options: KlackButtonOptions) => track(state, addButton(state.plugin.name, options)),
+    addButton: (options: KlackButtonOptions) => cleanup(addButton(state.plugin.name, options)),
     addStyle: (css: string, options?: { id?: string }) =>
-      track(state, addStyle(state.plugin.name, css, options?.id)),
+      cleanup(addStyle(state.plugin.name, css, options?.id)),
+    hide: (selectors: string | readonly string[], options?: { id?: string }) =>
+      cleanup(hide(state.plugin.name, selectors, options?.id)),
     mount: (
       target: KlackUiTarget,
-      render: (context: { plugin: string; target: Element }) => KlackMountResult,
-      options?: { position?: KlackUiPosition },
-    ) => track(state, mount(state.plugin.name, target, render, options?.position)),
-    observe: (selector: string, callback: (element: Element) => void | Cleanup) =>
-      track(state, observe(selector, callback)),
+      render: (context: KlackMountContext) => Element,
+      options?: KlackMountOptions,
+    ) => cleanup(mount(state.plugin.name, target, render, options)),
   });
 
   return Object.freeze({
-    addStyle: (css: string, id?: string) => ui.addStyle(css, { id }),
+    cleanup,
+    dom: Object.freeze({
+      observe: (target: Node, callback: MutationCallback, options: MutationObserverInit) =>
+        cleanup(observeMutations(target, callback, options)),
+      watch: (
+        selector: string,
+        callback: (element: Element) => void | Cleanup,
+        options?: { attributes?: boolean | readonly string[] },
+      ) => cleanup(watchElements(selector, callback, options)),
+    }),
+    events: Object.freeze({ on }),
     logger: console,
-    observe: ui.observe,
+    timers: Object.freeze({
+      animationFrame,
+      interval: (callback: () => void, delay: number) => {
+        const timer = window.setInterval(() => {
+          try {
+            callback();
+          } catch (error) {
+            reportTimerError("Interval", error);
+          }
+        }, delay);
+        return cleanup(() => window.clearInterval(timer));
+      },
+      timeout,
+    }),
     ui,
     version: KLACK_VERSION,
   });
@@ -323,9 +529,7 @@ function start(name: string): void {
 
   try {
     state.started = true;
-    const setup = "setup" in state.plugin ? state.plugin.setup : state.plugin.start;
-    const cleanup = setup(createPluginApi(state));
-    if (typeof cleanup === "function") track(state, cleanup);
+    state.plugin.setup(createPluginApi(state));
     console.info(`[Klack] Started ${name}`);
   } catch (error) {
     cleanupResources(state);
@@ -345,14 +549,28 @@ function stop(name: string): void {
   }
 }
 
-function defaultPluginName(sourceName: string): string {
-  const filename = sourceName.split(/[\\/]/).pop() || "plugin";
-  const name = filename.replace(/\.js$/i, "").replace(/[^A-Za-z0-9_-]+/g, "-");
-  return name.replace(/^-+|-+$/g, "") || "plugin";
+function registerPlugin(plugin: unknown): void {
+  if (!plugin || typeof plugin !== "object") {
+    throw new TypeError("Klack plugins must be objects created with definePlugin()");
+  }
+
+  const candidate = plugin as Partial<KlackPlugin>;
+  if (typeof candidate.name !== "string" || typeof candidate.setup !== "function") {
+    throw new TypeError("Klack plugins need a name and setup(klack) function");
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(candidate.name)) {
+    throw new TypeError(`Invalid Klack plugin name: ${candidate.name}`);
+  }
+  if (states.has(candidate.name)) {
+    throw new Error(`Klack plugin already registered: ${candidate.name}`);
+  }
+
+  const definition = candidate as KlackPlugin;
+  states.set(definition.name, { plugin: definition, resources: new Set(), started: false });
+  start(definition.name);
 }
 
 const Klack: KlackGlobal = Object.freeze({
-  definePlugin,
   disable(name) {
     writeOverride(name, false);
     stop(name);
@@ -371,31 +589,8 @@ const Klack: KlackGlobal = Object.freeze({
       version: plugin.version,
     }));
   },
-  loadPlugin(sourceName, extension) {
-    if (typeof extension === "function") {
-      Klack.register({ name: defaultPluginName(sourceName), setup: extension as KlackExtension });
-      return;
-    }
-    if (!extension || typeof extension !== "object") return;
-
-    const candidate = extension as Partial<KlackPlugin & KlackLegacyPlugin>;
-    if (typeof candidate.setup !== "function" && typeof candidate.start !== "function") return;
-    Klack.register({ ...candidate, name: candidate.name || defaultPluginName(sourceName) } as KlackPluginDefinition);
-  },
-  register(plugin) {
-    const setup = plugin && ("setup" in plugin ? plugin.setup : plugin.start);
-    if (!plugin || typeof plugin.name !== "string" || typeof setup !== "function") {
-      throw new TypeError("Klack plugins need a name and setup(klack) function");
-    }
-    if (!/^[A-Za-z0-9_-]+$/.test(plugin.name)) {
-      throw new TypeError(`Invalid Klack plugin name: ${plugin.name}`);
-    }
-    if (states.has(plugin.name)) {
-      throw new Error(`Klack plugin already registered: ${plugin.name}`);
-    }
-
-    states.set(plugin.name, { plugin, resources: new Set(), started: false });
-    start(plugin.name);
+  loadPlugin(plugin) {
+    registerPlugin(plugin);
   },
   resetPlugins() {
     [...states.keys()].reverse().forEach(stop);

@@ -27,6 +27,7 @@
     "check": "tsc --noEmit",
     "klack": "node dist/cli.cjs",
     "package:release": "scripts/package-release.sh",
+    "site:dev": "python3 -m http.server 4173 --directory site",
     "test": "pnpm build && node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
