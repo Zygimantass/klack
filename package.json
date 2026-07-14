@@ -2,8 +2,16 @@
   "name": "klack",
   "version": "0.1.0",
   "description": "An experimental plugin loader for the Slack desktop app",
+  "license": "MIT",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "plugins",
+    "install.sh",
+    "LICENSE",
+    "README.md"
+  ],
   "bin": {
     "klack": "dist/cli.cjs"
   },
@@ -18,6 +26,7 @@
     "build": "node esbuild.mjs",
     "check": "tsc --noEmit",
     "klack": "node dist/cli.cjs",
+    "package:release": "scripts/package-release.sh",
     "test": "pnpm build && node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
