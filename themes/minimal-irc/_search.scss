@@ -18,6 +18,10 @@
   box-shadow: none !important;
 }
 
+#{selector("slack.search.view")} #{selector("slack.search.filters-container")} {
+  background: var(--minimal-irc-panel) !important;
+}
+
 #{selector("slack.search.view")}:has(> #{selector("slack.search.filters")}),
 #{selector("slack.search.view")} [role="listitem"] {
   color: var(--minimal-irc-text) !important;

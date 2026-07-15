@@ -698,6 +698,11 @@ export const THEME_SELECTORS = {
     cardinality: "zero-or-one",
     surface: "search",
   }),
+  "slack.search.filters-container": selector(
+    "Search filter toolbar background container.",
+    [candidate("#filters-container", "slack-data", "stable")],
+    { cardinality: "zero-or-one", surface: "search" },
+  ),
   "slack.search.sort": selector("Search result sort toggle.", [qa("message_sort_toggle-button")], {
     cardinality: "zero-or-one",
     surface: "search",

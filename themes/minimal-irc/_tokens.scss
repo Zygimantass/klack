@@ -2,15 +2,16 @@
 
 :root,
 #{selector("slack.app.root")} {
-  --minimal-irc-bg: #1b1f24;
-  --minimal-irc-panel: #171a1f;
-  --minimal-irc-raised: #252b32;
-  --minimal-irc-border: #343c45;
-  --minimal-irc-text: #d0d7de;
-  --minimal-irc-muted: #8b98a3;
-  --minimal-irc-accent: #76a7bd;
-  --minimal-irc-name: #8fc8c3;
-  --minimal-irc-unread: #f0f3f5;
+  /* Solarized Dark: base03/base02 surfaces, base0 text, blue/cyan accents. */
+  --minimal-irc-bg: #002b36;
+  --minimal-irc-panel: #073642;
+  --minimal-irc-raised: #0b4652;
+  --minimal-irc-border: rgba(88, 110, 117, 0.58);
+  --minimal-irc-text: #839496;
+  --minimal-irc-muted: #586e75;
+  --minimal-irc-accent: #268bd2;
+  --minimal-irc-name: #2aa198;
+  --minimal-irc-unread: #93a1a1;
   --minimal-irc-font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   --minimal-irc-text-size: 14px;
   --minimal-irc-ui-size: 13px;
