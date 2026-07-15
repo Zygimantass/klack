@@ -12,9 +12,20 @@
 }
 
 #{selector("slack.threads.view")} #{selector("slack.threads.card")} {
-  border-bottom: 0 !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  border-left: 3px solid var(--minimal-irc-accent) !important;
+  border-right: 1px solid var(--minimal-irc-border) !important;
   border-radius: 0 !important;
-  background: transparent !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.card")}.p-multi_thread_background--first {
+  border-top: 1px solid var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.card")}.p-multi_thread_background--last {
+  border-bottom: 1px solid var(--minimal-irc-border) !important;
 }
 
 #{selector("slack.threads.item")}:has(#{selector("slack.threads.group-header")}) {
@@ -29,9 +40,14 @@
   display: flex !important;
   align-items: baseline !important;
   gap: 8px !important;
-  margin: 8px 18px 4px !important;
+  box-sizing: border-box !important;
+  margin: 8px 10px 4px !important;
+  padding: 0 8px !important;
+  border-left: 3px solid var(--minimal-irc-accent) !important;
+  border-right: 1px solid var(--minimal-irc-border) !important;
   color: var(--minimal-irc-text) !important;
-  font: var(--minimal-irc-ui-size)/20px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+  background: var(--minimal-irc-raised) !important;
+  font: 700 var(--minimal-irc-ui-size)/20px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
 }
 
 #{selector("slack.threads.channel-name")} {
