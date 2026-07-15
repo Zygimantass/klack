@@ -496,6 +496,9 @@ export const THEME_SELECTORS = {
   "slack.file.meta": selector("Uploaded-file metadata.", [slackClass(".c-message_kit__file__meta")], {
     surface: "file",
   }),
+  "slack.file.snippet": selector("Expanded uploaded-file snippet.", [slackClass(".c-pillow_file__snippet")], {
+    surface: "file",
+  }),
 
   "slack.code.block": selector("Markdown code block.", [slackClass(".c-mrkdwn__pre")], {
     surface: "code",

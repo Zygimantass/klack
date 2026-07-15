@@ -377,6 +377,17 @@
   background: var(--minimal-irc-panel) !important;
 }
 
+/* CodeMirror renders uploaded snippets as one bare <pre> per source line.
+   Keep the block treatment above off those individual rows. */
+#{selector("slack.message.row")} #{selector("slack.file.snippet")} .CodeMirror pre {
+  width: auto !important;
+  max-width: none !important;
+  padding: 0 4px !important;
+  border: 0 !important;
+  color: inherit !important;
+  background: transparent !important;
+}
+
 #{selector("slack.message.row")} #{selector("slack.code.block")} pre :is(
   code,
   .line,
