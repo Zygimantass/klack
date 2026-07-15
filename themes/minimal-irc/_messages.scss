@@ -371,7 +371,16 @@
   margin: 0 !important;
   padding: 6px 8px !important;
   border: 1px solid var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-text) !important;
   background: var(--minimal-irc-panel) !important;
+}
+
+#{selector("slack.message.row")} #{selector("slack.code.block")} pre :is(
+  code,
+  .line,
+  .line > span:not(.line-number)
+) {
+  color: var(--minimal-irc-text) !important;
 }
 
 #{selector("slack.message.row")} pre #{selector("slack.code.line-number")} {
