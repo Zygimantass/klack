@@ -60,6 +60,7 @@
 
 #{selector("slack.message.row")} :is(
   .p-rich_text_section,
+  .p-rich_text_block,
   .c-message__body,
   .c-message_attachment__pretext,
   .c-message_attachment__text,
@@ -73,6 +74,7 @@
    without resetting semantic bold/italic weights. */
 #{selector("slack.message.row")} :is(
   .p-rich_text_section,
+  .p-rich_text_block,
   .c-message__body,
   .c-message_attachment__pretext,
   .c-message_attachment__text,
