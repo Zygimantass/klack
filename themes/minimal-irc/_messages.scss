@@ -85,7 +85,7 @@
 
 #{selector("klack.message.decorated")} #{selector("slack.message.indent")} {
   display: grid !important;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: 20ch minmax(0, 1fr);
   grid-template-rows: minmax(0, auto) !important;
   column-gap: 12px;
   align-items: start;
@@ -122,15 +122,17 @@
   grid-column: 1;
   grid-row: 1;
   width: auto;
+  min-width: 0;
   white-space: nowrap;
 }
 
 #{selector("klack.message.time")} {
-  flex: 0 0 auto;
+  flex: 0 0 8ch;
   color: #66737d;
 }
 
 #{selector("klack.message.sender")} {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   color: var(--minimal-irc-name);
