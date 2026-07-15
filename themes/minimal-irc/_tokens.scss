@@ -2,16 +2,16 @@
 
 :root,
 #{selector("slack.app.root")} {
-  /* Solarized Dark: base03/base02 surfaces, base0 text, blue/cyan accents. */
-  --minimal-irc-bg: #002b36;
-  --minimal-irc-panel: #073642;
-  --minimal-irc-raised: #0b4652;
-  --minimal-irc-border: rgba(88, 110, 117, 0.58);
-  --minimal-irc-text: #839496;
-  --minimal-irc-muted: #586e75;
-  --minimal-irc-accent: #268bd2;
-  --minimal-irc-name: #2aa198;
-  --minimal-irc-unread: #93a1a1;
+  /* Gruvbox Dark Hard, matching the active Ghostty theme. */
+  --minimal-irc-bg: #1d2021;
+  --minimal-irc-panel: #282828;
+  --minimal-irc-raised: #3c3836;
+  --minimal-irc-border: #504945;
+  --minimal-irc-text: #ebdbb2;
+  --minimal-irc-muted: #928374;
+  --minimal-irc-accent: #83a598;
+  --minimal-irc-name: #8ec07c;
+  --minimal-irc-unread: #fbf1c7;
   --minimal-irc-font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   --minimal-irc-text-size: 14px;
   --minimal-irc-ui-size: 13px;
