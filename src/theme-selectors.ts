@@ -403,6 +403,9 @@ export const THEME_SELECTORS = {
   "slack.message.day-divider": selector("Transcript day divider.", [slackClass(".c-message_list__day_divider")], {
     surface: "message",
   }),
+  "slack.message.day-divider-line": selector("Transcript day-divider rule.", [slackClass(".c-message_list__day_divider__line")], {
+    surface: "message",
+  }),
   "slack.message.day-divider-label": selector("Transcript day-divider label.", [slackClass(".c-message_list__day_divider__label")], {
     surface: "message",
   }),

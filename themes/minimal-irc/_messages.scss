@@ -440,13 +440,24 @@
 
 #{selector("slack.message.day-divider")},
 #{selector("slack.message.day-divider-label")} {
-  color: #74818b !important;
+  color: var(--minimal-irc-muted) !important;
   background: var(--minimal-irc-bg) !important;
   font: var(--minimal-irc-meta-size)/20px ui-monospace, "SFMono-Regular", Menlo, monospace !important;
 }
 
+#{selector("slack.message.day-divider-line")} {
+  border-top: 1px solid var(--minimal-irc-border) !important;
+}
+
 #{selector("slack.message.day-divider-pill")} {
+  height: 20px !important;
+  padding: 0 8px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
   border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-bg) !important;
+  box-shadow: none !important;
+  font: var(--minimal-irc-meta-size)/18px ui-monospace, "SFMono-Regular", Menlo, monospace !important;
 }
 
 #{selector("slack.message.unread-divider")} {
