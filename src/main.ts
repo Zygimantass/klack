@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  DIAGNOSTIC_CAPTURE_CHANNEL,
+  DIAGNOSTIC_COPY_CHANNEL,
   KLACK_VERSION,
   ORIGINAL_ASAR_NAME,
   PLUGIN_CHANNEL,
@@ -22,6 +24,7 @@ type BrowserWindowOptions = {
 };
 
 type WebContents = {
+  capturePage(): Promise<NativeImage>;
   closeDevTools(): void;
   isDestroyed(): boolean;
   isDevToolsOpened(): boolean;
@@ -32,6 +35,15 @@ type WebContents = {
 
 type BrowserWindowInstance = {
   webContents: WebContents;
+};
+
+type NativeImage = {
+  isEmpty(): boolean;
+  toDataURL(): string;
+};
+
+type IpcMainEvent = {
+  sender: WebContents;
 };
 
 type BrowserWindowConstructor = {
@@ -69,7 +81,14 @@ type ElectronModule = {
     setPath(name: "userData", path: string): void;
   };
   BrowserWindow: BrowserWindowConstructor;
+  clipboard: {
+    write(data: { image: NativeImage; text: string }): void;
+  };
   ipcMain: {
+    handle(
+      channel: string,
+      listener: (event: IpcMainEvent, payload?: unknown) => unknown | Promise<unknown>,
+    ): void;
     on(channel: string, listener: (event: { returnValue: unknown }) => void): void;
   };
   Menu: {
@@ -78,6 +97,9 @@ type ElectronModule = {
     setApplicationMenu(menu: Menu | null): void;
   };
   MenuItem: new (options: MenuItemOptions) => MenuItem;
+  nativeImage: {
+    createFromDataURL(dataUrl: string): NativeImage;
+  };
   [key: string]: unknown;
 };
 
@@ -162,12 +184,43 @@ if (!process.argv.includes("--klack-vanilla")) {
   let themes = readThemes(false) || [];
   const injectedWebContents = new Set<WebContents>();
 
+  const requireInjectedSender = (event: IpcMainEvent): WebContents => {
+    if (!injectedWebContents.has(event.sender) || event.sender.isDestroyed()) {
+      throw new Error("[Klack] Diagnostics are only available to injected Slack windows");
+    }
+    return event.sender;
+  };
+
   electron.ipcMain.on(PLUGIN_CHANNEL, (event) => {
     event.returnValue = {
       plugins,
       themes,
       version: KLACK_VERSION,
     };
+  });
+
+  electron.ipcMain.handle(DIAGNOSTIC_CAPTURE_CHANNEL, async (event) => {
+    const image = await requireInjectedSender(event).capturePage();
+    if (image.isEmpty()) throw new Error("[Klack] Slack returned an empty screenshot");
+    return image.toDataURL();
+  });
+
+  electron.ipcMain.handle(DIAGNOSTIC_COPY_CHANNEL, (event, received) => {
+    requireInjectedSender(event);
+    const payload = received as { imageDataUrl?: unknown; text?: unknown } | undefined;
+    if (typeof payload?.text !== "string" || typeof payload.imageDataUrl !== "string") {
+      throw new TypeError("[Klack] Invalid diagnostic clipboard payload");
+    }
+    if (payload.text.length > 100_000 || payload.imageDataUrl.length > 64 * 1024 * 1024) {
+      throw new RangeError("[Klack] Diagnostic clipboard payload is too large");
+    }
+    if (!payload.imageDataUrl.startsWith("data:image/png;base64,")) {
+      throw new TypeError("[Klack] Diagnostic screenshot must be a PNG data URL");
+    }
+
+    const image = electron.nativeImage.createFromDataURL(payload.imageDataUrl);
+    if (image.isEmpty()) throw new Error("[Klack] Could not decode the diagnostic screenshot");
+    electron.clipboard.write({ image, text: payload.text });
   });
 
   const OriginalBrowserWindow = electron.BrowserWindow;

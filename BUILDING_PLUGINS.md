@@ -307,6 +307,25 @@ Use `klack.cleanup()` for:
 - manually appended DOM nodes;
 - global state and subscriptions.
 
+## Diagnostic screenshots
+
+Trusted plugins can use `klack.diagnostics` to capture the current Slack
+window and copy a PNG plus a plain-text report to the system clipboard:
+
+```ts
+const screenshot = await klack.diagnostics.capturePage();
+await klack.diagnostics.copyReport({
+  imageDataUrl: screenshot,
+  text: "Description of the current UI state",
+});
+```
+
+`capturePage()` returns a PNG data URL for the calling Slack window only.
+`copyReport()` accepts PNG data URLs and writes both the image and text
+representations in one clipboard operation. Do not collect message bodies,
+composer contents, credentials, or other private data without an explicit user
+action and clear disclosure.
+
 Do not remove or overwrite a newer Slack-owned value during cleanup when the
 UI may have changed independently.
 

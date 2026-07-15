@@ -1,4 +1,10 @@
-import { PLUGIN_CHANNEL, PLUGIN_RELOAD_CHANNEL, THEME_RELOAD_CHANNEL } from "./constants";
+import {
+  DIAGNOSTIC_CAPTURE_CHANNEL,
+  DIAGNOSTIC_COPY_CHANNEL,
+  PLUGIN_CHANNEL,
+  PLUGIN_RELOAD_CHANNEL,
+  THEME_RELOAD_CHANNEL,
+} from "./constants";
 import { pluginEvaluationSource } from "./plugin-source";
 
 declare const __KLACK_RENDERER_SOURCE__: string;
@@ -21,6 +27,7 @@ type ElectronRendererModule = {
     exposeInMainWorld(name: string, value: unknown): void;
   };
   ipcRenderer: {
+    invoke(channel: string, payload?: unknown): Promise<unknown>;
     on(channel: string, listener: (_event: unknown, payload: unknown) => void): void;
     sendSync(channel: string): unknown;
   };
@@ -45,6 +52,14 @@ const payload = normalizePayload(ipcRenderer.sendSync(PLUGIN_CHANNEL));
 contextBridge.exposeInMainWorld(
   "KlackNative",
   Object.freeze({
+    async capturePage(): Promise<string> {
+      const result = await ipcRenderer.invoke(DIAGNOSTIC_CAPTURE_CHANNEL);
+      if (typeof result !== "string") throw new TypeError("Klack received an invalid screenshot");
+      return result;
+    },
+    async copyDiagnosticReport(report: { imageDataUrl: string; text: string }): Promise<void> {
+      await ipcRenderer.invoke(DIAGNOSTIC_COPY_CHANNEL, report);
+    },
     version: payload.version,
   }),
 );

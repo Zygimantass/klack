@@ -114,8 +114,14 @@ export type KlackSelectors = {
   probe(id: ThemeSelectorId, root?: ParentNode): KlackSelectorProbe;
 };
 
+export type KlackDiagnostics = {
+  capturePage(): Promise<string>;
+  copyReport(report: { imageDataUrl: string; text: string }): Promise<void>;
+};
+
 export type KlackApi = {
   cleanup(cleanup: Cleanup): Cleanup;
+  diagnostics: KlackDiagnostics;
   dom: KlackDom;
   events: KlackEvents;
   logger: Console;

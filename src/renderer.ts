@@ -65,6 +65,8 @@ declare global {
   interface Window {
     Klack?: KlackGlobal;
     KlackNative?: {
+      capturePage?(): Promise<string>;
+      copyDiagnosticReport?(report: { imageDataUrl: string; text: string }): Promise<void>;
       version?: string;
     };
   }
@@ -618,6 +620,20 @@ function createPluginApi(state: PluginState): KlackApi {
 
   return Object.freeze({
     cleanup,
+    diagnostics: Object.freeze({
+      capturePage: async () => {
+        if (!window.KlackNative?.capturePage) {
+          throw new Error("Klack screenshot capture is unavailable until Slack restarts");
+        }
+        return window.KlackNative.capturePage();
+      },
+      copyReport: async (report: { imageDataUrl: string; text: string }) => {
+        if (!window.KlackNative?.copyDiagnosticReport) {
+          throw new Error("Klack diagnostic clipboard access is unavailable until Slack restarts");
+        }
+        await window.KlackNative.copyDiagnosticReport(report);
+      },
+    }),
     dom: Object.freeze({
       observe: (target: Node, callback: MutationCallback, options: MutationObserverInit) =>
         cleanup(observeMutations(target, callback, options)),
