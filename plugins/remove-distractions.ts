@@ -5,15 +5,24 @@ export default definePlugin({
   description:
     "Removes agent features, channel tabs, and low-value channel header controls.",
   setup(klack) {
+    const channelTabs = klack.selectors.get("slack.channel-header.tabs");
+    const viewHeader = klack.selectors.get("slack.channel-header.root");
+    const channelNameControl = klack.selectors.get("slack.channel-header.title-control");
+    const contextBar = klack.selectors.get("slack.channel-header.context-bar");
+    const sharedContextText = klack.selectors.get("slack.channel-header.shared-context-text");
+    const dndContextText = klack.selectors.get("slack.channel-header.dnd-context-text");
+    const sharedContext = `${contextBar}:has(${sharedContextText})`;
     klack.ui.hide(
       [
         '[data-qa="ai-apps-menu-container"]',
         '[data-qa-channel-sidebar-section-heading="recent_apps"]',
-        '[data-qa="entity-header-star-button"]',
+        klack.selectors.get("slack.channel-header.favorite-action"),
         '[data-qa="search_in_channel_button"]',
         '[data-feat="view-header:notifications"]',
-        '[role="tablist"]:has([data-qa="channel"][role="tab"]):has([aria-label="Add and Edit Channel Tabs"])',
-        '[data-qa="context_bar"]:has([data-qa="context_bar_text_shared"])',
+        `${channelTabs}:has([aria-label="Add and Edit Channel Tabs"])`,
+        sharedContext,
+        `${contextBar}:has(${dndContextText})`,
+        klack.selectors.get("slack.channel-header.connected-info"),
         "[data-klack-hide-summarize-thread]",
         ':is(button, [role="button"])[aria-label*="summarize" i][aria-label*="thread" i]',
         ':is(button, [role="button"])[title*="summarize" i][title*="thread" i]',
@@ -33,9 +42,10 @@ export default definePlugin({
     );
 
     const buttonSelector = 'button, [role="button"]';
-    const externalOrgIconSelector =
-      '[data-qa="context_bar"]:has([data-qa="context_bar_text_shared"]) [data-qa="shared_channel_connection_info_icon"]';
-    const channelNameSelector = '[data-qa="view_header"] [data-qa="channel_name_button"]';
+    const externalOrgIconSelector = `${sharedContext} ${klack.selectors.get(
+      "slack.channel-header.shared-context-icon",
+    )}`;
+    const channelNameSelector = `${viewHeader} ${channelNameControl}`;
     let externalOrgIcons: HTMLElement | null = null;
     let cancelExternalOrgIconsFrame: (() => void) | null = null;
     let externalOrgIconsMarkup = "";

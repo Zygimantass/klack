@@ -1,0 +1,186 @@
+@use "theme-selectors" as *;
+
+#{selector("klack.plugin-manager.trigger")} {
+  height: 22px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font: var(--minimal-irc-ui-size)/22px ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+#{selector("klack.plugin-manager.dialog")} {
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45) !important;
+  font: var(--minimal-irc-ui-size)/var(--minimal-irc-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("klack.plugin-manager.header")} {
+  padding: 12px 16px 8px !important;
+}
+
+#{selector("klack.plugin-manager.tabs")} {
+  gap: 0 !important;
+  padding: 0 16px 10px !important;
+  border-bottom: 1px solid var(--minimal-irc-border) !important;
+}
+
+#{selector("klack.plugin-manager.tab")} {
+  min-height: var(--minimal-irc-control-height) !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: var(--minimal-irc-ui-size)/var(--minimal-irc-ui-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("klack.plugin-manager.tab")}[aria-selected="true"] {
+  color: var(--minimal-irc-unread) !important;
+  background: var(--minimal-irc-bg) !important;
+  box-shadow: inset 0 -1px 0 var(--minimal-irc-accent) !important;
+}
+
+#{selector("klack.plugin-manager.tab")}:focus-visible {
+  border-color: var(--minimal-irc-accent) !important;
+  outline: 1px solid var(--minimal-irc-accent) !important;
+  outline-offset: -2px !important;
+}
+
+#{selector("klack.plugin-manager.heading")} {
+  color: var(--minimal-irc-unread) !important;
+  font: 700 16px/24px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("klack.plugin-manager.subtitle")},
+#{selector("klack.plugin-manager.description")},
+#{selector("klack.plugin-manager.path")} {
+  color: var(--minimal-irc-muted) !important;
+  font-family: inherit !important;
+}
+
+#{selector("klack.plugin-manager.close")} {
+  width: var(--minimal-irc-control-height) !important;
+  height: var(--minimal-irc-control-height) !important;
+  margin: -2px -4px 0 8px !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  font: 400 20px/1 ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+#{selector("klack.plugin-manager.toolbar")} {
+  padding: 0 16px 10px !important;
+}
+
+#{selector("klack.plugin-manager.search-wrap")} {
+  height: var(--minimal-irc-control-height) !important;
+  padding: 0 8px !important;
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  background: var(--minimal-irc-bg) !important;
+  box-shadow: none !important;
+}
+
+#{selector("klack.plugin-manager.search-wrap")}:focus-within {
+  border-color: var(--minimal-irc-accent) !important;
+  box-shadow: inset 2px 0 0 var(--minimal-irc-accent) !important;
+}
+
+#{selector("klack.plugin-manager.search")} {
+  height: 26px !important;
+  color: var(--minimal-irc-text) !important;
+  font: var(--minimal-irc-ui-size)/26px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("klack.plugin-manager.dialog")} :is(
+  input,
+  button,
+  #{selector("klack.plugin-manager.row")}
+) {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  font-family: inherit !important;
+}
+
+#{selector("klack.plugin-manager.dialog")} input {
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-bg) !important;
+  box-shadow: none !important;
+}
+
+#{selector("klack.plugin-manager.dialog")} #{selector("klack.plugin-manager.row")} {
+  grid-template-columns: 28px minmax(0, 1fr) auto !important;
+  gap: 8px !important;
+  min-height: 50px !important;
+  padding: 6px 16px !important;
+  border-color: var(--minimal-irc-border) !important;
+  background: transparent !important;
+}
+
+#{selector("klack.plugin-manager.icon")} {
+  width: 26px !important;
+  height: 26px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-accent) !important;
+  background: var(--minimal-irc-raised) !important;
+  font: 700 var(--minimal-irc-meta-size)/24px ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+#{selector("klack.plugin-manager.name")} {
+  color: var(--minimal-irc-text) !important;
+  font: 700 var(--minimal-irc-ui-size)/var(--minimal-irc-ui-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("klack.plugin-manager.status")} {
+  color: var(--minimal-irc-muted) !important;
+  font: 700 var(--minimal-irc-meta-size)/var(--minimal-irc-meta-line-height) ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+#{selector("klack.plugin-manager.status")}.is-enabled {
+  color: var(--minimal-irc-accent) !important;
+}
+
+#{selector("klack.plugin-manager.switch")} {
+  width: 32px !important;
+  height: 18px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("klack.plugin-manager.switch")}[aria-checked="true"] {
+  border-color: var(--minimal-irc-accent) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("klack.plugin-manager.switch")}::after {
+  top: 2px !important;
+  left: 2px !important;
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 0 !important;
+  background: var(--minimal-irc-muted) !important;
+  box-shadow: none !important;
+}
+
+#{selector("klack.plugin-manager.switch")}[aria-checked="true"]::after {
+  background: var(--minimal-irc-accent) !important;
+  transform: translateX(14px) !important;
+}
+
+#{selector("klack.plugin-manager.footer")} {
+  padding: 10px 16px !important;
+}
+
+#{selector("klack.plugin-manager.done")} {
+  height: var(--minimal-irc-control-height) !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--minimal-irc-accent) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-unread) !important;
+  background: var(--minimal-irc-raised) !important;
+  font: 700 var(--minimal-irc-ui-size)/26px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}

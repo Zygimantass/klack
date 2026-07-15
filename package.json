@@ -6,6 +6,8 @@
   "private": true,
   "type": "module",
   "files": [
+    "BUILDING_PLUGINS.md",
+    "BUILDING_THEMES.md",
     "dist",
     "plugins",
     "install.sh",
@@ -23,7 +25,7 @@
     }
   },
   "scripts": {
-    "build": "node esbuild.mjs",
+    "build": "node esbuild.mjs && tsx scripts/build-themes.ts",
     "check": "tsc --noEmit",
     "klack": "node dist/cli.cjs",
     "package:release": "scripts/package-release.sh",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "sass": "^1.89.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   },

@@ -23,7 +23,9 @@ The MVP supports:
 - injection without disabling Slack's renderer sandbox;
 - typed plugin definitions with automatically scoped UI contributions;
 - plugin enablement overrides stored in the renderer's local storage;
-- a built-in plugin manager;
+- first-class local CSS themes with isolated hot reload;
+- a shared, typed Slack selector compatibility registry;
+- a built-in manager for plugins and themes;
 - resilient buttons, custom DOM mounts, styles, events, timers, and DOM watchers;
 - `--klack-vanilla` for starting through the bootstrap without injection.
 
@@ -126,9 +128,10 @@ Klack follows Pi's extension model: a plugin default-exports one typed
 provided API belongs to that plugin. Disabling the plugin automatically removes
 its UI, DOM watchers, listeners, and timers.
 
-See [BUILDING_PLUGINS.md](BUILDING_PLUGINS.md) for plugin patterns, selector
-guidance, lifecycle rules, performance constraints, and a verification
-checklist.
+See [BUILDING_PLUGINS.md](BUILDING_PLUGINS.md) for plugin patterns, lifecycle
+rules, performance constraints, and a verification checklist. Plugins can use
+`klack.selectors.get()` and `klack.selectors.probe()` instead of duplicating
+shared Slack selectors.
 
 At startup, Klack loads its built-in plugins and then scans
 `~/.klack/plugins/*.{ts,tsx,js,jsx}`. TypeScript and JavaScript modules are
@@ -211,10 +214,24 @@ Buttons and custom mounts support `append` (default), `prepend`, `before`, and
 `after`. Klack watches Slack's React-managed DOM and recreates a contribution if
 Slack replaces either its target or the contribution itself.
 
-Klack's built-in **PluginManager** adds a **Plugins** button to Slack's top bar.
+Klack's built-in **PluginManager** adds a **Klack** button to Slack's top bar.
 It provides searchable, persistent enable/disable controls for built-in and
-user plugins. The manager itself stays enabled so the controls remain
-accessible.
+user plugins and themes. The manager itself stays enabled so the controls
+remain accessible.
+
+## Themes
+
+Klack discovers `~/.klack/themes/**/*.theme.css` at startup. Themes have their
+own enablement and hot-reload lifecycle: saving CSS updates its style element
+without restarting plugins or their observers. Theme entries may import local
+CSS partials from the same directory; remote and escaping imports are rejected.
+
+The built-in **Minimal IRC** theme is split into surface-owned SCSS modules and
+compiled from Klack's typed selector registry. The same registry generates a
+runtime probe manifest and powers the plugin SDK's selector helper.
+
+See [BUILDING_THEMES.md](BUILDING_THEMES.md) for metadata, modular CSS, selector
+compatibility, companion plugins, and the live verification checklist.
 
 From Slack DevTools:
 
@@ -242,7 +259,7 @@ you have not reviewed.
    `BrowserWindow`.
 4. Windows using Slack's primary `preload.bundle.js` receive a generated
    preload containing Klack followed by Slack's exact original preload.
-5. Klack's preload injects the renderer and local plugins before Slack finishes
-   loading.
+5. Klack's preload injects the renderer, applies enabled local themes, and then
+   starts local plugins before Slack finishes loading.
 
 Slack's `sandbox: true` and `contextIsolation: true` settings remain unchanged.

@@ -1,0 +1,77 @@
+@use "theme-selectors" as *;
+
+/* Composer completions are presentation popovers, not menus or dialogs. */
+#{selector("slack.autocomplete.root")},
+#{selector("slack.autocomplete.body")},
+#{selector("slack.autocomplete.results")} {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: none !important;
+  font: var(--minimal-irc-ui-size)/var(--minimal-irc-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.autocomplete.root")} {
+  overflow: hidden !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+#{selector("slack.autocomplete.result")} {
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: transparent !important;
+  font-family: inherit !important;
+}
+
+#{selector("slack.autocomplete.result")} :is(
+  #{selector("slack.entity.text")},
+  #{selector("slack.autocomplete.secondary-name")},
+  #{selector("slack.autocomplete.current-status")}
+) {
+  color: var(--minimal-irc-muted) !important;
+  font-family: inherit !important;
+}
+
+#{selector("slack.autocomplete.result")} :is(
+  #{selector("slack.autocomplete.member-name")},
+  #{selector("slack.autocomplete.member-name")}
+) {
+  color: var(--minimal-irc-text) !important;
+}
+
+#{selector("slack.autocomplete.result")}:is(
+  #{selector("slack.autocomplete.result-selected")},
+  :hover
+) {
+  color: var(--minimal-irc-unread) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("slack.autocomplete.root")} #{selector("slack.keyboard.key")} {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-bg) !important;
+  box-shadow: none !important;
+  font-family: inherit !important;
+}
+
+#{selector("slack.emoji-picker.root")},
+#{selector("slack.emoji-picker.content")},
+#{selector("slack.emoji-picker.footer")} {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+}
+
+#{selector("slack.emoji-picker.root")} :is(input, #{selector("slack.control.text-input")}, #{selector("slack.control.outline-button")}) {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-raised) !important;
+  box-shadow: none !important;
+  font: var(--minimal-irc-ui-size)/20px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}

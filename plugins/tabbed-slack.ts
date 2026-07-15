@@ -244,6 +244,7 @@ export default definePlugin({
   name: "TabbedSlack",
   description: "Adds in-app tabs for Slack links and replaces message previews with hover text.",
   setup(klack) {
+    const attachmentCollectionSelector = klack.selectors.get("slack.attachment.collection");
     klack.ui.addStyle(
       `
         [data-tabbed-slack-strip] {
@@ -476,7 +477,7 @@ export default definePlugin({
     }
 
     klack.ui.mount(
-      ".p-view_contents--primary",
+      klack.selectors.get("slack.workspace.primary-pane"),
       ({ cleanup }) => {
         const strip = document.createElement("div");
         strip.dataset.tabbedSlackStrip = "";
@@ -506,7 +507,7 @@ export default definePlugin({
       const previews = Array.from(container.querySelectorAll(SLACK_MESSAGE_PREVIEW));
 
       previews.forEach((preview) => {
-        const previewContainer = preview.closest(".c-message_kit__attachments") || preview;
+        const previewContainer = preview.closest(attachmentCollectionSelector) || preview;
         previewContainer.setAttribute("data-tabbed-slack-hidden-preview", "");
         hiddenPreviews.add(previewContainer);
       });

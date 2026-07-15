@@ -1,0 +1,66 @@
+@use "theme-selectors" as *;
+
+/* A narrow title/search line keeps window dragging and search available. */
+#{selector("slack.top-nav.root")} {
+  min-height: 30px !important;
+  height: 30px !important;
+  border-bottom: 1px solid var(--minimal-irc-border) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: none !important;
+}
+
+#{selector("slack.top-nav.search-container")} {
+  width: min(420px, 46vw) !important;
+  max-width: 420px !important;
+}
+
+#{selector("slack.top-nav.search-trigger")} {
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  box-shadow: none !important;
+  font-family: var(--minimal-irc-font-family) !important;
+  font-size: var(--minimal-irc-ui-size) !important;
+  line-height: 20px !important;
+  opacity: 1 !important;
+}
+
+#{selector("slack.top-nav.search-icon")} {
+  width: 14px !important;
+  height: 14px !important;
+  flex: 0 0 14px !important;
+}
+
+#{selector("slack.top-nav.search-text")} {
+  min-width: 0 !important;
+  padding: 0 !important;
+  line-height: 20px !important;
+}
+
+#{selector("slack.top-nav.search-trigger")}:hover {
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("slack.top-nav.workspace-name")} {
+  color: var(--minimal-irc-text) !important;
+  font-size: var(--minimal-irc-ui-size) !important;
+  line-height: var(--minimal-irc-line-height) !important;
+}
+
+#{selector("slack.top-nav.workspace-actions")},
+#{selector("slack.channel-header.title-control")},
+#{selector("slack.channel-header.huddle-action")} {
+  border-radius: 0 !important;
+}
+
+[style*="width: 40px"]:has([data-qa="move-to-split-view"]) {
+  border-left: 1px solid var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-panel) !important;
+}

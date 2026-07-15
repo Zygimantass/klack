@@ -1,0 +1,43 @@
+@use "theme-selectors" as *;
+
+/* TabbedSlack becomes a plain IRC-style buffer list. */
+#{selector("klack.tabbed-slack.strip")} {
+  flex-basis: 26px !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  height: 26px !important;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--minimal-irc-border) !important;
+  background: var(--minimal-irc-panel) !important;
+}
+
+#{selector("klack.tabbed-slack.tab")} {
+  min-width: 90px !important;
+  max-width: 190px !important;
+  height: 25px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#{selector("klack.tabbed-slack.tab")}[data-active="true"] {
+  color: var(--minimal-irc-unread) !important;
+  background: var(--minimal-irc-bg) !important;
+  box-shadow: inset 0 -1px 0 var(--minimal-irc-accent) !important;
+}
+
+#{selector("klack.tabbed-slack.tab-link")} {
+  padding: 4px 6px 3px 9px !important;
+  font: var(--minimal-irc-ui-size)/18px ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+#{selector("klack.tabbed-slack.close")} {
+  width: 20px !important;
+  height: 20px !important;
+  margin: 2px !important;
+  border-radius: 0 !important;
+  font-size: 14px !important;
+}

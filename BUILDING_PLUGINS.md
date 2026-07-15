@@ -235,6 +235,29 @@ Avoid CSS-module names with generated suffixes:
 [data-qa="ai-apps-menu-container"]
 ```
 
+Before copying a Slack selector into a plugin, check Klack's shared semantic
+registry. It keeps preferred selectors and compatibility fallbacks in one
+place:
+
+```ts
+const message = klack.selectors.get("slack.message.row");
+klack.dom.watch(message, initializeMessage);
+```
+
+During Slack updates, use `probe()` to see which candidate currently wins:
+
+```ts
+klack.logger.table([
+  klack.selectors.probe("slack.message.row"),
+  klack.selectors.probe("slack.composer.input"),
+]);
+```
+
+Keep behavior predicates local even when their element identity is shared. A
+plugin should still perform its own URL validation, text matching, or
+feature-specific `:has()` composition rather than adding those predicates to
+the registry.
+
 Keep selectors as narrow as the feature. For example, a plugin that changes
 linked Slack messages should scope links beneath `[data-qa="message-text"]`
 and exclude timestamps and attachment-footer links. Broad click interception
@@ -283,6 +306,23 @@ Use `klack.cleanup()` for:
 - direct attributes, classes, and inline styles;
 - manually appended DOM nodes;
 - global state and subscriptions.
+
+## Diagnostic screenshots
+
+Trusted plugins can use `klack.diagnostics` to capture the current Slack
+window and copy a PNG to the system clipboard:
+
+```ts
+const screenshot = await klack.diagnostics.capturePage();
+await klack.diagnostics.copyImage(screenshot);
+```
+
+`capturePage()` returns a PNG data URL for the calling Slack window only.
+`copyImage()` accepts PNG data URLs and writes an image-only clipboard entry so
+chat and issue-tracking clients paste the screenshot instead of preferring a
+plain-text representation. Do not collect message bodies, composer contents,
+credentials, or other private data without an explicit user action and clear
+disclosure.
 
 Do not remove or overwrite a newer Slack-owned value during cleanup when the
 UI may have changed independently.

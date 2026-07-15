@@ -1,0 +1,96 @@
+@use "theme-selectors" as *;
+
+/* The composer is a single terminal prompt; Enter still sends. */
+#{selector("slack.workspace.primary-footer")},
+#{selector("slack.composer.container")},
+.p-flexpane .p-workspace__input,
+.p-threads_view .p-threads_view__footer {
+  border-top: 1px solid var(--minimal-irc-border) !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.composer.container")} {
+  padding: 0 !important;
+  border-top: 0 !important;
+}
+
+#{selector("slack.workspace.primary-footer")} {
+  margin: 0 !important;
+}
+
+#{selector("slack.composer.inner")} {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+#{selector("slack.composer.inner")} #{selector("slack.composer.notification")} {
+  min-height: var(--minimal-irc-ui-line-height) !important;
+  padding: 1px 8px !important;
+  border: 0 !important;
+  border-top: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-panel) !important;
+  font: var(--minimal-irc-meta-size)/var(--minimal-irc-meta-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.composer.notification")}:has(.p-notification_bar__formatting) {
+  display: none !important;
+}
+
+#{selector("slack.composer.page")} .p-composer_page__footer {
+  margin: 0 20px !important;
+  border-top: 1px solid var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.editor-shell")} {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.editor-shell")} :is(
+  #{selector("slack.composer.formatting-toolbar")},
+  #{selector("slack.composer.actions-toolbar")}
+) {
+  display: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.input-shell")} {
+  position: relative;
+  min-height: var(--minimal-irc-ui-line-height) !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.input-shell")}::before {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  color: var(--minimal-irc-accent);
+  content: ">";
+  font: 700 var(--minimal-irc-text-size)/var(--minimal-irc-ui-line-height) ui-monospace, "SFMono-Regular", Menlo, monospace;
+  pointer-events: none;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.input")} {
+  min-height: var(--minimal-irc-ui-line-height) !important;
+  padding: 0 0 0 10px !important;
+  color: var(--minimal-irc-unread) !important;
+  caret-color: var(--minimal-irc-accent) !important;
+  font: var(--minimal-irc-text-size)/var(--minimal-irc-ui-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.placeholder")} {
+  top: 0 !important;
+  left: 10px !important;
+  right: 0 !important;
+  bottom: auto !important;
+  color: #74818b !important;
+  font: var(--minimal-irc-text-size)/var(--minimal-irc-ui-line-height) ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+.c-scrollbar__hider::-webkit-scrollbar,
+.c-virtual_list::-webkit-scrollbar {
+  width: 7px !important;
+}

@@ -8,9 +8,11 @@ import {
   type KlackMountOptions,
   type KlackOn,
   type KlackPlugin,
+  type KlackSelectors,
   type KlackUiPosition,
   type KlackUiTarget,
 } from "./sdk";
+import { THEME_SELECTORS, selectorFor, type ThemeSelectorId } from "./theme-selectors";
 
 type PluginState = {
   plugin: KlackPlugin;
@@ -18,10 +20,26 @@ type PluginState = {
   started: boolean;
 };
 
+type ThemeDefinition = {
+  css: string;
+  description?: string;
+  id: string;
+  name: string;
+  version?: string;
+};
+
+type ThemeState = {
+  definition: ThemeDefinition;
+  style?: HTMLStyleElement;
+};
+
 type KlackGlobal = {
   disable(name: string): void;
+  disableTheme(id: string): void;
   enable(name: string): void;
+  enableTheme(id: string): void;
   isEnabled(name: string): boolean;
+  isThemeEnabled(id: string): boolean;
   list(): Array<{
     description?: string;
     enabled: boolean;
@@ -29,8 +47,17 @@ type KlackGlobal = {
     started: boolean;
     version?: string;
   }>;
+  listThemes(): Array<{
+    description?: string;
+    enabled: boolean;
+    id: string;
+    name: string;
+    version?: string;
+  }>;
   loadPlugin(plugin: unknown): void;
+  loadThemes(themes: unknown): void;
   resetPlugins(): void;
+  selectors: KlackSelectors;
   version: string;
 };
 
@@ -38,27 +65,31 @@ declare global {
   interface Window {
     Klack?: KlackGlobal;
     KlackNative?: {
+      capturePage?(): Promise<string>;
+      copyDiagnosticImage?(imageDataUrl: string): Promise<void>;
       version?: string;
     };
   }
 }
 
 const SETTINGS_KEY = "klack:plugin-overrides";
+const THEME_SETTINGS_KEY = "klack:theme-overrides";
 const states = new Map<string, PluginState>();
+const themeStates = new Map<string, ThemeState>();
 let ready = document.readyState !== "loading";
 
-function readOverrides(): Record<string, boolean> {
+function readOverrides(key = SETTINGS_KEY): Record<string, boolean> {
   try {
-    return JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") as Record<string, boolean>;
+    return JSON.parse(localStorage.getItem(key) || "{}") as Record<string, boolean>;
   } catch {
     return {};
   }
 }
 
-function writeOverride(name: string, enabled: boolean): void {
-  const overrides = readOverrides();
+function writeOverride(name: string, enabled: boolean, key = SETTINGS_KEY): void {
+  const overrides = readOverrides(key);
   overrides[name] = enabled;
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(overrides));
+  localStorage.setItem(key, JSON.stringify(overrides));
 }
 
 function isEnabled(name: string): boolean {
@@ -67,6 +98,11 @@ function isEnabled(name: string): boolean {
 
   const override = readOverrides()[name];
   return typeof override === "boolean" ? override : state.plugin.defaultEnabled !== false;
+}
+
+function isThemeEnabled(id: string): boolean {
+  if (!themeStates.has(id)) return false;
+  return readOverrides(THEME_SETTINGS_KEY)[id] === true;
 }
 
 function track(state: PluginState, cleanup: Cleanup): Cleanup {
@@ -111,6 +147,97 @@ function hide(plugin: string, selectors: string | readonly string[], id?: string
     id,
   );
 }
+
+function setThemeStyle(state: ThemeState): void {
+  if (!isThemeEnabled(state.definition.id)) {
+    state.style?.remove();
+    state.style = undefined;
+    return;
+  }
+
+  const style = state.style || document.createElement("style");
+  style.dataset.klackTheme = state.definition.id;
+  style.textContent = state.definition.css;
+  (document.head || document.documentElement).append(style);
+  state.style = style;
+}
+
+function notifyThemesChanged(): void {
+  document.dispatchEvent(new Event("klack:themes-changed"));
+}
+
+function themeDefinition(value: unknown): ThemeDefinition {
+  if (!value || typeof value !== "object") throw new TypeError("Klack themes must be objects");
+  const candidate = value as Partial<ThemeDefinition>;
+  if (
+    typeof candidate.id !== "string" ||
+    !/^[A-Za-z0-9_-]+$/.test(candidate.id) ||
+    typeof candidate.name !== "string" ||
+    typeof candidate.css !== "string"
+  ) {
+    throw new TypeError("Klack themes need a valid id, name, and CSS source");
+  }
+  return candidate as ThemeDefinition;
+}
+
+function replaceThemes(value: unknown): void {
+  if (!Array.isArray(value)) throw new TypeError("Klack.loadThemes() expects an array");
+
+  const definitions = value.map(themeDefinition);
+  const ids = new Set<string>();
+  for (const definition of definitions) {
+    if (ids.has(definition.id)) throw new Error(`Duplicate Klack theme id: ${definition.id}`);
+    ids.add(definition.id);
+  }
+
+  for (const [id, state] of themeStates) {
+    if (!ids.has(id)) state.style?.remove();
+  }
+
+  const nextStates = new Map<string, ThemeState>();
+  for (const definition of definitions) {
+    const previous = themeStates.get(definition.id);
+    nextStates.set(definition.id, { definition, style: previous?.style });
+  }
+  themeStates.clear();
+  nextStates.forEach((state, id) => themeStates.set(id, state));
+  themeStates.forEach(setThemeStyle);
+  notifyThemesChanged();
+}
+
+function selectorDefinition(id: ThemeSelectorId) {
+  const definition = THEME_SELECTORS[id];
+  if (!definition) throw new TypeError(`Unknown Klack theme selector: ${id}`);
+  return definition;
+}
+
+const selectors: KlackSelectors = Object.freeze({
+  candidates(id) {
+    return selectorDefinition(id).candidates.map(({ selector }) => selector);
+  },
+  get(id) {
+    selectorDefinition(id);
+    return selectorFor(id);
+  },
+  probe(id, root = document) {
+    const definition = selectorDefinition(id);
+    for (let index = 0; index < definition.candidates.length; index += 1) {
+      const candidate = definition.candidates[index];
+      let matchCount = root.querySelectorAll(candidate.selector).length;
+      if (root instanceof Element && root.matches(candidate.selector)) matchCount += 1;
+      if (matchCount > 0) {
+        return {
+          candidate: candidate.selector,
+          candidateIndex: index,
+          id,
+          matchCount,
+          stability: candidate.stability,
+        };
+      }
+    }
+    return { candidateIndex: -1, id, matchCount: 0 };
+  },
+});
 
 function resolveTargets(target: KlackUiTarget): Element[] {
   if (typeof target === "string") return Array.from(document.querySelectorAll(target));
@@ -332,8 +459,18 @@ function mount(
         },
         isActive: () => {
           if (!element.isConnected) return false;
-          if (options.position === "before") return element.nextElementSibling === targetElement;
-          if (options.position === "after") return element.previousElementSibling === targetElement;
+          if (options.position === "before") {
+            return (
+              element.parentElement === targetElement.parentElement &&
+              !!(element.compareDocumentPosition(targetElement) & Node.DOCUMENT_POSITION_FOLLOWING)
+            );
+          }
+          if (options.position === "after") {
+            return (
+              element.parentElement === targetElement.parentElement &&
+              !!(targetElement.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+            );
+          }
           return element.parentElement === targetElement;
         },
       };
@@ -493,6 +630,20 @@ function createPluginApi(state: PluginState): KlackApi {
 
   return Object.freeze({
     cleanup,
+    diagnostics: Object.freeze({
+      capturePage: async () => {
+        if (!window.KlackNative?.capturePage) {
+          throw new Error("Klack screenshot capture is unavailable until Slack restarts");
+        }
+        return window.KlackNative.capturePage();
+      },
+      copyImage: async (imageDataUrl: string) => {
+        if (!window.KlackNative?.copyDiagnosticImage) {
+          throw new Error("Klack diagnostic clipboard access is unavailable until Slack restarts");
+        }
+        await window.KlackNative.copyDiagnosticImage(imageDataUrl);
+      },
+    }),
     dom: Object.freeze({
       observe: (target: Node, callback: MutationCallback, options: MutationObserverInit) =>
         cleanup(observeMutations(target, callback, options)),
@@ -504,6 +655,7 @@ function createPluginApi(state: PluginState): KlackApi {
     }),
     events: Object.freeze({ on }),
     logger: console,
+    selectors,
     timers: Object.freeze({
       animationFrame,
       interval: (callback: () => void, delay: number) => {
@@ -575,11 +727,26 @@ const Klack: KlackGlobal = Object.freeze({
     writeOverride(name, false);
     stop(name);
   },
+  disableTheme(id) {
+    const state = themeStates.get(id);
+    if (!state) return;
+    writeOverride(id, false, THEME_SETTINGS_KEY);
+    setThemeStyle(state);
+    notifyThemesChanged();
+  },
   enable(name) {
     writeOverride(name, true);
     start(name);
   },
+  enableTheme(id) {
+    const state = themeStates.get(id);
+    if (!state) return;
+    writeOverride(id, true, THEME_SETTINGS_KEY);
+    setThemeStyle(state);
+    notifyThemesChanged();
+  },
   isEnabled,
+  isThemeEnabled,
   list() {
     return [...states.values()].map(({ plugin, started }) => ({
       description: plugin.description,
@@ -589,13 +756,26 @@ const Klack: KlackGlobal = Object.freeze({
       version: plugin.version,
     }));
   },
+  listThemes() {
+    return [...themeStates.values()].map(({ definition }) => ({
+      description: definition.description,
+      enabled: isThemeEnabled(definition.id),
+      id: definition.id,
+      name: definition.name,
+      version: definition.version,
+    }));
+  },
   loadPlugin(plugin) {
     registerPlugin(plugin);
+  },
+  loadThemes(themes) {
+    replaceThemes(themes);
   },
   resetPlugins() {
     [...states.keys()].reverse().forEach(stop);
     states.clear();
   },
+  selectors,
   version: KLACK_VERSION,
 });
 

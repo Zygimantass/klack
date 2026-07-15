@@ -10,6 +10,9 @@ every installation reversible.
 Read [BUILDING_PLUGINS.md](BUILDING_PLUGINS.md) before creating or changing a
 plugin.
 
+Read [BUILDING_THEMES.md](BUILDING_THEMES.md) before creating or changing a
+theme or the shared selector registry.
+
 ## Source layout
 
 - `src/installer.ts` owns ASAR backup, integrity metadata, signing, install,
@@ -22,6 +25,10 @@ plugin.
   UI helpers.
 - `src/sdk.ts` is the public typed plugin API.
 - `src/plugins.ts` discovers and compiles plugin source files.
+- `src/themes.ts` discovers CSS themes and inlines their local modules.
+- `src/theme-selectors.ts` is the typed selector compatibility source of truth.
+- `themes/` contains modular built-in theme source; `scripts/build-themes.ts`
+  validates selectors and compiles distributable theme CSS.
 - `plugins/` contains built-in plugins. User plugins live in
   `~/.klack/plugins/` and are not part of this repository.
 - `dist/` and `runtime/preload.bundle.js` are generated artifacts. Change their

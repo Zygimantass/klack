@@ -1,0 +1,187 @@
+@use "theme-selectors" as *;
+
+#{selector("slack.threads.view")},
+#{selector("slack.threads.view")} #{selector("slack.message.scroll")} {
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.threads.item")} {
+  border-bottom: 0 !important;
+  background: var(--minimal-irc-panel) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.card")} {
+  box-sizing: border-box !important;
+  border: 0 !important;
+  border-left: 3px solid var(--minimal-irc-accent) !important;
+  border-right: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.card")}.p-multi_thread_background--first {
+  border-top: 1px solid var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.card")}.p-multi_thread_background--last {
+  border-bottom: 1px solid var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.threads.item")}:has(#{selector("slack.threads.group-header")}) {
+  border-top: 1px solid var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.inner-root")} {
+  border-color: var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.threads.group-header")} {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
+  margin: 8px 10px 4px !important;
+  padding: 0 8px !important;
+  border-left: 3px solid var(--minimal-irc-accent) !important;
+  border-right: 1px solid var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-raised) !important;
+  font: 700 var(--minimal-irc-ui-size)/20px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.threads.channel-name")} {
+  color: var(--minimal-irc-accent) !important;
+  font: inherit !important;
+}
+
+#{selector("slack.threads.participants")} {
+  display: inline !important;
+  margin-left: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  font: var(--minimal-irc-meta-size)/18px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.threads.view")} #{selector("klack.message.decorated")} :is(
+  .c-message_kit__hover,
+  .c-message_kit__actions,
+  #{selector("slack.message.gutter")},
+  #{selector("slack.message.gutter-right")},
+  #{selector("slack.message.indent")}
+) {
+  height: auto !important;
+  min-height: var(--minimal-irc-line-height) !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.card")} {
+  margin-inline: 10px !important;
+}
+
+#{selector("slack.threads.divider-line")} {
+  border-color: var(--minimal-irc-border) !important;
+}
+
+#{selector("slack.threads.divider-label")} {
+  padding: 1px 8px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-panel) !important;
+  font: var(--minimal-irc-meta-size)/18px ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.load-older")} {
+  min-height: 24px !important;
+  height: 24px !important;
+  border: 0 !important;
+  color: var(--minimal-irc-accent) !important;
+  background: transparent !important;
+  font: var(--minimal-irc-meta-size)/22px ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.broadcast-checkbox")} {
+  display: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.broadcast-controls")} {
+  display: none !important;
+}
+
+#{selector("slack.threads.view")} :is(
+  #{selector("slack.threads.inner-root")},
+  #{selector("slack.threads.footer")},
+  #{selector("slack.threads.card")},
+  #{selector("slack.composer.editor-shell")}
+) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.footer")} {
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  border-color: var(--minimal-irc-border) !important;
+  background: var(--minimal-irc-panel) !important;
+}
+
+#{selector("slack.threads.footer-input")} {
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+#{selector("slack.thread.pane")} .c-scrollbar__child {
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+#{selector("slack.thread.pane")} #{selector("slack.message.scroll")} {
+  min-height: 100% !important;
+}
+
+#{selector("slack.thread.pane")} .c-virtual_list__item:has(> #{selector("slack.thread.reply-container")}) {
+  top: auto !important;
+  bottom: 0 !important;
+}
+
+#{selector("slack.thread.pane")} #{selector("slack.thread.reply-container")} {
+  border-top: 1px solid var(--minimal-irc-border) !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.composer.preview")} {
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: none !important;
+  font-family: var(--minimal-irc-font-family) !important;
+}
+
+#{selector("slack.composer.preview")} :is(
+  #{selector("slack.composer.preview-subtitle")},
+  strong,
+  span
+) {
+  color: inherit !important;
+  font-family: inherit !important;
+}
+
+#{selector("slack.composer.preview")} .p-message_pane_input__button-wrapper button {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-raised) !important;
+  box-shadow: none !important;
+  font-family: var(--minimal-irc-font-family) !important;
+}
+
+#{selector("slack.composer.thread-typing")}:empty {
+  display: none !important;
+}
+
+#{selector("slack.threads.view")} #{selector("slack.threads.page-title")} {
+  color: var(--minimal-irc-unread) !important;
+  font-size: var(--minimal-irc-text-size) !important;
+  line-height: 30px !important;
+}

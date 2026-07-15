@@ -1,0 +1,22 @@
+/**
+ * @id MinimalIRC
+ * @name Minimal IRC
+ * @description Turns Slack into a compact terminal-like IRC client
+ * @version 1.0.0
+ */
+
+@use "tokens";
+@use "shell";
+@use "threads";
+@use "unreads";
+@use "dialogs";
+@use "autocomplete";
+@use "search";
+@use "panes";
+@use "top-nav";
+@use "plugin-manager";
+@use "tabs";
+@use "sidebar";
+@use "headers";
+@use "messages";
+@use "composer";

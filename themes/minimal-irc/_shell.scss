@@ -1,0 +1,20 @@
+@use "theme-selectors" as *;
+
+/* Keep one workspace, one channel list, and the transcript. */
+#{selector("slack.app.root")} :is(
+  #{selector("slack.workspace.team-sidebar")},
+  #{selector("slack.workspace.switcher")},
+  #{selector("slack.workspace.tab-rail")},
+  #{selector("slack.workspace.control-strip")},
+  #{selector("slack.workspace.banners")}
+) {
+  display: none !important;
+}
+
+#{selector("slack.workspace.wrapper")},
+#{selector("slack.workspace.shell")},
+#{selector("slack.workspace.layout")},
+#{selector("slack.workspace.primary-body")},
+#{selector("slack.workspace.primary-pane")} {
+  background: var(--minimal-irc-bg) !important;
+}
