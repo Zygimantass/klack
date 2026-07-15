@@ -358,7 +358,7 @@ export default definePlugin({
                 error,
               );
             }
-            await klack.diagnostics.copyReport({ imageDataUrl: annotated, text: report });
+            await klack.diagnostics.copyImage(annotated);
             setTemporaryLabel("✓ Copied");
           } catch (error) {
             klack.logger.error("[ReportUiIssue] Could not create diagnostic report", error);

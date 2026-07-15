@@ -82,7 +82,7 @@ type ElectronModule = {
   };
   BrowserWindow: BrowserWindowConstructor;
   clipboard: {
-    write(data: { image: NativeImage; text: string }): void;
+    writeImage(image: NativeImage): void;
   };
   ipcMain: {
     handle(
@@ -207,20 +207,19 @@ if (!process.argv.includes("--klack-vanilla")) {
 
   electron.ipcMain.handle(DIAGNOSTIC_COPY_CHANNEL, (event, received) => {
     requireInjectedSender(event);
-    const payload = received as { imageDataUrl?: unknown; text?: unknown } | undefined;
-    if (typeof payload?.text !== "string" || typeof payload.imageDataUrl !== "string") {
-      throw new TypeError("[Klack] Invalid diagnostic clipboard payload");
+    if (typeof received !== "string") {
+      throw new TypeError("[Klack] Invalid diagnostic screenshot payload");
     }
-    if (payload.text.length > 100_000 || payload.imageDataUrl.length > 64 * 1024 * 1024) {
+    if (received.length > 64 * 1024 * 1024) {
       throw new RangeError("[Klack] Diagnostic clipboard payload is too large");
     }
-    if (!payload.imageDataUrl.startsWith("data:image/png;base64,")) {
+    if (!received.startsWith("data:image/png;base64,")) {
       throw new TypeError("[Klack] Diagnostic screenshot must be a PNG data URL");
     }
 
-    const image = electron.nativeImage.createFromDataURL(payload.imageDataUrl);
+    const image = electron.nativeImage.createFromDataURL(received);
     if (image.isEmpty()) throw new Error("[Klack] Could not decode the diagnostic screenshot");
-    electron.clipboard.write({ image, text: payload.text });
+    electron.clipboard.writeImage(image);
   });
 
   const OriginalBrowserWindow = electron.BrowserWindow;

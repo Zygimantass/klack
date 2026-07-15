@@ -310,21 +310,19 @@ Use `klack.cleanup()` for:
 ## Diagnostic screenshots
 
 Trusted plugins can use `klack.diagnostics` to capture the current Slack
-window and copy a PNG plus a plain-text report to the system clipboard:
+window and copy a PNG to the system clipboard:
 
 ```ts
 const screenshot = await klack.diagnostics.capturePage();
-await klack.diagnostics.copyReport({
-  imageDataUrl: screenshot,
-  text: "Description of the current UI state",
-});
+await klack.diagnostics.copyImage(screenshot);
 ```
 
 `capturePage()` returns a PNG data URL for the calling Slack window only.
-`copyReport()` accepts PNG data URLs and writes both the image and text
-representations in one clipboard operation. Do not collect message bodies,
-composer contents, credentials, or other private data without an explicit user
-action and clear disclosure.
+`copyImage()` accepts PNG data URLs and writes an image-only clipboard entry so
+chat and issue-tracking clients paste the screenshot instead of preferring a
+plain-text representation. Do not collect message bodies, composer contents,
+credentials, or other private data without an explicit user action and clear
+disclosure.
 
 Do not remove or overwrite a newer Slack-owned value during cleanup when the
 UI may have changed independently.

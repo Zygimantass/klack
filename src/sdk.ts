@@ -116,7 +116,7 @@ export type KlackSelectors = {
 
 export type KlackDiagnostics = {
   capturePage(): Promise<string>;
-  copyReport(report: { imageDataUrl: string; text: string }): Promise<void>;
+  copyImage(imageDataUrl: string): Promise<void>;
 };
 
 export type KlackApi = {

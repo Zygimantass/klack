@@ -66,7 +66,7 @@ declare global {
     Klack?: KlackGlobal;
     KlackNative?: {
       capturePage?(): Promise<string>;
-      copyDiagnosticReport?(report: { imageDataUrl: string; text: string }): Promise<void>;
+      copyDiagnosticImage?(imageDataUrl: string): Promise<void>;
       version?: string;
     };
   }
@@ -637,11 +637,11 @@ function createPluginApi(state: PluginState): KlackApi {
         }
         return window.KlackNative.capturePage();
       },
-      copyReport: async (report: { imageDataUrl: string; text: string }) => {
-        if (!window.KlackNative?.copyDiagnosticReport) {
+      copyImage: async (imageDataUrl: string) => {
+        if (!window.KlackNative?.copyDiagnosticImage) {
           throw new Error("Klack diagnostic clipboard access is unavailable until Slack restarts");
         }
-        await window.KlackNative.copyDiagnosticReport(report);
+        await window.KlackNative.copyDiagnosticImage(imageDataUrl);
       },
     }),
     dom: Object.freeze({

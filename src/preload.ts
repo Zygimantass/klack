@@ -57,8 +57,8 @@ contextBridge.exposeInMainWorld(
       if (typeof result !== "string") throw new TypeError("Klack received an invalid screenshot");
       return result;
     },
-    async copyDiagnosticReport(report: { imageDataUrl: string; text: string }): Promise<void> {
-      await ipcRenderer.invoke(DIAGNOSTIC_COPY_CHANNEL, report);
+    async copyDiagnosticImage(imageDataUrl: string): Promise<void> {
+      await ipcRenderer.invoke(DIAGNOSTIC_COPY_CHANNEL, imageDataUrl);
     },
     version: payload.version,
   }),
