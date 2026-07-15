@@ -1,0 +1,109 @@
+@use "theme-selectors" as *;
+
+#{selector("slack.unreads.view")} {
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.unreads.new-header")} {
+  border-color: var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+}
+
+#{selector("slack.unreads.new-header")} :is(button, span, div) {
+  color: inherit !important;
+}
+
+#{selector("slack.unreads.mark-read")} {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-raised) !important;
+  box-shadow: none !important;
+}
+
+#{selector("slack.unreads.view")} :is(#{selector("slack.keyboard.key")}, kbd),
+#{selector("slack.unreads.header")} :is(#{selector("slack.keyboard.key")}, kbd) {
+  border-color: var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("slack.unreads.empty")},
+#{selector("slack.unreads.empty")} :is(h1, h2, h3, p, span) {
+  color: var(--minimal-irc-muted) !important;
+  font: var(--minimal-irc-text-size)/var(--minimal-irc-line-height) ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace !important;
+}
+
+#{selector("slack.unreads.header")} :is(
+  #{selector("slack.unreads.list-control")},
+  #{selector("slack.unreads.refresh")}
+) {
+  color: var(--minimal-irc-muted) !important;
+}
+
+#{selector("slack.dialog.root")},
+#{selector("slack.dialog.root")} > [role="presentation"] {
+  border-color: var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45) !important;
+}
+
+#{selector("slack.dialog.root")} :is(
+  #{selector("slack.search.dialog-input")},
+  #{selector("slack.search.dialog-input-container")},
+  #{selector("slack.search.autocomplete-footer")}
+) {
+  border-color: var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: none !important;
+}
+
+#{selector("slack.dialog.root")} :is(
+  input,
+  button,
+  [role="option"],
+  [role="presentation"]
+) {
+  color: var(--minimal-irc-text) !important;
+}
+
+#{selector("slack.dialog.root")} #{selector("slack.search.suggestion")} {
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+#{selector("slack.dialog.root")} :is(
+  #{selector("slack.search.suggestion-selected")},
+  #{selector("slack.search.suggestion")}:hover
+) {
+  color: var(--minimal-irc-unread) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("slack.dialog.root")} :is(
+  #{selector("slack.keyboard.key")},
+  #{selector("slack.entity.avatar-container")}
+) {
+  border-color: var(--minimal-irc-border) !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("slack.dialog.root")} :is(
+  #{selector("slack.search.token")},
+  #{selector("slack.search.token-label")}
+) {
+  border-radius: 0 !important;
+  color: var(--minimal-irc-accent) !important;
+  background: var(--minimal-irc-raised) !important;
+}
+
+#{selector("slack.dialog.root")} #{selector("slack.search.filter-action")} {
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+}

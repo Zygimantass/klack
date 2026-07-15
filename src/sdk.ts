@@ -1,3 +1,5 @@
+import type { ThemeSelectorId } from "./theme-selectors";
+
 export type Cleanup = () => void;
 
 export type KlackEventOptions = boolean | AddEventListenerOptions;
@@ -98,11 +100,26 @@ export type KlackTimers = {
   timeout(callback: () => void, delay: number): Cleanup;
 };
 
+export type KlackSelectorProbe = {
+  candidate?: string;
+  candidateIndex: number;
+  id: ThemeSelectorId;
+  matchCount: number;
+  stability?: "owned" | "stable" | "semantic" | "structural" | "fallback";
+};
+
+export type KlackSelectors = {
+  candidates(id: ThemeSelectorId): readonly string[];
+  get(id: ThemeSelectorId): string;
+  probe(id: ThemeSelectorId, root?: ParentNode): KlackSelectorProbe;
+};
+
 export type KlackApi = {
   cleanup(cleanup: Cleanup): Cleanup;
   dom: KlackDom;
   events: KlackEvents;
   logger: Console;
+  selectors: KlackSelectors;
   timers: KlackTimers;
   ui: KlackUi;
   version: string;

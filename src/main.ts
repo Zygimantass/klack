@@ -7,8 +7,10 @@ import {
   ORIGINAL_ASAR_NAME,
   PLUGIN_CHANNEL,
   PLUGIN_RELOAD_CHANNEL,
+  THEME_RELOAD_CHANNEL,
 } from "./constants";
 import { loadPlugins } from "./plugins";
+import { loadThemes } from "./themes";
 
 type BrowserWindowOptions = {
   webPreferences?: {
@@ -111,6 +113,9 @@ if (!process.argv.includes("--klack-vanilla")) {
   const builtInPluginDirectory = path.join(klackRoot, "plugins");
   const userPluginDirectory = process.env.KLACK_PLUGIN_DIR || path.join(os.homedir(), ".klack", "plugins");
   const pluginDirectories = [builtInPluginDirectory, userPluginDirectory];
+  const builtInThemeDirectory = path.join(klackRoot, "dist", "themes");
+  const userThemeDirectory = process.env.KLACK_THEME_DIR || path.join(os.homedir(), ".klack", "themes");
+  const themeDirectories = [builtInThemeDirectory, userThemeDirectory];
   const sdkPath = path.join(klackRoot, "dist", "sdk.js");
 
   if (!fs.existsSync(klackPreload)) {
@@ -121,6 +126,11 @@ if (!process.argv.includes("--klack-vanilla")) {
     fs.mkdirSync(userPluginDirectory, { recursive: true });
   } catch (error) {
     console.error(`[Klack] Failed to create plugin directory ${userPluginDirectory}`, error);
+  }
+  try {
+    fs.mkdirSync(userThemeDirectory, { recursive: true });
+  } catch (error) {
+    console.error(`[Klack] Failed to create theme directory ${userThemeDirectory}`, error);
   }
 
   function compilePlugins(reload: boolean): ReturnType<typeof loadPlugins> | undefined {
@@ -136,12 +146,26 @@ if (!process.argv.includes("--klack-vanilla")) {
     return reload && failed ? undefined : nextPlugins;
   }
 
+  function readThemes(reload: boolean): ReturnType<typeof loadThemes> | undefined {
+    let failed = false;
+    const nextThemes = loadThemes({
+      directories: themeDirectories,
+      onError(themePath, error) {
+        failed = true;
+        console.error(`[Klack] Failed to load theme ${themePath}`, error);
+      },
+    });
+    return reload && failed ? undefined : nextThemes;
+  }
+
   let plugins = compilePlugins(false) || [];
+  let themes = readThemes(false) || [];
   const injectedWebContents = new Set<WebContents>();
 
   electron.ipcMain.on(PLUGIN_CHANNEL, (event) => {
     event.returnValue = {
       plugins,
+      themes,
       version: KLACK_VERSION,
     };
   });
@@ -260,8 +284,39 @@ if (!process.argv.includes("--klack-vanilla")) {
     }
   }
 
+  let themeReloadTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleThemeReload = (): void => {
+    if (themeReloadTimer) clearTimeout(themeReloadTimer);
+    themeReloadTimer = setTimeout(() => {
+      themeReloadTimer = undefined;
+      const nextThemes = readThemes(true);
+      if (!nextThemes) {
+        console.error("[Klack] Theme hot reload skipped; keeping the previous theme set");
+        return;
+      }
+
+      themes = nextThemes;
+      for (const contents of injectedWebContents) {
+        if (contents.isDestroyed()) continue;
+        contents.send(THEME_RELOAD_CHANNEL, { themes });
+      }
+      console.log(`[Klack] Hot reloaded ${themes.length} theme(s)`);
+    }, 100);
+  };
+
+  for (const directory of new Set(themeDirectories)) {
+    try {
+      fs.watch(directory, { recursive: true }, (_event, filename) => {
+        if (filename && !/\.css$/i.test(filename.toString())) return;
+        scheduleThemeReload();
+      });
+    } catch (error) {
+      console.error(`[Klack] Failed to watch theme directory ${directory}`, error);
+    }
+  }
+
   console.log(
-    `[Klack] ${KLACK_VERSION} loaded; ${plugins.length} plugin(s) from ${builtInPluginDirectory} and ${userPluginDirectory}`,
+    `[Klack] ${KLACK_VERSION} loaded; ${plugins.length} plugin(s) and ${themes.length} theme(s)`,
   );
 } else {
   console.log("[Klack] Starting Slack in vanilla mode");

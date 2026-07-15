@@ -235,6 +235,29 @@ Avoid CSS-module names with generated suffixes:
 [data-qa="ai-apps-menu-container"]
 ```
 
+Before copying a Slack selector into a plugin, check Klack's shared semantic
+registry. It keeps preferred selectors and compatibility fallbacks in one
+place:
+
+```ts
+const message = klack.selectors.get("slack.message.row");
+klack.dom.watch(message, initializeMessage);
+```
+
+During Slack updates, use `probe()` to see which candidate currently wins:
+
+```ts
+klack.logger.table([
+  klack.selectors.probe("slack.message.row"),
+  klack.selectors.probe("slack.composer.input"),
+]);
+```
+
+Keep behavior predicates local even when their element identity is shared. A
+plugin should still perform its own URL validation, text matching, or
+feature-specific `:has()` composition rather than adding those predicates to
+the registry.
+
 Keep selectors as narrow as the feature. For example, a plugin that changes
 linked Slack messages should scope links beneath `[data-qa="message-text"]`
 and exclude timestamps and attachment-footer links. Broad click interception

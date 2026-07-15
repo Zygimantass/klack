@@ -1,0 +1,35 @@
+@use "theme-selectors" as *;
+
+:root,
+#{selector("slack.app.root")} {
+  --minimal-irc-bg: #1b1f24;
+  --minimal-irc-panel: #171a1f;
+  --minimal-irc-raised: #252b32;
+  --minimal-irc-border: #343c45;
+  --minimal-irc-text: #d0d7de;
+  --minimal-irc-muted: #8b98a3;
+  --minimal-irc-accent: #76a7bd;
+  --minimal-irc-name: #8fc8c3;
+  --minimal-irc-unread: #f0f3f5;
+  --minimal-irc-font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  --minimal-irc-text-size: 14px;
+  --minimal-irc-ui-size: 13px;
+  --minimal-irc-meta-size: 12px;
+  --minimal-irc-line-height: 22px;
+  --minimal-irc-ui-line-height: 20px;
+  --minimal-irc-meta-line-height: 18px;
+  --minimal-irc-control-height: 28px;
+  --sk_primary_background: var(--minimal-irc-bg);
+  --sk_primary_foreground: var(--minimal-irc-text);
+  --sk_primary_foreground_high: var(--minimal-irc-muted);
+  --sk_primary_foreground_low: var(--minimal-irc-border);
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-bg) !important;
+  font-family: var(--minimal-irc-font-family) !important;
+  font-size: var(--minimal-irc-ui-size) !important;
+  line-height: var(--minimal-irc-line-height) !important;
+}
+
+#{selector("slack.app.root")} :is(button, input, textarea, [contenteditable="true"]) {
+  font-family: inherit;
+}

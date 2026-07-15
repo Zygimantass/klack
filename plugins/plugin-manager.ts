@@ -10,10 +10,21 @@ type PluginSummary = {
   version?: string;
 };
 
+type ThemeSummary = {
+  description?: string;
+  enabled: boolean;
+  id: string;
+  name: string;
+  version?: string;
+};
+
 type KlackManager = {
   disable(name: string): void;
+  disableTheme(id: string): void;
   enable(name: string): void;
+  enableTheme(id: string): void;
   list(): PluginSummary[];
+  listThemes(): ThemeSummary[];
   version: string;
 };
 
@@ -28,13 +39,19 @@ function pluginStatus(plugin: PluginSummary): { className: string; label: string
   return { className: "is-enabled", label: "On" };
 }
 
+function themeStatus(theme: ThemeSummary): { className: string; label: string } {
+  return theme.enabled
+    ? { className: "is-enabled", label: "On" }
+    : { className: "is-disabled", label: "Off" };
+}
+
 function pluginInitial(name: string): string {
   return name.replace(/([a-z])([A-Z])/g, "$1 $2").trim().charAt(0).toUpperCase() || "P";
 }
 
 export default definePlugin({
   name: PLUGIN_NAME,
-  description: "Adds a Slack-native interface for enabling and disabling Klack plugins.",
+  description: "Adds a Slack-native interface for managing Klack plugins and themes.",
   setup(klack) {
     klack.ui.addStyle(
       `
@@ -143,8 +160,38 @@ export default definePlugin({
           background: var(--sk_primary_foreground_low, rgba(29, 28, 29, 0.08));
         }
 
+        [data-klack-plugin-manager-tabs] {
+          display: flex;
+          gap: 20px;
+          padding: 0 28px;
+          border-bottom: 1px solid var(--sk_primary_foreground_low, rgba(29, 28, 29, 0.13));
+        }
+
+        [data-klack-plugin-manager-tab] {
+          height: 36px;
+          margin-bottom: -1px;
+          padding: 0 1px;
+          border: 0;
+          border-bottom: 2px solid transparent;
+          color: var(--sk_primary_foreground_high, #616061);
+          background: transparent;
+          font: 700 14px/34px Slack-Lato, Lato, sans-serif;
+          cursor: pointer;
+        }
+
+        [data-klack-plugin-manager-tab][aria-selected="true"] {
+          border-bottom-color: var(--sk_highlight, #1264a3);
+          color: var(--sk_primary_foreground, #1d1c1d);
+        }
+
+        [data-klack-plugin-manager-tab]:focus-visible {
+          border-radius: 3px;
+          outline: 2px solid var(--sk_highlight, #1264a3);
+          outline-offset: 1px;
+        }
+
         [data-klack-plugin-manager-toolbar] {
-          padding: 0 28px 18px;
+          padding: 18px 28px;
         }
 
         [data-klack-plugin-manager-search-wrap] {
@@ -394,10 +441,10 @@ export default definePlugin({
       const heading = document.createElement("h2");
       heading.id = "klack-plugin-manager-title";
       heading.dataset.klackPluginManagerHeading = "";
-      heading.textContent = "Plugins";
+      heading.textContent = "Klack";
       const subtitle = document.createElement("p");
       subtitle.dataset.klackPluginManagerSubtitle = "";
-      subtitle.textContent = `Manage how Klack ${klack.version} changes Slack`;
+      subtitle.textContent = `Manage plugins and themes · v${klack.version}`;
       headingCopy.append(heading, subtitle);
 
       const closeButton = document.createElement("button");
@@ -407,6 +454,22 @@ export default definePlugin({
       closeButton.title = "Close";
       closeButton.ariaLabel = "Close plugin manager";
       header.append(headingCopy, closeButton);
+
+      const tabs = document.createElement("div");
+      tabs.dataset.klackPluginManagerTabs = "";
+      tabs.setAttribute("role", "tablist");
+      tabs.ariaLabel = "Klack settings";
+      const pluginsTab = document.createElement("button");
+      pluginsTab.type = "button";
+      pluginsTab.dataset.klackPluginManagerTab = "plugins";
+      pluginsTab.setAttribute("role", "tab");
+      pluginsTab.textContent = "Plugins";
+      const themesTab = document.createElement("button");
+      themesTab.type = "button";
+      themesTab.dataset.klackPluginManagerTab = "themes";
+      themesTab.setAttribute("role", "tab");
+      themesTab.textContent = "Themes";
+      tabs.append(pluginsTab, themesTab);
 
       const toolbar = document.createElement("div");
       toolbar.dataset.klackPluginManagerToolbar = "";
@@ -438,39 +501,74 @@ export default definePlugin({
       done.textContent = "Done";
       footer.append(path, done);
 
+      let page: "plugins" | "themes" = "plugins";
+
       const renderList = (): void => {
         const api = manager();
         if (!api) return;
         const query = search.value.trim().toLocaleLowerCase();
-        const plugins = api
-          .list()
-          .filter((plugin) => {
+        const items = (page === "plugins"
+          ? api.list().map((plugin) => ({
+              description: plugin.description,
+              enabled: plugin.enabled,
+              id: plugin.name,
+              name: plugin.name,
+              required: plugin.name === PLUGIN_NAME,
+              status: pluginStatus(plugin),
+              toggle() {
+                if (plugin.enabled) api.disable(plugin.name);
+                else api.enable(plugin.name);
+              },
+              version: plugin.version,
+            }))
+          : api.listThemes().map((theme) => ({
+              description: theme.description,
+              enabled: theme.enabled,
+              id: theme.id,
+              name: theme.name,
+              required: false,
+              status: themeStatus(theme),
+              toggle() {
+                if (theme.enabled) api.disableTheme(theme.id);
+                else api.enableTheme(theme.id);
+              },
+              version: theme.version,
+            })))
+          .filter((item) => {
             if (!query) return true;
-            return `${plugin.name} ${plugin.description || ""}`.toLocaleLowerCase().includes(query);
+            return `${item.name} ${item.description || ""}`.toLocaleLowerCase().includes(query);
           })
           .sort((left, right) => {
-            if (left.name === PLUGIN_NAME) return -1;
-            if (right.name === PLUGIN_NAME) return 1;
+            if (left.required) return -1;
+            if (right.required) return 1;
             return left.name.localeCompare(right.name);
           });
 
-        if (plugins.length === 0) {
+        pluginsTab.setAttribute("aria-selected", String(page === "plugins"));
+        themesTab.setAttribute("aria-selected", String(page === "themes"));
+        search.placeholder = `Search ${page}`;
+        search.ariaLabel = `Search ${page}`;
+        path.textContent = `User ${page} load from ~/.klack/${page}`;
+        path.title = `~/.klack/${page}`;
+
+        if (items.length === 0) {
           const empty = document.createElement("div");
           empty.dataset.klackPluginManagerEmpty = "";
-          empty.textContent = "No plugins match your search.";
+          empty.textContent = `No ${page} match your search.`;
           list.replaceChildren(empty);
           return;
         }
 
         list.replaceChildren(
-          ...plugins.map((plugin) => {
+          ...items.map((item) => {
             const row = document.createElement("div");
             row.dataset.klackPluginManagerRow = "";
+            row.dataset.klackPluginManagerKind = page;
             row.setAttribute("role", "listitem");
 
             const icon = document.createElement("div");
             icon.dataset.klackPluginManagerIcon = "";
-            icon.textContent = pluginInitial(plugin.name);
+            icon.textContent = pluginInitial(item.name);
             icon.ariaHidden = "true";
 
             const copy = document.createElement("div");
@@ -479,35 +577,32 @@ export default definePlugin({
             nameLine.dataset.klackPluginManagerNameLine = "";
             const name = document.createElement("div");
             name.dataset.klackPluginManagerName = "";
-            name.textContent = plugin.name;
-            name.title = plugin.name;
-            const statusValue = pluginStatus(plugin);
+            name.textContent = item.name;
+            name.title = item.name;
             const status = document.createElement("span");
             status.dataset.klackPluginManagerStatus = "";
-            status.className = statusValue.className;
-            status.textContent = statusValue.label;
+            status.className = item.status.className;
+            status.textContent = item.status.label;
             nameLine.append(name, status);
 
             const description = document.createElement("div");
             description.dataset.klackPluginManagerDescription = "";
-            description.textContent = plugin.description || "No description provided";
+            description.textContent = item.description || "No description provided";
             description.title = description.textContent;
-            if (plugin.version) description.textContent += ` · v${plugin.version}`;
+            if (item.version) description.textContent += ` · v${item.version}`;
             copy.append(nameLine, description);
 
             const toggle = document.createElement("button");
             toggle.type = "button";
             toggle.dataset.klackPluginManagerSwitch = "";
             toggle.setAttribute("role", "switch");
-            toggle.setAttribute("aria-checked", String(plugin.enabled));
-            toggle.ariaLabel = `${plugin.enabled ? "Disable" : "Enable"} ${plugin.name}`;
+            toggle.setAttribute("aria-checked", String(item.enabled));
+            toggle.ariaLabel = `${item.enabled ? "Disable" : "Enable"} ${item.name}`;
             toggle.title = toggle.ariaLabel;
-            toggle.disabled = plugin.name === PLUGIN_NAME;
+            toggle.disabled = item.required;
             toggle.addEventListener("click", () => {
-              const currentApi = manager();
-              if (!currentApi || plugin.name === PLUGIN_NAME) return;
-              if (plugin.enabled) currentApi.disable(plugin.name);
-              else currentApi.enable(plugin.name);
+              if (item.required) return;
+              item.toggle();
               renderList();
             });
 
@@ -515,6 +610,13 @@ export default definePlugin({
             return row;
           }),
         );
+      };
+
+      const showPage = (nextPage: "plugins" | "themes"): void => {
+        if (page !== nextPage) search.value = "";
+        page = nextPage;
+        renderList();
+        search.focus();
       };
 
       const open = (): void => {
@@ -555,10 +657,12 @@ export default definePlugin({
       on(closeButton, "click", close);
       on(done, "click", close);
       on(search, "input", renderList);
+      on(pluginsTab, "click", () => showPage("plugins"));
+      on(themesTab, "click", () => showPage("themes"));
       on(document, "keydown", onKeyDown, true);
       on(document, "klack:open-plugin-manager", onOpen);
 
-      dialog.append(header, toolbar, list, footer);
+      dialog.append(header, tabs, toolbar, list, footer);
       nextOverlay.append(dialog);
       overlay = nextOverlay;
       cleanup(() => {
@@ -569,15 +673,15 @@ export default definePlugin({
     });
 
     klack.ui.mount(
-      '[data-qa="top-nav-help-button"]',
+      klack.selectors.get("slack.top-nav.help-button"),
       ({ on }) => {
         const button = document.createElement("button");
         button.type = "button";
         button.dataset.klackPluginManagerTrigger = "";
-        button.title = "Manage Klack plugins";
-        button.ariaLabel = "Manage Klack plugins";
+        button.title = "Manage Klack plugins and themes";
+        button.ariaLabel = "Manage Klack plugins and themes";
         button.innerHTML =
-          '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.25 3.25h5.5v3.5h3.5v5.5h-3.5v3.5h-5.5v-3.5h-3.5v-5.5h3.5z"></path><circle cx="10" cy="9.5" r="2.25"></circle></svg><span>Plugins</span>';
+          '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.25 3.25h5.5v3.5h3.5v5.5h-3.5v3.5h-5.5v-3.5h-3.5v-5.5h3.5z"></path><circle cx="10" cy="9.5" r="2.25"></circle></svg><span>Klack</span>';
         const onClick = (): void => {
           document.dispatchEvent(new Event("klack:open-plugin-manager"));
         };
