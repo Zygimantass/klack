@@ -459,8 +459,18 @@ function mount(
         },
         isActive: () => {
           if (!element.isConnected) return false;
-          if (options.position === "before") return element.nextElementSibling === targetElement;
-          if (options.position === "after") return element.previousElementSibling === targetElement;
+          if (options.position === "before") {
+            return (
+              element.parentElement === targetElement.parentElement &&
+              !!(element.compareDocumentPosition(targetElement) & Node.DOCUMENT_POSITION_FOLLOWING)
+            );
+          }
+          if (options.position === "after") {
+            return (
+              element.parentElement === targetElement.parentElement &&
+              !!(targetElement.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
+            );
+          }
           return element.parentElement === targetElement;
         },
       };
