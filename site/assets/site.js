@@ -67,6 +67,20 @@ async function writeClipboard(text) {
 }
 
 const visualLabStorageKey = "klack-visual-lab";
+const visualLabVersions = {
+  editorial: {
+    label: "Editorial",
+    description: "Open + serif",
+  },
+  modern: {
+    label: "Modern",
+    description: "Direct + sans",
+  },
+  compact: {
+    label: "Compact",
+    description: "Dense + quick",
+  },
+};
 const visualLabColorControls = [
   { property: "--bg", label: "Canvas" },
   { property: "--bg-raised", label: "Surface" },
@@ -77,6 +91,7 @@ const visualLabColorControls = [
   { property: "--purple", label: "Code" },
 ];
 const visualLabDefaults = {
+  version: "editorial",
   colors: {
     "--bg": "#0b0d0c",
     "--bg-raised": "#101311",
@@ -215,6 +230,7 @@ function derivedVisualColors(colors) {
 
 function copyVisualSettings(settings) {
   return {
+    version: settings.version,
     colors: { ...settings.colors },
     animated: settings.animated,
     density: settings.density,
@@ -226,6 +242,7 @@ function loadVisualSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(visualLabStorageKey));
     return {
+      version: visualLabVersions[saved?.version] ? saved.version : visualLabDefaults.version,
       colors: { ...visualLabDefaults.colors, ...saved?.colors },
       animated: typeof saved?.animated === "boolean" ? saved.animated : visualLabDefaults.animated,
       density: clamp(Number(saved?.density) || visualLabDefaults.density, 3, 10),
@@ -239,6 +256,7 @@ function loadVisualSettings() {
 let visualSettings = loadVisualSettings();
 
 function applyVisualSettings() {
+  root.dataset.visualVersion = visualSettings.version;
   const properties = { ...visualSettings.colors, ...derivedVisualColors(visualSettings.colors) };
   for (const [property, value] of Object.entries(properties)) {
     root.style.setProperty(property, value);
@@ -276,6 +294,17 @@ function createVisualLab() {
       <button type="button" data-visual-close aria-label="Close visual lab">×</button>
     </div>
     <div class="visual-lab-body">
+      <fieldset class="visual-lab-section">
+        <legend>Page version</legend>
+        <div class="visual-version-grid">
+          ${Object.entries(visualLabVersions).map(([id, version], index) => `
+            <button type="button" data-visual-version="${id}" aria-pressed="false">
+              <span>V${index + 1}</span>
+              <strong>${version.label}</strong>
+              <small>${version.description}</small>
+            </button>`).join("")}
+        </div>
+      </fieldset>
       <fieldset class="visual-lab-section">
         <legend>Palette presets</legend>
         <div class="visual-preset-grid">
@@ -343,6 +372,9 @@ function createVisualLab() {
     panel.querySelector("[data-visual-density-output]").textContent = `${visualSettings.density}px`;
     panel.querySelector("[data-visual-speed-output]").textContent = `${visualSettings.speed}s`;
     const activePreset = matchingPreset();
+    panel.querySelectorAll("[data-visual-version]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.visualVersion === visualSettings.version));
+    });
     panel.querySelectorAll("[data-visual-preset]").forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.visualPreset === activePreset));
     });
@@ -366,6 +398,12 @@ function createVisualLab() {
     if (!panel.hidden) panel.querySelector("[data-visual-close]").focus();
   });
   panel.querySelector("[data-visual-close]").addEventListener("click", closeVisualLab);
+  panel.querySelectorAll("[data-visual-version]").forEach((button) => {
+    button.addEventListener("click", () => {
+      visualSettings.version = button.dataset.visualVersion;
+      updateVisualSettings();
+    });
+  });
   panel.querySelectorAll("[data-visual-preset]").forEach((button) => {
     button.addEventListener("click", () => {
       visualSettings.colors = { ...visualLabPresets[button.dataset.visualPreset].colors };
@@ -401,7 +439,7 @@ function createVisualLab() {
   panel.querySelector("[data-visual-copy]").addEventListener("click", async (event) => {
     const button = event.currentTarget;
     const properties = { ...visualSettings.colors, ...derivedVisualColors(visualSettings.colors) };
-    const css = `:root {\n${Object.entries(properties).map(([property, value]) => `  ${property}: ${value};`).join("\n")}\n}`;
+    const css = `/* Klack ${visualLabVersions[visualSettings.version].label} version */\n:root {\n${Object.entries(properties).map(([property, value]) => `  ${property}: ${value};`).join("\n")}\n}`;
     try {
       await writeClipboard(css);
       button.textContent = "Copied";

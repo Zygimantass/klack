@@ -1769,6 +1769,61 @@ button:hover .arrow {
   text-transform: uppercase;
 }
 
+.visual-version-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.visual-version-grid button {
+  min-width: 0;
+  padding: 9px 8px;
+  color: var(--ink-muted);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  text-align: left;
+}
+
+.visual-version-grid button:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.visual-version-grid button[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.visual-version-grid span,
+.visual-version-grid strong,
+.visual-version-grid small {
+  display: block;
+}
+
+.visual-version-grid span {
+  margin-bottom: 7px;
+  color: var(--art);
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.visual-version-grid strong {
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.visual-version-grid small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .visual-preset-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2514,6 +2569,139 @@ button:hover .arrow {
 
   .api-table {
     min-width: 560px;
+  }
+}
+
+/* Visual lab page versions */
+html[data-visual-version="modern"] {
+  --display: var(--sans);
+}
+
+html[data-visual-version="modern"] .hero h1 {
+  font-size: clamp(76px, 7.8vw, 112px);
+  letter-spacing: -0.065em;
+  line-height: 0.9;
+}
+
+html[data-visual-version="modern"] :is(.section-heading h2, .architecture-copy h2, .cta-panel h2) {
+  font-size: clamp(48px, 4.7vw, 64px);
+  letter-spacing: -0.05em;
+}
+
+html[data-visual-version="modern"] .feature-card h3 {
+  letter-spacing: -0.04em;
+}
+
+html[data-visual-version="compact"] {
+  --display: var(--sans);
+}
+
+html[data-visual-version="compact"] .hero-poster {
+  min-height: 720px;
+}
+
+html[data-visual-version="compact"] .hero-poster > .eyebrow {
+  top: 54px;
+}
+
+html[data-visual-version="compact"] .hero h1 {
+  top: 132px;
+  font-size: clamp(72px, 7.2vw, 102px);
+  letter-spacing: -0.062em;
+  line-height: 0.9;
+}
+
+html[data-visual-version="compact"] .hero-details {
+  bottom: 36px;
+}
+
+html[data-visual-version="compact"] .product-showcase {
+  padding: 94px 0;
+}
+
+html[data-visual-version="compact"] .trust-strip-inner {
+  padding: 28px 0;
+}
+
+html[data-visual-version="compact"] .section {
+  padding: 98px 0;
+}
+
+html[data-visual-version="compact"] :is(.section-heading h2, .architecture-copy h2, .cta-panel h2) {
+  font-size: clamp(44px, 4.3vw, 58px);
+  letter-spacing: -0.045em;
+}
+
+html[data-visual-version="compact"] .feature-grid {
+  width: min(820px, 82%);
+  margin-top: 62px;
+}
+
+html[data-visual-version="compact"] .feature-card {
+  margin-bottom: 38px;
+}
+
+html[data-visual-version="compact"] .flow-diagram {
+  margin-top: 62px;
+}
+
+html[data-visual-version="compact"] .flow-item {
+  margin-bottom: 26px;
+}
+
+html[data-visual-version="compact"] .code-section .section-heading {
+  margin-bottom: 44px;
+}
+
+html[data-visual-version="compact"] .final-cta {
+  padding: 76px 0;
+}
+
+html[data-visual-version="compact"] .cta-panel {
+  padding-top: 58px;
+}
+
+@media (max-width: 680px) {
+  html[data-visual-version="modern"] .hero h1 {
+    font-size: clamp(52px, 15vw, 62px);
+  }
+
+  html[data-visual-version="compact"] .hero-poster {
+    min-height: 690px;
+  }
+
+  html[data-visual-version="compact"] .hero-poster > .eyebrow {
+    top: 18px;
+  }
+
+  html[data-visual-version="compact"] .hero h1 {
+    top: 90px;
+    font-size: clamp(49px, 14vw, 58px);
+  }
+
+  html[data-visual-version="compact"] .hero-details {
+    bottom: 24px;
+  }
+
+  html[data-visual-version="compact"] .product-showcase {
+    padding: 48px 0 54px;
+  }
+
+  html[data-visual-version="compact"] .section {
+    padding: 68px 0;
+  }
+
+  html[data-visual-version="compact"] :is(.section-heading h2, .architecture-copy h2, .cta-panel h2) {
+    font-size: 34px;
+  }
+
+  html[data-visual-version="compact"] .feature-grid {
+    width: 100%;
+    margin-top: 42px;
+  }
+
+  html[data-visual-version="compact"] .final-cta {
+    padding: 50px 0;
   }
 }
 
