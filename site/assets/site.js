@@ -80,6 +80,18 @@ const visualLabVersions = {
     label: "Compact",
     description: "Dense + quick",
   },
+  centered: {
+    label: "Centered",
+    description: "Single focal point",
+  },
+  product: {
+    label: "Product",
+    description: "Demo above fold",
+  },
+  terminal: {
+    label: "Terminal",
+    description: "Mono + utilitarian",
+  },
 };
 const visualLabColorControls = [
   { property: "--bg", label: "Canvas" },

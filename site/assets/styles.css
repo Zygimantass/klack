@@ -2661,6 +2661,157 @@ html[data-visual-version="compact"] .cta-panel {
   padding-top: 58px;
 }
 
+html[data-visual-version="centered"] .hero-poster > .eyebrow {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+html[data-visual-version="centered"] .hero h1 {
+  left: 50%;
+  width: 100%;
+  max-width: 940px;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+html[data-visual-version="centered"] .hero-art {
+  top: 49%;
+  left: 50%;
+  width: min(820px, 72vw);
+  opacity: 0.52;
+}
+
+html[data-visual-version="centered"] .hero-details {
+  left: 50%;
+  width: min(650px, 70%);
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+html[data-visual-version="centered"] :is(.hero-copy, .install-command) {
+  margin-inline: auto;
+}
+
+html[data-visual-version="centered"] .hero-actions {
+  justify-content: center;
+}
+
+html[data-visual-version="centered"] .section-heading,
+html[data-visual-version="centered"] .architecture-copy,
+html[data-visual-version="centered"] .cta-panel {
+  margin-inline: auto;
+  text-align: center;
+}
+
+html[data-visual-version="centered"] .feature-grid,
+html[data-visual-version="centered"] .flow-diagram {
+  margin-inline: auto;
+}
+
+html[data-visual-version="centered"] .feature-card {
+  padding-left: 0;
+  text-align: center;
+}
+
+html[data-visual-version="centered"] .feature-card::before {
+  position: static;
+  margin: 0 auto 15px;
+  display: block;
+}
+
+html[data-visual-version="centered"] .feature-card p {
+  margin-inline: auto;
+}
+
+html[data-visual-version="centered"] .flow-diagram {
+  text-align: center;
+}
+
+html[data-visual-version="product"] {
+  --display: var(--sans);
+}
+
+html[data-visual-version="product"] .hero-poster {
+  min-height: 610px;
+}
+
+html[data-visual-version="product"] .hero-poster > .eyebrow {
+  top: 34px;
+}
+
+html[data-visual-version="product"] .hero h1 {
+  top: 96px;
+  font-size: clamp(68px, 6.8vw, 94px);
+  letter-spacing: -0.06em;
+}
+
+html[data-visual-version="product"] .hero-art {
+  left: 76%;
+  width: min(620px, 54vw);
+  height: 82%;
+}
+
+html[data-visual-version="product"] .hero-details {
+  bottom: 30px;
+}
+
+html[data-visual-version="product"] .hero-copy {
+  max-width: 470px;
+  font-size: 15px;
+}
+
+html[data-visual-version="product"] .hero-details .hero-actions {
+  margin-top: 20px;
+}
+
+html[data-visual-version="product"] .hero-details .install-command {
+  display: none;
+}
+
+html[data-visual-version="product"] .product-showcase {
+  padding: 70px 0 86px;
+}
+
+html[data-visual-version="product"] .section {
+  padding: 108px 0;
+}
+
+html[data-visual-version="product"] :is(.section-heading h2, .architecture-copy h2, .cta-panel h2) {
+  font-size: clamp(46px, 4.5vw, 60px);
+  letter-spacing: -0.05em;
+}
+
+html[data-visual-version="terminal"] {
+  --display: var(--mono);
+}
+
+html[data-visual-version="terminal"] .eyebrow {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+html[data-visual-version="terminal"] .hero h1 {
+  font-size: clamp(66px, 6.8vw, 94px);
+  letter-spacing: -0.075em;
+  line-height: 0.94;
+}
+
+html[data-visual-version="terminal"] :is(.section-heading h2, .architecture-copy h2, .cta-panel h2) {
+  font-size: clamp(40px, 4vw, 54px);
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+}
+
+html[data-visual-version="terminal"] .feature-card h3,
+html[data-visual-version="terminal"] .flow-text strong {
+  font-size: 21px;
+  letter-spacing: -0.045em;
+}
+
+html[data-visual-version="terminal"] .feature-card::before {
+  border-radius: 0;
+}
+
 @media (max-width: 680px) {
   html[data-visual-version="modern"] .hero h1 {
     font-size: clamp(52px, 15vw, 62px);
@@ -2702,6 +2853,58 @@ html[data-visual-version="compact"] .cta-panel {
 
   html[data-visual-version="compact"] .final-cta {
     padding: 50px 0;
+  }
+
+  html[data-visual-version="centered"] .hero-poster > .eyebrow {
+    width: 100%;
+    text-align: center;
+  }
+
+  html[data-visual-version="centered"] .hero h1 {
+    left: 50%;
+    max-width: 100%;
+    text-align: center;
+  }
+
+  html[data-visual-version="centered"] .hero-art {
+    left: 50%;
+    width: 125vw;
+    opacity: 0.78;
+  }
+
+  html[data-visual-version="centered"] .hero-details {
+    right: auto;
+    left: 50%;
+    width: 100%;
+  }
+
+  html[data-visual-version="product"] .hero-poster {
+    min-height: 650px;
+  }
+
+  html[data-visual-version="product"] .hero-poster > .eyebrow {
+    top: 18px;
+  }
+
+  html[data-visual-version="product"] .hero h1 {
+    top: 88px;
+    font-size: clamp(48px, 14vw, 57px);
+  }
+
+  html[data-visual-version="product"] .hero-details {
+    bottom: 24px;
+  }
+
+  html[data-visual-version="product"] .product-showcase {
+    padding: 48px 0 54px;
+  }
+
+  html[data-visual-version="terminal"] .hero h1 {
+    font-size: clamp(43px, 12.5vw, 51px);
+  }
+
+  html[data-visual-version="terminal"] :is(.section-heading h2, .architecture-copy h2, .cta-panel h2) {
+    font-size: 31px;
   }
 }
 
