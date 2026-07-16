@@ -1,4 +1,3 @@
-const root = document.documentElement;
 const body = document.body;
 
 const icons = {
@@ -6,23 +5,6 @@ const icons = {
   copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>`,
   file: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/></svg>`,
 };
-
-function currentTheme() {
-  return root.dataset.theme || "light";
-}
-
-function setTheme(theme) {
-  root.dataset.theme = theme;
-  localStorage.setItem("klack-theme", theme);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#10110f" : "#f6f6f0");
-  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-    button.setAttribute("aria-label", theme === "dark" ? "Use light theme" : "Use dark theme");
-  });
-}
-
-document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-  button.addEventListener("click", () => setTheme(currentTheme() === "dark" ? "light" : "dark"));
-});
 
 const menuButton = document.querySelector("[data-menu-toggle]");
 const mobileNav = document.querySelector("[data-mobile-nav]");

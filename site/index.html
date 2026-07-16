@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f6f0" />
+    <meta name="theme-color" content="#0b0d0c" />
     <meta
       name="description"
       content="Klack is an experimental, typed plugin loader for the Slack desktop app with hot reload and reversible installation."
@@ -21,20 +21,13 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c8f35d'/%3E%3Cpath d='M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z' fill='%23161a0c'/%3E%3C/svg%3E"
     />
-    <script>
-      try {
-        const saved = localStorage.getItem("klack-theme");
-        document.documentElement.dataset.theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-        document.querySelector('meta[name="theme-color"]').content = document.documentElement.dataset.theme === "dark" ? "#10110f" : "#f6f6f0";
-      } catch {}
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="./assets/styles.css" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
-    <noscript><div class="noscript">Klack’s site works without JavaScript; search, copy buttons, and theme switching need it.</div></noscript>
+    <noscript><div class="noscript">Klack’s site works without JavaScript; search and copy buttons need it.</div></noscript>
 
     <header class="site-header">
       <div class="header-inner">
@@ -63,15 +56,6 @@
             <kbd>⌘K</kbd>
           </button>
           <span class="version-pill">v0.1.0</span>
-          <button class="icon-button" type="button" data-theme-toggle aria-label="Change color theme">
-            <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-              <path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"></path>
-            </svg>
-            <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.5"></circle>
-              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
-            </svg>
-          </button>
           <button class="mobile-menu-button" type="button" data-menu-toggle aria-label="Toggle navigation" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16"></path>
@@ -94,20 +78,29 @@
       </button>
     </nav>
 
-    <div class="announcement">
-      <a href="./docs/#security">
-        <span class="announcement-dot" aria-hidden="true"></span>
-        Experimental software for local use — read the security notes first
-        <span class="arrow" aria-hidden="true">→</span>
-      </a>
-    </div>
-
     <main id="main">
       <section class="hero">
         <div class="hero-inner">
-          <div class="hero-copy-block">
+          <div class="hero-poster">
+            <div class="hero-art" aria-hidden="true">
+              <span class="hero-art-ring"></span>
+              <span class="hero-art-field"></span>
+            </div>
+            <a class="poster-safety" href="./docs/#security">
+              Experimental software / local use <span class="arrow" aria-hidden="true">→</span>
+            </a>
             <p class="eyebrow">A plugin loader for Slack desktop</p>
-            <h1>Your Slack.<br /><span class="accent-word">Your rules.</span></h1>
+            <h1>
+              <span>Your</span>
+              <span>Slack.</span>
+              <span>Your</span>
+              <span class="accent-word">rules.</span>
+            </h1>
+            <p class="poster-caption">Typed extensions / hot reload / reversible install</p>
+            <span class="poster-index" aria-hidden="true">KLK—001 / 2026</span>
+          </div>
+
+          <div class="hero-details">
             <p class="hero-copy">
               Build typed local extensions that add UI, watch the DOM, and reload as you work—without switching off Slack’s renderer sandbox.
             </p>
@@ -129,7 +122,11 @@
               </button>
             </div>
           </div>
+        </div>
+      </section>
 
+      <section class="product-showcase" aria-label="Klack in use">
+        <div class="section-inner">
           <div class="product-window" aria-label="Illustration of Klack adding a plugin to Slack">
             <div class="window-bar">
               <span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span>
