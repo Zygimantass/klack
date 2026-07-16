@@ -722,13 +722,67 @@ button:hover .arrow {
   color: var(--code-green);
 }
 
-.mini-code {
-  margin: 0;
+.plugin-preview-list {
+  display: grid;
+}
+
+.plugin-preview-item {
+  min-width: 0;
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 26px;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid var(--code-line);
+}
+
+.plugin-preview-mark {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  background: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.plugin-preview-item strong,
+.plugin-preview-item small {
+  display: block;
   overflow: hidden;
-  font-family: var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plugin-preview-item strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.plugin-preview-item small {
+  margin-top: 2px;
+  color: var(--code-muted);
   font-size: 10px;
-  line-height: 1.75;
-  white-space: pre;
+}
+
+.plugin-preview-item i {
+  position: relative;
+  width: 26px;
+  height: 15px;
+  background: color-mix(in srgb, var(--accent) 70%, var(--code-bg));
+  border-radius: 999px;
+}
+
+.plugin-preview-item i::after {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  background: var(--accent-ink);
+  border-radius: 50%;
+  content: "";
 }
 
 .syntax-keyword,
@@ -789,7 +843,7 @@ button:hover .arrow {
   line-height: 1.35;
 }
 
-.trust-item span {
+.trust-item > div > span {
   display: block;
   margin-top: 2px;
   color: var(--ink-muted);
@@ -906,29 +960,14 @@ button:hover .arrow {
   box-shadow: none;
 }
 
-.flow-line {
-  display: none;
-}
-
 .flow-item {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  align-items: center;
-  gap: 22px;
-  margin-bottom: 28px;
+  margin-bottom: 34px;
 }
 
 .flow-item + .flow-item {
   margin-top: 0;
 }
 
-.flow-node {
-  color: var(--ink-muted);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-
-.flow-item:last-child .flow-node,
 .flow-item:last-child .flow-text strong {
   color: var(--accent);
 }
@@ -940,9 +979,9 @@ button:hover .arrow {
 
 .flow-text strong {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 5px;
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 400;
   letter-spacing: -0.02em;
 }
@@ -950,7 +989,7 @@ button:hover .arrow {
 .flow-text span {
   display: block;
   color: var(--ink-muted);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .code-section {
@@ -2394,14 +2433,6 @@ button:hover .arrow {
     width: 100%;
     margin-top: 50px;
     padding: 0;
-  }
-
-  .flow-line {
-    left: 43px;
-  }
-
-  .flow-item {
-    gap: 10px;
   }
 
   .code-layout > .code-frame {
