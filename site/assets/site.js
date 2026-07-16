@@ -272,7 +272,7 @@ function createVisualLab() {
   panel.setAttribute("aria-label", "Visual settings");
   panel.innerHTML = `
     <div class="visual-lab-header">
-      <div><span>DEBUG / LOCAL</span><strong>Visual lab</strong></div>
+      <strong>Visual lab</strong>
       <button type="button" data-visual-close aria-label="Close visual lab">×</button>
     </div>
     <div class="visual-lab-body">

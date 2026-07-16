@@ -315,7 +315,6 @@ button:hover .arrow {
 }
 
 .poster-safety,
-.poster-index,
 .poster-caption {
   position: absolute;
   z-index: 3;
@@ -335,13 +334,6 @@ button:hover .arrow {
 
 .poster-safety:hover {
   color: var(--ink);
-}
-
-.poster-index {
-  top: 29px;
-  left: 50%;
-  color: color-mix(in srgb, var(--art) 78%, var(--ink-muted));
-  transform: translateX(-50%);
 }
 
 .poster-caption {
@@ -627,23 +619,6 @@ button:hover .arrow {
   border-bottom: 1px solid var(--line);
 }
 
-.product-showcase .section-inner {
-  position: relative;
-  padding-top: 30px;
-}
-
-.product-showcase .section-inner::before {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  content: "INTERFACE STUDY / LIVE PATCH / 001";
-  color: var(--ink-muted);
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: 0.08em;
-  transform: translateX(-50%);
-}
-
 .product-window {
   position: relative;
   width: min(100%, 900px);
@@ -653,10 +628,6 @@ button:hover .arrow {
   background: var(--bg-raised);
   box-shadow: none;
   transform: none;
-}
-
-.product-window::before {
-  display: none;
 }
 
 .window-bar {
@@ -1857,21 +1828,11 @@ button:hover .arrow {
   border-bottom: 1px solid var(--line);
 }
 
-.visual-lab-header div,
-.visual-lab-header strong,
-.visual-lab-header span {
+.visual-lab-header strong {
   display: block;
 }
 
-.visual-lab-header span {
-  color: var(--art);
-  font-family: var(--mono);
-  font-size: 7px;
-  letter-spacing: 0.1em;
-}
-
 .visual-lab-header strong {
-  margin-top: 2px;
   font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.025em;
@@ -2487,14 +2448,6 @@ button:hover .arrow {
 
   .poster-safety {
     display: none;
-  }
-
-  .poster-index {
-    top: 21px;
-    right: 18px;
-    left: auto;
-    font-size: 7px;
-    transform: none;
   }
 
   .poster-caption {
