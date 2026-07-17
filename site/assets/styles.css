@@ -50,7 +50,7 @@
   --dither-pointer-y: 0px;
   --dither-pointer-rotate: 0deg;
   --header-height: 64px;
-  --content-width: 100%;
+  --content-width: 80%;
   --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --sans: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -152,7 +152,7 @@ svg {
 }
 
 .header-inner {
-  width: min(calc(100% - 40px), var(--content-width));
+  width: calc(100% - 40px);
   height: 100%;
   margin: 0 auto;
   display: flex;
@@ -3097,6 +3097,10 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
   .trust-strip-inner,
   .footer-inner {
     width: min(calc(100% - 30px), var(--content-width));
+  }
+
+  .header-inner {
+    width: calc(100% - 30px);
   }
 
   .brand-mark {
