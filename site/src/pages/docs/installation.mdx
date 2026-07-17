@@ -1,0 +1,82 @@
+---
+title: Installation
+description: Download Klack, inspect your Slack installation, and install or remove the bootstrap.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Installation
+
+Klack currently supports release installs on macOS for Apple silicon and Intel. It has been developed against Slack `4.50.143` and requires Node.js 24 or newer.
+
+::::steps
+
+## Download Klack
+
+The installer selects the release for your Mac, verifies its SHA-256 checksum, and adds a launcher at `~/.local/bin/klack`. It does not patch Slack yet.
+
+```sh
+curl -fsSL https://klack.sh/install | sh
+```
+
+## Quit Slack completely
+
+Use **Slack → Quit Slack** and confirm no other Slack copy is running. Klack intentionally refuses to modify an app while Slack is open.
+
+## Inspect before changing anything
+
+```sh
+~/.local/bin/klack status
+
+# Use a separate app path while testing:
+~/.local/bin/klack status --app "$HOME/Applications/Slack-Klack.app"
+```
+
+## Install the bootstrap
+
+```sh
+~/.local/bin/klack install
+
+# Or install into a disposable copy:
+~/.local/bin/klack install --app "$HOME/Applications/Slack-Klack.app"
+```
+
+::::
+
+:::note
+**After a Slack update:** Slack replaces its application resources when it updates. Quit Slack and run `klack install` again to regenerate the combined preload.
+:::
+
+To download Klack and patch Slack in one command, add `--install` to the installer:
+
+```sh
+curl -fsSL https://klack.sh/install | sh -s -- --install
+```
+
+## Restore Slack
+
+Quit every Slack copy, then run:
+
+```sh
+klack uninstall
+
+# Match the custom app path if you used one:
+klack uninstall --app "$HOME/Applications/Slack-Klack.app"
+```
+
+For protected canonical installs, Klack restores the complete vendor-signed bundle it preserved. Directly writable copies restore the original ASAR but remain ad-hoc signed.
+
+## Build from source
+
+Source builds additionally require pnpm. Clone the repository, run its checks, then use `pnpm klack` in place of the release launcher.
+
+```sh
+git clone https://github.com/zygimantass/klack.git
+cd klack
+pnpm install
+pnpm check
+pnpm test
+pnpm klack status
+```

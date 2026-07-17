@@ -1,0 +1,22 @@
+---
+title: How it works
+description: How Klack injects local plugins while preserving Slack’s renderer protections.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# How injection works
+
+Klack uses a small bootstrap rather than disabling Electron’s renderer protections.
+
+1. The installer renames Slack’s `app.asar` to `_app.asar` and puts a tiny bootstrap archive in its place.
+2. On macOS, it updates Electron’s embedded ASAR-integrity metadata and ad-hoc signs the outer app while leaving Slack’s signed helpers and frameworks untouched.
+3. The bootstrap starts Klack’s main-process patcher, redirects Electron to Slack’s original package, and wraps `BrowserWindow`.
+4. Windows using Slack’s primary preload receive a generated file containing Klack followed by Slack’s exact original preload.
+5. Klack injects the renderer and the compiled local plugin set before Slack finishes loading.
+
+:::note
+**Renderer settings remain unchanged.** Slack still launches windows with `sandbox: true` and `contextIsolation: true`. This is a compatibility property, not a sandbox for Klack plugins.
+:::

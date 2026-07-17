@@ -1,0 +1,54 @@
+---
+title: Quick start
+description: Confirm Klack loaded and add your first local Slack plugin.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Quick start
+
+Once Slack launches through Klack, verify the runtime and add a tiny plugin.
+
+## 1. Confirm Klack loaded
+
+Open Slack’s DevTools with <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> and run:
+
+```js
+Klack.version
+Klack.list()
+```
+
+The built-in `LoadedIndicator` plugin also adds a small badge in the lower-right corner of Slack.
+
+## 2. Create the plugin directory
+
+```sh
+mkdir -p ~/.klack/plugins
+```
+
+## 3. Add a plugin
+
+Create `~/.klack/plugins/hello.ts`:
+
+```ts
+import { definePlugin } from "klack/sdk";
+
+export default definePlugin({
+  name: "Hello",
+  description: "My first Klack plugin",
+  setup(klack) {
+    klack.ui.addButton({
+      id: "hello",
+      target: "body",
+      label: "Hello from Klack",
+      onClick(_event, { button }) {
+        button.textContent = "Clicked!";
+      },
+    });
+  },
+});
+```
+
+Save the file. Klack bundles it in memory and applies the new plugin without a manual build or Slack restart.

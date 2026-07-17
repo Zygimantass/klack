@@ -1,0 +1,25 @@
+---
+title: Hot reload
+description: How Klack recompiles local plugins and updates every open Slack window.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Hot reload
+
+At startup, Klack loads its built-in plugins, then scans `~/.klack/plugins/*.{ts,tsx,js,jsx}`. TypeScript and JavaScript modules are bundled in memory, so no generated files appear beside your source.
+
+- Changes, additions, and deletions trigger a new plugin set.
+- Current plugin resources are cleaned up before the replacement set starts.
+- Every Slack window receives the update.
+- If compilation fails, Klack logs the error and keeps the last working set active.
+
+## Use a different plugin directory
+
+```sh
+KLACK_PLUGIN_DIR="$HOME/code/slack-plugins" open /Applications/Slack.app
+```
+
+The environment variable must be present in the process that launches Slack.

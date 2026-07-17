@@ -1,0 +1,34 @@
+---
+title: CLI reference
+description: Inspect, install, remove, and launch Klack from the command line.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# CLI reference
+
+Use `klack` after a release installation. From a source checkout, prefix the same commands with `pnpm`.
+
+| Command | Description |
+| --- | --- |
+| `klack status` | Print the app path, Klack state, and detected Slack version. |
+| `klack install` | Install or refresh the bootstrap and generated preload. |
+| `klack uninstall` | Remove Klack and restore Slack’s original application resources. |
+
+## Options
+
+| Option | Description |
+| --- | --- |
+| `--app <path>` | Operate on a Slack app other than `/Applications/Slack.app`. |
+| `--no-resign` | Skip macOS ad-hoc signing. The changed app will not launch until it is signed. |
+| `-h`, `--help` | Print command usage. |
+
+## Launch without injection
+
+To start through the installed bootstrap without Klack’s renderer or local plugins, pass `--klack-vanilla` directly to Slack:
+
+```sh
+/Applications/Slack.app/Contents/MacOS/Slack --klack-vanilla
+```

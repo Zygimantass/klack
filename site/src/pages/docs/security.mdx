@@ -1,0 +1,22 @@
+---
+title: Security
+description: Understand Klack’s trust model, installation changes, and plugin capabilities.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Security
+
+Klack is unofficial, unsupported, and intended for local experimentation. Its plugin system is deliberately powerful.
+
+- **Plugins are trusted code.** They can inspect or modify anything visible to Slack’s renderer. Never install a plugin you have not reviewed.
+- **Plugins are not isolated from one another.** Plugin ownership provides lifecycle cleanup, not a security boundary.
+- **Installation changes Slack’s bundle.** This invalidates Slack’s vendor signature and may violate Slack or workspace policies.
+- **Ad-hoc signing has consequences.** Keychain, notifications, updates, and device permissions can behave differently.
+- **Managed devices may block changes.** Get explicit authorization before using Klack on workplace hardware.
+
+:::warning
+**Preserving Electron’s sandbox does not sandbox plugins.** Klack’s injection is compatible with Slack’s existing renderer protections, but plugin code still runs with access to the renderer environment.
+:::

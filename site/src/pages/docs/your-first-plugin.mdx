@@ -1,0 +1,45 @@
+---
+title: Your first plugin
+description: Define a typed Klack plugin or use JavaScript without a build step.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Your first plugin
+
+A typed plugin exports a definition created with `definePlugin`. The helper is intentionally an identity function at runtime; its job is to provide type checking and autocomplete.
+
+```ts title="plugin.ts"
+import { definePlugin } from "klack/sdk";
+
+export default definePlugin({
+  name: "Example", // A-Z, a-z, 0-9, _ and -
+  description: "Example plugin",
+  version: "1.0.0",
+  defaultEnabled: true,
+  setup(klack) {
+    klack.logger.info("Example started");
+
+    klack.cleanup(() => {
+      klack.logger.info("Example stopped");
+    });
+  },
+});
+```
+
+The filename is the source identity. A file in the user plugin directory replaces a built-in plugin with the same filename.
+
+## JavaScript without a build step
+
+A CommonJS definition also works. It uses the same required `name` and `setup` fields:
+
+```js title="simple.js"
+module.exports = {
+  name: "Simple",
+  setup(klack) {
+    klack.logger.info("Simple plugin loaded");
+  },
+};
+```

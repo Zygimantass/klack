@@ -1,0 +1,46 @@
+---
+title: Plugin API
+description: Reference for plugin definitions, the setup context, and the Klack browser global.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Plugin API
+
+## Definition fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `name` | string | Required. Letters, numbers, underscores, and hyphens only. |
+| `setup` | function | Required. Receives `KlackApi`; register cleanup with the provided methods. |
+| `description` | string | Optional human-readable summary. |
+| `version` | string | Optional plugin version shown by `Klack.list()`. |
+| `defaultEnabled` | boolean | Defaults to `true`. A saved user override takes precedence. |
+
+## Setup context
+
+| Property | Description |
+| --- | --- |
+| `klack.ui` | The scoped methods documented in [UI contributions](/docs/ui-contributions). |
+| `klack.dom` | Incremental selector watching and scoped mutation observers. |
+| `klack.events` | Plugin-owned event listeners. |
+| `klack.timers` | Plugin-owned timeouts, intervals, and animation frames. |
+| `klack.cleanup` | Registers cleanup for direct changes and third-party APIs. |
+| `klack.logger` | Slack renderer’s `console`, suitable for namespaced development logs. |
+| `klack.version` | The currently running Klack version. |
+
+## Browser global
+
+The frozen `window.Klack` object exposes:
+
+```js
+Klack.version
+Klack.list()
+Klack.isEnabled(name)
+Klack.enable(name)
+Klack.disable(name)
+```
+
+Plugin modules must default-export a definition with `name` and `setup`.

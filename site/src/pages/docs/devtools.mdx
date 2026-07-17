@@ -1,0 +1,23 @@
+---
+title: DevTools
+description: Inspect Slack’s interface and control Klack plugins from the browser console.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# DevTools
+
+Klack adds **Toggle DevTools** to Slack’s **View** menu—or to a **Klack** menu if Slack has no View menu.
+
+Use <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd> on Windows and Linux. The element picker helps find stable selectors for UI targets.
+
+```js
+Klack.list()
+Klack.disable("Example")
+Klack.enable("Example")
+Klack.isEnabled("Example")
+```
+
+Enablement choices are stored in Slack renderer local storage under `klack:plugin-overrides`.

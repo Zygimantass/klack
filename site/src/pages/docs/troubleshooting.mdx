@@ -1,0 +1,32 @@
+---
+title: Troubleshooting
+description: Fix common Klack installation, launch, sign-in, and plugin reload problems.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# Troubleshooting
+
+## “A Slack app is running”
+
+Quit every Slack copy, including test copies. Klack checks for the Slack process before install and uninstall operations.
+
+## The modified app does not launch
+
+If you passed `--no-resign` on macOS, the bundle needs a valid signature before it can launch. Re-run installation without that option or restore Slack.
+
+## Browser sign-in opens another Slack copy
+
+macOS chooses a `slack://` handler by bundle identifier, not app path. Quit all other Slack copies during sign-in or use the canonical `/Applications/Slack.app`.
+
+## A plugin edit does not apply
+
+Open DevTools and inspect the console for a compile error. Klack intentionally keeps the last working plugin set active when a new source file fails to bundle.
+
+## Slack updated and Klack disappeared
+
+Slack updates replace application resources. Re-run the release download if you want to update Klack too, quit Slack, and run `klack install` again.
+
+[Back to Klack home](/) · [Open an issue](https://github.com/zygimantass/klack/issues)

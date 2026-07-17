@@ -1,0 +1,63 @@
+---
+title: UI contributions
+description: Add buttons, mount custom elements, inject styles, and observe Slack’s DOM.
+layout: full
+outline: 2
+showAskAi: false
+showFeedback: false
+---
+
+# UI contributions
+
+Everything registered through `klack.ui`, `klack.dom`, `klack.events`, and `klack.timers` belongs to the current plugin. Disabling or reloading that plugin removes the contribution automatically.
+
+| Method | Purpose |
+| --- | --- |
+| `ui.addButton(options)` | Mount a resilient button at every matching target, with click context and accessible attributes. |
+| `ui.mount(target, render, options)` | Mount an arbitrary element with mount-scoped events and cleanup. |
+| `ui.addStyle(css, options?)` | Inject plugin-owned CSS with an optional style identifier. |
+| `ui.hide(selectors, options?)` | Hide one or more selectors with plugin-owned CSS. |
+| `dom.watch(selector, callback)` | Initialize current and future matches incrementally, with per-element cleanup. |
+| `events.on(target, type, listener)` | Add a listener that is removed automatically. |
+
+## Targets and positions
+
+A UI target can be a CSS selector, one `Element`, or a function that returns an element or iterable of elements. Buttons and mounts support four positions:
+
+| Position | Behavior |
+| --- | --- |
+| `append` | Add inside the target, after its existing children. This is the default. |
+| `prepend` | Add inside the target, before its existing children. |
+| `before` | Add as the target’s previous sibling. |
+| `after` | Add as the target’s next sibling. |
+
+## Mount custom DOM
+
+```ts title="custom-mount.ts"
+klack.ui.mount(
+  "[data-qa='message_input']",
+  ({ cleanup, plugin, target }) => {
+    const badge = document.createElement("span");
+    badge.textContent = `Mounted by ${plugin}`;
+    cleanup(() => {
+      klack.logger.debug("Removed from", target);
+    });
+    return badge;
+  },
+  { position: "before" },
+);
+```
+
+## Observe Slack’s DOM
+
+```ts title="observer.ts"
+klack.dom.watch("[data-qa='message_container']", (message) => {
+  message.classList.add("my-plugin-message");
+
+  return () => {
+    message.classList.remove("my-plugin-message");
+  };
+});
+```
+
+Klack reconciles contributions when Slack changes the DOM. If the target or mounted element disappears, cleanup runs and the contribution is recreated when a target returns.

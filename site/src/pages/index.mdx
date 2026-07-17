@@ -75,7 +75,7 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
         <div className="hero-details">
           <p className="hero-copy">Remove distractions, browse conversations in tabs, change the entire look, and add the features Slack forgot. Keep what you want; leave the rest.</p>
           <div className="hero-actions">
-            <a className="button button-primary" href="/docs#installation">Install Klack <span className="arrow" aria-hidden="true">→</span></a>
+            <a className="button button-primary" href="/docs/installation">Install Klack <span className="arrow" aria-hidden="true">→</span></a>
             <a className="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse plugins</a>
           </div>
           <div className="install-command">
@@ -230,7 +230,7 @@ export default definePlugin({
         <h2>Make Slack yours.</h2>
         <p>Install Klack, open the Plugin Manager, and enable only the changes you want.</p>
         <div className="hero-actions">
-          <a className="button button-primary" href="/docs#installation">Install Klack <span className="arrow" aria-hidden="true">→</span></a>
+          <a className="button button-primary" href="/docs/installation">Install Klack <span className="arrow" aria-hidden="true">→</span></a>
           <a className="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse included plugins</a>
         </div>
       </div>
@@ -248,9 +248,9 @@ export default definePlugin({
         </a>
         <p>Customize Slack with focused plugins and complete themes. Unofficial, local-first, and reversible.</p>
       </div>
-      <div className="footer-column"><strong>Start</strong><a href="/docs#installation">Installation</a><a href="/docs#quick-start">Quick start</a><a href="/docs#your-first-plugin">First plugin</a></div>
-      <div className="footer-column"><strong>Reference</strong><a href="/docs#ui-api">UI API</a><a href="/docs#cli">CLI</a><a href="/docs#devtools">DevTools</a></div>
-      <div className="footer-column"><strong>Project</strong><a href="https://github.com/zygimantass/klack">GitHub</a><a href="https://github.com/zygimantass/klack/issues">Issues</a><a href="/docs#security">Security</a></div>
+      <div className="footer-column"><strong>Start</strong><a href="/docs/installation">Installation</a><a href="/docs/quick-start">Quick start</a><a href="/docs/your-first-plugin">First plugin</a></div>
+      <div className="footer-column"><strong>Reference</strong><a href="/docs/ui-contributions">UI API</a><a href="/docs/cli">CLI</a><a href="/docs/devtools">DevTools</a></div>
+      <div className="footer-column"><strong>Project</strong><a href="https://github.com/zygimantass/klack">GitHub</a><a href="https://github.com/zygimantass/klack/issues">Issues</a><a href="/docs/security">Security</a></div>
     </div>
     <div className="footer-bottom">
       <span>© <span data-year>2026</span> Klack contributors</span>
@@ -260,16 +260,18 @@ export default definePlugin({
 </footer>
 
 <div hidden aria-hidden="true">
-  <a href="/docs#overview" data-search-item data-search-group="Introduction" data-search-title="Overview" data-search-description="What Klack is and how it works"></a>
-  <a href="/docs#installation" data-search-item data-search-group="Introduction" data-search-title="Installation" data-search-description="Download and install Klack on macOS"></a>
-  <a href="/docs#quick-start" data-search-item data-search-group="Introduction" data-search-title="Quick start" data-search-description="Verify Klack and create a plugin"></a>
-  <a href="/docs#your-first-plugin" data-search-item data-search-group="Plugins" data-search-title="Your first plugin" data-search-description="Plugin anatomy and setup"></a>
-  <a href="/docs#ui-api" data-search-item data-search-group="Plugins" data-search-title="UI contributions" data-search-description="Buttons, mounts, styles, and observers"></a>
-  <a href="/docs#hot-reload" data-search-item data-search-group="Plugins" data-search-title="Hot reload" data-search-description="How live plugin updates work"></a>
-  <a href="/docs#cli" data-search-item data-search-group="Reference" data-search-title="CLI reference" data-search-description="status, install, and uninstall commands"></a>
-  <a href="/docs#plugin-api" data-search-item data-search-group="Reference" data-search-title="Plugin API" data-search-description="Definitions, metadata, and globals"></a>
-  <a href="/docs#security" data-search-item data-search-group="Reference" data-search-title="Security" data-search-description="Trust model and macOS signing implications"></a>
-  <a href="/docs#architecture" data-search-item data-search-group="Reference" data-search-title="Architecture" data-search-description="How Klack injects while preserving the sandbox"></a>
+  <a href="/docs" data-search-item data-search-group="Introduction" data-search-title="Overview" data-search-description="What Klack is and how it works"></a>
+  <a href="/docs/installation" data-search-item data-search-group="Introduction" data-search-title="Installation" data-search-description="Download and install Klack on macOS"></a>
+  <a href="/docs/quick-start" data-search-item data-search-group="Introduction" data-search-title="Quick start" data-search-description="Verify Klack and create a plugin"></a>
+  <a href="/docs/how-it-works" data-search-item data-search-group="Introduction" data-search-title="How it works" data-search-description="How Klack injects while preserving the sandbox"></a>
+  <a href="/docs/your-first-plugin" data-search-item data-search-group="Plugins" data-search-title="Your first plugin" data-search-description="Plugin anatomy and setup"></a>
+  <a href="/docs/ui-contributions" data-search-item data-search-group="Plugins" data-search-title="UI contributions" data-search-description="Buttons, mounts, styles, and observers"></a>
+  <a href="/docs/hot-reload" data-search-item data-search-group="Plugins" data-search-title="Hot reload" data-search-description="How live plugin updates work"></a>
+  <a href="/docs/devtools" data-search-item data-search-group="Plugins" data-search-title="DevTools" data-search-description="Inspect Slack and manage plugins from the console"></a>
+  <a href="/docs/cli" data-search-item data-search-group="Reference" data-search-title="CLI reference" data-search-description="status, install, and uninstall commands"></a>
+  <a href="/docs/plugin-api" data-search-item data-search-group="Reference" data-search-title="Plugin API" data-search-description="Definitions, metadata, and globals"></a>
+  <a href="/docs/security" data-search-item data-search-group="Reference" data-search-title="Security" data-search-description="Trust model and macOS signing implications"></a>
+  <a href="/docs/troubleshooting" data-search-item data-search-group="Reference" data-search-title="Troubleshooting" data-search-description="Fix common install, launch, and plugin reload problems"></a>
 </div>
 
 <dialog className="command-dialog" data-command-dialog aria-label="Search documentation">
