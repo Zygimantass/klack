@@ -113,6 +113,10 @@ const visualLabDitherSelects = {
       hatch: "Hatch",
       cross: "Crosshatch",
       rings: "Rings",
+      paper: "Paper grain",
+      strips: "Cut strips",
+      flecks: "Ink flecks",
+      blocks: "Cut blocks",
     },
   },
   shape: {
@@ -123,6 +127,10 @@ const visualLabDitherSelects = {
       aperture: "Aperture",
       shards: "Shards",
       wave: "Wave",
+      torn: "Torn sheet",
+      ribbons: "Ribbons",
+      scraps: "Scraps",
+      stencil: "Stencil",
     },
   },
   motion: {
@@ -183,20 +191,20 @@ const visualLabDefaults = {
   dither: {
     animated: true,
     reactive: true,
-    pattern: "dots",
-    shape: "orbit",
-    motion: "drift",
-    timing: "fluid",
-    blend: "normal",
-    density: 5,
-    speed: 22,
-    drift: 34,
-    spin: 18,
-    pulse: 6,
-    hue: 0,
+    pattern: "pixels",
+    shape: "shards",
+    motion: "glitch",
+    timing: "stepped",
+    blend: "difference",
+    density: 4,
+    speed: 6,
+    drift: 58,
+    spin: 28,
+    pulse: 12,
+    hue: 90,
     bloom: 4,
-    opacity: 90,
-    parallax: 10,
+    opacity: 74,
+    parallax: 18,
   },
 };
 const visualLabPresets = {
@@ -377,7 +385,23 @@ const visualLabMotionPresets = {
   drift: {
     label: "Drift",
     description: "Slow + airy",
-    dither: { ...visualLabDefaults.dither },
+    dither: {
+      ...visualLabDefaults.dither,
+      pattern: "dots",
+      shape: "orbit",
+      motion: "drift",
+      timing: "fluid",
+      blend: "normal",
+      density: 5,
+      speed: 22,
+      drift: 34,
+      spin: 18,
+      pulse: 6,
+      hue: 0,
+      bloom: 4,
+      opacity: 90,
+      parallax: 10,
+    },
   },
   orbit: {
     label: "Orbit",
@@ -483,7 +507,92 @@ const visualLabMotionPresets = {
       parallax: 12,
     },
   },
+  cutout: {
+    label: "Cutout",
+    description: "Torn sheet",
+    dither: {
+      ...visualLabDefaults.dither,
+      pattern: "paper",
+      shape: "torn",
+      motion: "glitch",
+      timing: "stepped",
+      blend: "normal",
+      density: 5,
+      speed: 9,
+      drift: 40,
+      spin: 18,
+      pulse: 5,
+      hue: 15,
+      bloom: 2,
+      opacity: 88,
+      parallax: 12,
+    },
+  },
+  ransom: {
+    label: "Ransom",
+    description: "Uneven strips",
+    dither: {
+      ...visualLabDefaults.dither,
+      pattern: "strips",
+      shape: "ribbons",
+      motion: "glitch",
+      timing: "stepped",
+      blend: "normal",
+      density: 8,
+      speed: 7,
+      drift: 64,
+      spin: 8,
+      pulse: 5,
+      hue: 35,
+      bloom: 3,
+      opacity: 92,
+      parallax: 15,
+    },
+  },
+  scraps: {
+    label: "Scraps",
+    description: "Loose pieces",
+    dither: {
+      ...visualLabDefaults.dither,
+      pattern: "flecks",
+      shape: "scraps",
+      motion: "glitch",
+      timing: "elastic",
+      blend: "normal",
+      density: 6,
+      speed: 10,
+      drift: 50,
+      spin: 36,
+      pulse: 10,
+      hue: 45,
+      bloom: 2,
+      opacity: 90,
+      parallax: 20,
+    },
+  },
+  stencil: {
+    label: "Stencil",
+    description: "Holes + ink",
+    dither: {
+      ...visualLabDefaults.dither,
+      pattern: "blocks",
+      shape: "stencil",
+      motion: "pulse",
+      timing: "stepped",
+      blend: "screen",
+      density: 7,
+      speed: 11,
+      drift: 20,
+      spin: 14,
+      pulse: 16,
+      hue: 35,
+      bloom: 7,
+      opacity: 78,
+      parallax: 10,
+    },
+  },
 };
+const visualLabHandCutPresetIds = new Set(["cutout", "ransom", "scraps", "stencil"]);
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -672,10 +781,21 @@ function createVisualLab() {
       <fieldset class="visual-lab-section">
         <legend>Dither recipes</legend>
         <div class="visual-motion-grid">
-          ${Object.entries(visualLabMotionPresets).map(([id, preset]) => `
+          ${Object.entries(visualLabMotionPresets).filter(([id]) => !visualLabHandCutPresetIds.has(id)).map(([id, preset]) => `
             <button type="button" data-visual-motion-preset="${id}" aria-pressed="false">
               <span aria-hidden="true"></span>
               <strong>${preset.label}</strong>
+              <small>${preset.description}</small>
+            </button>`).join("")}
+        </div>
+      </fieldset>
+      <fieldset class="visual-lab-section visual-cut-studies">
+        <legend>Hand-cut studies</legend>
+        <div class="visual-motion-grid">
+          ${Object.entries(visualLabMotionPresets).filter(([id]) => visualLabHandCutPresetIds.has(id)).map(([id, preset], index) => `
+            <button type="button" data-visual-motion-preset="${id}" aria-pressed="false">
+              <span aria-hidden="true"></span>
+              <strong>C${index + 1} · ${preset.label}</strong>
               <small>${preset.description}</small>
             </button>`).join("")}
         </div>

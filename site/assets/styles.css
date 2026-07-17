@@ -26,26 +26,26 @@
   --code-blue: #78c7ff;
   --code-panel: #1a1b18;
   --code-line: #343630;
-  --dither-grid: 5px;
-  --dither-grid-wide: 9px;
-  --dither-speed: 22s;
-  --dither-speed-slow: 31s;
-  --dither-color-speed: 18s;
+  --dither-grid: 4px;
+  --dither-grid-wide: 8px;
+  --dither-speed: 6s;
+  --dither-speed-slow: 8s;
+  --dither-color-speed: 6s;
   --dither-play-state: running;
-  --dither-drift: 34px;
-  --dither-drift-half: 17px;
-  --dither-drift-neg: -34px;
-  --dither-spin: 18deg;
-  --dither-spin-half: 9deg;
-  --dither-spin-neg: -18deg;
-  --dither-scale-min: 0.97;
-  --dither-scale-max: 1.06;
-  --dither-hue: 0deg;
-  --dither-hue-neg: 0deg;
+  --dither-drift: 58px;
+  --dither-drift-half: 29px;
+  --dither-drift-neg: -58px;
+  --dither-spin: 28deg;
+  --dither-spin-half: 14deg;
+  --dither-spin-neg: -28deg;
+  --dither-scale-min: 0.94;
+  --dither-scale-max: 1.12;
+  --dither-hue: 90deg;
+  --dither-hue-neg: -45deg;
   --dither-bloom: 4px;
-  --dither-ink-opacity: 0.9;
-  --dither-field-opacity: 0.36;
-  --dither-blend: normal;
+  --dither-ink-opacity: 0.74;
+  --dither-field-opacity: 0.296;
+  --dither-blend: difference;
   --dither-pointer-x: 0px;
   --dither-pointer-y: 0px;
   --dither-pointer-rotate: 0deg;
@@ -448,6 +448,39 @@ html[data-dither-pattern="rings"] :is(.hero-art-ring, .hero-art-field) {
   background-size: 42px 42px, 58px 58px;
 }
 
+html[data-dither-pattern="paper"] :is(.hero-art-ring, .hero-art-field) {
+  background-image:
+    repeating-linear-gradient(7deg, color-mix(in srgb, var(--art) 76%, transparent) 0 1px, transparent 1px var(--dither-grid)),
+    radial-gradient(ellipse at 72% 31%, color-mix(in srgb, var(--art-secondary) 76%, transparent) 0 1px, transparent 1.4px);
+  background-size: auto, calc(var(--dither-grid-wide) + 7px) calc(var(--dither-grid) + 8px);
+}
+
+html[data-dither-pattern="strips"] :is(.hero-art-ring, .hero-art-field) {
+  background-image:
+    repeating-linear-gradient(174deg, color-mix(in srgb, var(--art) 88%, transparent) 0 4px, transparent 4px var(--dither-grid-wide)),
+    repeating-linear-gradient(8deg, color-mix(in srgb, var(--art-secondary) 66%, transparent) 0 2px, transparent 2px calc(var(--dither-grid) + 5px));
+  background-size: auto;
+  background-color: color-mix(in srgb, var(--art-soft) 42%, transparent);
+}
+
+html[data-dither-pattern="flecks"] :is(.hero-art-ring, .hero-art-field) {
+  background-image:
+    radial-gradient(ellipse at 17% 31%, color-mix(in srgb, var(--art) 96%, transparent) 0 1px, transparent 1.5px),
+    radial-gradient(ellipse at 73% 66%, color-mix(in srgb, var(--art-secondary) 88%, transparent) 0 1.4px, transparent 1.9px),
+    radial-gradient(ellipse at 45% 12%, color-mix(in srgb, var(--art) 64%, transparent) 0 0.7px, transparent 1.2px);
+  background-size:
+    calc(var(--dither-grid) + 8px) calc(var(--dither-grid-wide) + 5px),
+    calc(var(--dither-grid-wide) + 9px) calc(var(--dither-grid) + 6px),
+    calc(var(--dither-grid) + 5px) calc(var(--dither-grid) + 9px);
+}
+
+html[data-dither-pattern="blocks"] :is(.hero-art-ring, .hero-art-field) {
+  background-image:
+    conic-gradient(from 16deg at 64% 38%, color-mix(in srgb, var(--art) 92%, transparent) 0 12.5%, transparent 0 50%, color-mix(in srgb, var(--art) 60%, transparent) 0 62.5%, transparent 0),
+    conic-gradient(from 201deg at 37% 71%, color-mix(in srgb, var(--art-secondary) 82%, transparent) 0 18%, transparent 0 57%, color-mix(in srgb, var(--art-secondary) 48%, transparent) 0 70%, transparent 0);
+  background-size: calc(var(--dither-grid) + 7px) calc(var(--dither-grid) + 4px), calc(var(--dither-grid-wide) + 5px) calc(var(--dither-grid-wide) + 9px);
+}
+
 html[data-dither-shape="bloom"] .hero-art-ring {
   -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 20%, #000 21% 58%, transparent 76%);
   mask-image: radial-gradient(circle at 50% 50%, transparent 0 20%, #000 21% 58%, transparent 76%);
@@ -485,6 +518,72 @@ html[data-dither-shape="wave"] .hero-art-ring {
 
 html[data-dither-shape="wave"] .hero-art-field {
   clip-path: polygon(0 29%, 18% 10%, 39% 24%, 62% 3%, 82% 22%, 100% 9%, 100% 71%, 83% 92%, 63% 77%, 40% 98%, 19% 79%, 0 93%);
+}
+
+html[data-dither-shape="torn"] .hero-art-ring {
+  clip-path: polygon(2% 13%, 7% 9%, 14% 11%, 21% 5%, 28% 9%, 37% 3%, 44% 7%, 53% 2%, 61% 8%, 70% 4%, 79% 10%, 88% 6%, 97% 14%, 94% 23%, 99% 32%, 95% 43%, 98% 54%, 93% 63%, 97% 74%, 91% 83%, 94% 94%, 84% 91%, 76% 97%, 67% 93%, 58% 99%, 49% 94%, 39% 98%, 31% 92%, 20% 96%, 13% 89%, 4% 92%, 7% 81%, 1% 72%, 5% 61%, 0 51%, 5% 42%, 1% 31%, 6% 23%);
+  -webkit-mask-image: linear-gradient(#000, #000);
+  mask-image: linear-gradient(#000, #000);
+}
+
+html[data-dither-shape="torn"] .hero-art-field {
+  clip-path: polygon(4% 20%, 14% 8%, 26% 13%, 39% 4%, 51% 11%, 66% 2%, 78% 14%, 94% 9%, 88% 27%, 98% 39%, 89% 52%, 96% 67%, 83% 74%, 87% 92%, 69% 85%, 57% 98%, 43% 88%, 29% 96%, 22% 81%, 7% 87%, 13% 68%, 2% 57%, 11% 42%);
+  -webkit-mask-image: linear-gradient(137deg, #000 0 69%, transparent 70%);
+  mask-image: linear-gradient(137deg, #000 0 69%, transparent 70%);
+}
+
+html[data-dither-shape="ribbons"] .hero-art-ring {
+  clip-path: polygon(1% 8%, 98% 2%, 94% 18%, 3% 24%, 8% 31%, 97% 26%, 99% 43%, 5% 49%, 1% 63%, 95% 56%, 92% 73%, 7% 81%, 2% 96%, 98% 87%, 100% 100%, 0 100%);
+  -webkit-mask-image: repeating-linear-gradient(176deg, #000 0 9%, transparent 10% 16%, #000 17% 25%, transparent 26% 33%);
+  mask-image: repeating-linear-gradient(176deg, #000 0 9%, transparent 10% 16%, #000 17% 25%, transparent 26% 33%);
+}
+
+html[data-dither-shape="ribbons"] .hero-art-field {
+  clip-path: polygon(4% 11%, 95% 3%, 100% 29%, 8% 36%, 1% 57%, 91% 48%, 98% 73%, 5% 84%, 0 100%, 93% 91%, 100% 100%, 0 100%);
+  -webkit-mask-image: repeating-linear-gradient(8deg, #000 0 12%, transparent 13% 22%);
+  mask-image: repeating-linear-gradient(8deg, #000 0 12%, transparent 13% 22%);
+}
+
+html[data-dither-shape="scraps"] .hero-art-ring {
+  clip-path: polygon(2% 18%, 23% 3%, 38% 17%, 55% 2%, 69% 20%, 96% 9%, 81% 37%, 99% 55%, 72% 68%, 91% 94%, 59% 82%, 42% 99%, 27% 75%, 1% 92%, 16% 58%);
+  -webkit-mask:
+    conic-gradient(from 17deg at 41% 53%, #000 0 76%, transparent 77%) 5% 7% / 26% 23% no-repeat,
+    conic-gradient(from 211deg at 54% 46%, #000 0 69%, transparent 70%) 41% 3% / 31% 27% no-repeat,
+    conic-gradient(from 101deg at 46% 55%, #000 0 72%, transparent 73%) 72% 19% / 24% 31% no-repeat,
+    conic-gradient(from 289deg at 52% 42%, #000 0 74%, transparent 75%) 12% 55% / 29% 34% no-repeat,
+    conic-gradient(from 43deg at 39% 61%, #000 0 67%, transparent 68%) 53% 57% / 37% 36% no-repeat;
+  mask:
+    conic-gradient(from 17deg at 41% 53%, #000 0 76%, transparent 77%) 5% 7% / 26% 23% no-repeat,
+    conic-gradient(from 211deg at 54% 46%, #000 0 69%, transparent 70%) 41% 3% / 31% 27% no-repeat,
+    conic-gradient(from 101deg at 46% 55%, #000 0 72%, transparent 73%) 72% 19% / 24% 31% no-repeat,
+    conic-gradient(from 289deg at 52% 42%, #000 0 74%, transparent 75%) 12% 55% / 29% 34% no-repeat,
+    conic-gradient(from 43deg at 39% 61%, #000 0 67%, transparent 68%) 53% 57% / 37% 36% no-repeat;
+}
+
+html[data-dither-shape="scraps"] .hero-art-field {
+  clip-path: polygon(5% 7%, 30% 17%, 48% 1%, 62% 22%, 93% 12%, 76% 43%, 99% 64%, 64% 73%, 53% 99%, 34% 76%, 3% 91%, 19% 57%);
+  -webkit-mask:
+    conic-gradient(from 133deg at 57% 44%, #000 0 71%, transparent 72%) 6% 22% / 33% 28% no-repeat,
+    conic-gradient(from 318deg at 43% 59%, #000 0 66%, transparent 67%) 49% 8% / 42% 29% no-repeat,
+    conic-gradient(from 61deg at 54% 37%, #000 0 73%, transparent 74%) 29% 57% / 31% 38% no-repeat,
+    conic-gradient(from 229deg at 38% 62%, #000 0 68%, transparent 69%) 68% 58% / 29% 31% no-repeat;
+  mask:
+    conic-gradient(from 133deg at 57% 44%, #000 0 71%, transparent 72%) 6% 22% / 33% 28% no-repeat,
+    conic-gradient(from 318deg at 43% 59%, #000 0 66%, transparent 67%) 49% 8% / 42% 29% no-repeat,
+    conic-gradient(from 61deg at 54% 37%, #000 0 73%, transparent 74%) 29% 57% / 31% 38% no-repeat,
+    conic-gradient(from 229deg at 38% 62%, #000 0 68%, transparent 69%) 68% 58% / 29% 31% no-repeat;
+}
+
+html[data-dither-shape="stencil"] .hero-art-ring {
+  clip-path: polygon(4% 12%, 19% 4%, 34% 9%, 48% 2%, 65% 8%, 81% 3%, 96% 17%, 91% 33%, 98% 49%, 92% 67%, 97% 84%, 81% 96%, 63% 91%, 48% 99%, 31% 92%, 14% 97%, 3% 82%, 8% 64%, 1% 48%, 7% 29%);
+  -webkit-mask-image: radial-gradient(ellipse 26% 31% at 51% 48%, transparent 0 52%, #000 54%);
+  mask-image: radial-gradient(ellipse 26% 31% at 51% 48%, transparent 0 52%, #000 54%);
+}
+
+html[data-dither-shape="stencil"] .hero-art-field {
+  clip-path: polygon(8% 21%, 28% 5%, 48% 14%, 69% 3%, 93% 23%, 81% 44%, 98% 64%, 73% 78%, 58% 98%, 39% 82%, 14% 94%, 20% 63%, 2% 47%);
+  -webkit-mask-image: radial-gradient(circle at 37% 43%, transparent 0 13%, #000 14% 68%, transparent 69%);
+  mask-image: radial-gradient(circle at 37% 43%, transparent 0 13%, #000 14% 68%, transparent 69%);
 }
 
 html[data-dither-motion="orbit"] .hero-art-ring {
@@ -2383,6 +2482,72 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
 .visual-motion-grid button:nth-child(4) > span::after { inset: 5px 14%; border-width: 1px 0; transform: skewX(-24deg); }
 .visual-motion-grid button:nth-child(5) > span::after { inset: 4px 17%; clip-path: polygon(0 20%, 44% 0, 57% 42%, 100% 18%, 82% 100%, 36% 71%); background: var(--art-secondary); border: 0; }
 .visual-motion-grid button:nth-child(6) > span::after { inset: 4px 27%; border: 2px dotted var(--art-secondary); border-radius: 50%; }
+
+.visual-cut-studies .visual-motion-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="cutout"] > span {
+  background:
+    repeating-linear-gradient(7deg, color-mix(in srgb, var(--art) 74%, transparent) 0 1px, transparent 1px 5px),
+    var(--bg-deep);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="cutout"] > span::after {
+  inset: 3px 14%;
+  background: var(--art-secondary);
+  border: 0;
+  clip-path: polygon(0 18%, 9% 8%, 21% 13%, 34% 3%, 46% 10%, 61% 1%, 74% 12%, 91% 7%, 100% 21%, 94% 39%, 100% 58%, 91% 76%, 95% 94%, 78% 88%, 62% 100%, 44% 91%, 26% 98%, 13% 86%, 2% 91%, 7% 68%, 0 49%, 6% 32%);
+  transform: rotate(-4deg);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="ransom"] > span {
+  background:
+    repeating-linear-gradient(176deg, var(--art) 0 2px, transparent 2px 7px),
+    var(--bg-deep);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="ransom"] > span::after {
+  inset: 2px 8%;
+  background: repeating-linear-gradient(174deg, var(--art-secondary) 0 3px, transparent 3px 7px);
+  border: 0;
+  clip-path: polygon(0 7%, 100% 0, 94% 22%, 4% 31%, 8% 40%, 99% 31%, 94% 57%, 1% 68%, 7% 78%, 98% 69%, 91% 96%, 3% 100%);
+  transform: rotate(2deg);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="scraps"] > span {
+  background:
+    radial-gradient(ellipse at 19% 31%, var(--art) 0 1px, transparent 1.4px) 0 0 / 9px 11px,
+    var(--bg-deep);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="scraps"] > span::after {
+  inset: auto;
+  top: 6px;
+  left: 17%;
+  width: 20px;
+  height: 9px;
+  background: var(--art-secondary);
+  border: 0;
+  box-shadow: 28px -2px 0 var(--art), 53px 5px 0 var(--art-secondary), 72px -3px 0 var(--art);
+  clip-path: polygon(0 19%, 76% 0, 100% 76%, 23% 100%);
+  transform: rotate(-8deg);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="stencil"] > span {
+  background:
+    conic-gradient(from 16deg at 64% 38%, var(--art) 0 12.5%, transparent 0 50%, var(--art) 0 62.5%, transparent 0) 0 0 / 10px 8px,
+    var(--bg-deep);
+}
+
+.visual-cut-studies button[data-visual-motion-preset="stencil"] > span::after {
+  inset: 3px 24%;
+  background: transparent;
+  border: 5px solid var(--art-secondary);
+  border-radius: 0;
+  clip-path: polygon(6% 15%, 31% 1%, 49% 12%, 72% 3%, 96% 19%, 88% 48%, 100% 76%, 71% 91%, 47% 100%, 28% 87%, 3% 95%, 12% 62%, 0 39%);
+  transform: rotate(5deg);
+}
 
 .visual-motion-grid strong,
 .visual-motion-grid small {
