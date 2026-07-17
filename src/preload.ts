@@ -1,6 +1,8 @@
 import {
   DIAGNOSTIC_CAPTURE_CHANNEL,
   DIAGNOSTIC_COPY_CHANNEL,
+  FIRST_INSTALL_CLAIM_CHANNEL,
+  FIRST_INSTALL_COMPLETE_CHANNEL,
   PLUGIN_CHANNEL,
   PLUGIN_RELOAD_CHANNEL,
   THEME_RELOAD_CHANNEL,
@@ -11,6 +13,7 @@ declare const __KLACK_RENDERER_SOURCE__: string;
 declare const __KLACK_VERSION__: string;
 
 type PluginPayload = {
+  firstInstall: boolean;
   plugins: Array<{ name: string; source: string }>;
   themes: Array<{
     css: string;
@@ -41,6 +44,7 @@ const { contextBridge, ipcRenderer, webFrame } = require("electron") as Electron
 function normalizePayload(received: unknown): PluginPayload {
   const candidate = received as Partial<PluginPayload> | undefined;
   return {
+    firstInstall: candidate?.firstInstall === true,
     plugins: Array.isArray(candidate?.plugins) ? candidate.plugins : [],
     themes: Array.isArray(candidate?.themes) ? candidate.themes : [],
     version: typeof candidate?.version === "string" ? candidate.version : __KLACK_VERSION__,
@@ -52,6 +56,13 @@ const payload = normalizePayload(ipcRenderer.sendSync(PLUGIN_CHANNEL));
 contextBridge.exposeInMainWorld(
   "KlackNative",
   Object.freeze({
+    async claimFirstInstall(): Promise<"claimed" | "completed" | "retry"> {
+      const result = await ipcRenderer.invoke(FIRST_INSTALL_CLAIM_CHANNEL);
+      return result === "claimed" || result === "retry" ? result : "completed";
+    },
+    async completeFirstInstall(): Promise<void> {
+      await ipcRenderer.invoke(FIRST_INSTALL_COMPLETE_CHANNEL);
+    },
     async capturePage(): Promise<string> {
       const result = await ipcRenderer.invoke(DIAGNOSTIC_CAPTURE_CHANNEL);
       if (typeof result !== "string") throw new TypeError("Klack received an invalid screenshot");
@@ -60,6 +71,7 @@ contextBridge.exposeInMainWorld(
     async copyDiagnosticImage(imageDataUrl: string): Promise<void> {
       await ipcRenderer.invoke(DIAGNOSTIC_COPY_CHANNEL, imageDataUrl);
     },
+    firstInstall: payload.firstInstall,
     version: payload.version,
   }),
 );
@@ -74,6 +86,7 @@ async function evaluatePlugins(payload: PluginPayload): Promise<void> {
       console.error(`[Klack] Failed to evaluate ${plugin.name}`, error);
     }
   }
+  await webFrame.executeJavaScript("globalThis.Klack.pluginsReady()");
 }
 
 async function evaluateThemes(themes: PluginPayload["themes"]): Promise<void> {

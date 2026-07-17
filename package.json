@@ -1,6 +1,6 @@
 {
   "name": "klack",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An experimental plugin loader for the Slack desktop app",
   "license": "MIT",
   "private": true,

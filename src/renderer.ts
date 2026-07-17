@@ -34,11 +34,14 @@ type ThemeState = {
 };
 
 type KlackGlobal = {
+  arePluginsReady(): boolean;
+  completeFirstInstall(): void;
   disable(name: string): void;
   disableTheme(id: string): void;
   enable(name: string): void;
   enableTheme(id: string): void;
   isEnabled(name: string): boolean;
+  isFirstInstall(): boolean;
   isThemeEnabled(id: string): boolean;
   list(): Array<{
     description?: string;
@@ -56,6 +59,7 @@ type KlackGlobal = {
   }>;
   loadPlugin(plugin: unknown): void;
   loadThemes(themes: unknown): void;
+  pluginsReady(): void;
   resetPlugins(): void;
   selectors: KlackSelectors;
   version: string;
@@ -65,8 +69,11 @@ declare global {
   interface Window {
     Klack?: KlackGlobal;
     KlackNative?: {
+      claimFirstInstall?(): Promise<"claimed" | "completed" | "retry">;
+      completeFirstInstall?(): Promise<void>;
       capturePage?(): Promise<string>;
       copyDiagnosticImage?(imageDataUrl: string): Promise<void>;
+      firstInstall?: boolean;
       version?: string;
     };
   }
@@ -74,9 +81,12 @@ declare global {
 
 const SETTINGS_KEY = "klack:plugin-overrides";
 const THEME_SETTINGS_KEY = "klack:theme-overrides";
+const FIRST_INSTALL_PLUGINS = new Set(["LoadedIndicator", "PluginManager"]);
 const states = new Map<string, PluginState>();
 const themeStates = new Map<string, ThemeState>();
 let ready = document.readyState !== "loading";
+let firstInstall = window.KlackNative?.firstInstall === true;
+let pluginsReady = false;
 
 function readOverrides(key = SETTINGS_KEY): Record<string, boolean> {
   try {
@@ -718,11 +728,21 @@ function registerPlugin(plugin: unknown): void {
   }
 
   const definition = candidate as KlackPlugin;
+  if (firstInstall) {
+    writeOverride(definition.name, FIRST_INSTALL_PLUGINS.has(definition.name));
+  }
   states.set(definition.name, { plugin: definition, resources: new Set(), started: false });
   start(definition.name);
 }
 
 const Klack: KlackGlobal = Object.freeze({
+  arePluginsReady() {
+    return pluginsReady;
+  },
+  completeFirstInstall() {
+    if (!firstInstall) return;
+    firstInstall = false;
+  },
   disable(name) {
     writeOverride(name, false);
     stop(name);
@@ -746,6 +766,9 @@ const Klack: KlackGlobal = Object.freeze({
     notifyThemesChanged();
   },
   isEnabled,
+  isFirstInstall() {
+    return firstInstall;
+  },
   isThemeEnabled,
   list() {
     return [...states.values()].map(({ plugin, started }) => ({
@@ -771,7 +794,12 @@ const Klack: KlackGlobal = Object.freeze({
   loadThemes(themes) {
     replaceThemes(themes);
   },
+  pluginsReady() {
+    pluginsReady = true;
+    document.dispatchEvent(new Event("klack:plugins-ready"));
+  },
   resetPlugins() {
+    pluginsReady = false;
     [...states.keys()].reverse().forEach(stop);
     states.clear();
   },

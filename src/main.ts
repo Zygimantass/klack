@@ -5,6 +5,8 @@ import path from "node:path";
 import {
   DIAGNOSTIC_CAPTURE_CHANNEL,
   DIAGNOSTIC_COPY_CHANNEL,
+  FIRST_INSTALL_CLAIM_CHANNEL,
+  FIRST_INSTALL_COMPLETE_CHANNEL,
   KLACK_VERSION,
   ORIGINAL_ASAR_NAME,
   PLUGIN_CHANNEL,
@@ -26,6 +28,7 @@ type BrowserWindowOptions = {
 type WebContents = {
   capturePage(): Promise<NativeImage>;
   closeDevTools(): void;
+  getURL(): string;
   isDestroyed(): boolean;
   isDevToolsOpened(): boolean;
   once(event: "destroyed", listener: () => void): void;
@@ -34,6 +37,7 @@ type WebContents = {
 };
 
 type BrowserWindowInstance = {
+  isVisible(): boolean;
   webContents: WebContents;
 };
 
@@ -48,6 +52,7 @@ type IpcMainEvent = {
 
 type BrowserWindowConstructor = {
   new (options?: BrowserWindowOptions): BrowserWindowInstance;
+  fromWebContents(contents: WebContents): BrowserWindowInstance | null;
   getAllWindows(): BrowserWindowInstance[];
   getFocusedWindow(): BrowserWindowInstance | null;
   [key: string]: unknown;
@@ -139,6 +144,25 @@ if (!process.argv.includes("--klack-vanilla")) {
   const userThemeDirectory = process.env.KLACK_THEME_DIR || path.join(os.homedir(), ".klack", "themes");
   const themeDirectories = [builtInThemeDirectory, userThemeDirectory];
   const sdkPath = path.join(klackRoot, "dist", "sdk.js");
+  const klackHome = path.join(os.homedir(), ".klack");
+  const firstInstallMarker = path.join(klackHome, "first-install-complete");
+  const firstInstallPendingMarker = path.join(klackHome, "first-install-pending");
+  const firstInstallComplete = fs.existsSync(firstInstallMarker);
+  const firstInstallPending = fs.existsSync(firstInstallPendingMarker);
+  let firstInstallSession = !firstInstallComplete && (firstInstallPending || !fs.existsSync(klackHome));
+  let firstInstallOwner: WebContents | undefined;
+
+  if (!firstInstallComplete) {
+    try {
+      fs.mkdirSync(klackHome, { recursive: true });
+      fs.writeFileSync(
+        firstInstallSession ? firstInstallPendingMarker : firstInstallMarker,
+        `${KLACK_VERSION}\n`,
+      );
+    } catch (error) {
+      console.error("[Klack] Failed to initialize first-install state", error);
+    }
+  }
 
   if (!fs.existsSync(klackPreload)) {
     throw new Error(`[Klack] Generated preload not found at ${klackPreload}. Run the installer again.`);
@@ -193,10 +217,42 @@ if (!process.argv.includes("--klack-vanilla")) {
 
   electron.ipcMain.on(PLUGIN_CHANNEL, (event) => {
     event.returnValue = {
+      firstInstall: firstInstallSession,
       plugins,
       themes,
       version: KLACK_VERSION,
     };
+  });
+
+  electron.ipcMain.handle(FIRST_INSTALL_CLAIM_CHANNEL, (event) => {
+    const sender = requireInjectedSender(event);
+    if (!firstInstallSession) return "completed";
+    const onboardingWindow = electron.BrowserWindow.fromWebContents(sender);
+    if (!onboardingWindow?.isVisible() || !sender.getURL().includes("/client/")) return "retry";
+    if (firstInstallOwner && firstInstallOwner !== sender && !firstInstallOwner.isDestroyed()) {
+      return "retry";
+    }
+
+    if (firstInstallOwner !== sender) {
+      firstInstallOwner = sender;
+      sender.once("destroyed", () => {
+        if (firstInstallOwner === sender) firstInstallOwner = undefined;
+      });
+    }
+    return "claimed";
+  });
+
+  electron.ipcMain.handle(FIRST_INSTALL_COMPLETE_CHANNEL, (event) => {
+    const sender = requireInjectedSender(event);
+    if (!firstInstallSession) return;
+    if (firstInstallOwner !== sender) {
+      throw new Error("[Klack] Only the onboarding window can complete first install");
+    }
+    fs.mkdirSync(path.dirname(firstInstallMarker), { recursive: true });
+    fs.writeFileSync(firstInstallMarker, `${KLACK_VERSION}\n`);
+    fs.rmSync(firstInstallPendingMarker, { force: true });
+    firstInstallSession = false;
+    firstInstallOwner = undefined;
   });
 
   electron.ipcMain.handle(DIAGNOSTIC_CAPTURE_CHANNEL, async (event) => {

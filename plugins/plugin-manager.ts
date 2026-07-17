@@ -19,10 +19,13 @@ type ThemeSummary = {
 };
 
 type KlackManager = {
+  arePluginsReady(): boolean;
+  completeFirstInstall(): void;
   disable(name: string): void;
   disableTheme(id: string): void;
   enable(name: string): void;
   enableTheme(id: string): void;
+  isFirstInstall(): boolean;
   list(): PluginSummary[];
   listThemes(): ThemeSummary[];
   version: string;
@@ -30,6 +33,18 @@ type KlackManager = {
 
 function manager(): KlackManager | undefined {
   return (window as unknown as { Klack?: KlackManager }).Klack;
+}
+
+function claimFirstInstall(): Promise<"claimed" | "completed" | "retry"> | undefined {
+  return (window as unknown as {
+    KlackNative?: { claimFirstInstall?(): Promise<"claimed" | "completed" | "retry"> };
+  }).KlackNative?.claimFirstInstall?.();
+}
+
+function completeFirstInstall(): Promise<void> | undefined {
+  return (window as unknown as {
+    KlackNative?: { completeFirstInstall?(): Promise<void> };
+  }).KlackNative?.completeFirstInstall?.();
 }
 
 function pluginStatus(plugin: PluginSummary): { className: string; label: string } {
@@ -416,12 +431,23 @@ export default definePlugin({
 
     let overlay: HTMLElement | null = null;
     let previousFocus: HTMLElement | null = null;
+    let firstInstallClaimed = false;
 
     const close = (): void => {
       if (!overlay || overlay.hidden) return;
       overlay.hidden = true;
       previousFocus?.focus();
       previousFocus = null;
+      if (!firstInstallClaimed) return;
+
+      firstInstallClaimed = false;
+      manager()?.completeFirstInstall();
+      const completion = completeFirstInstall();
+      if (completion) {
+        void completion.catch((error) =>
+          klack.logger.error("[Klack] Could not complete first-install onboarding", error),
+        );
+      }
     };
 
     klack.ui.mount("body", ({ cleanup, on }) => {
@@ -616,6 +642,7 @@ export default definePlugin({
         if (page !== nextPage) search.value = "";
         page = nextPage;
         renderList();
+        list.scrollTop = 0;
         search.focus();
       };
 
@@ -623,6 +650,7 @@ export default definePlugin({
         previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         nextOverlay.hidden = false;
         renderList();
+        list.scrollTop = 0;
         klack.timers.animationFrame(() => search.focus());
       };
 
@@ -652,6 +680,47 @@ export default definePlugin({
         }
       };
       const onOpen = (): void => open();
+      let firstInstallClaimPending = false;
+      const openFirstInstall = (): void => {
+        const api = manager();
+        if (!api?.isFirstInstall() || !api.arePluginsReady() || firstInstallClaimPending) return;
+        if (!document.querySelector(klack.selectors.get("slack.app.root"))) {
+          klack.timers.timeout(openFirstInstall, 250);
+          return;
+        }
+        const claim = claimFirstInstall();
+        if (!claim) return;
+
+        firstInstallClaimPending = true;
+        void claim
+          .then((result) => {
+            if (result === "retry") {
+              klack.timers.timeout(openFirstInstall, 250);
+              return;
+            }
+            if (result === "completed") {
+              if (!firstInstallClaimed) {
+                api.completeFirstInstall();
+                return;
+              }
+            } else {
+              firstInstallClaimed = true;
+            }
+            showPage("plugins");
+            open();
+            klack.timers.timeout(() => {
+              const completion = completeFirstInstall();
+              if (!completion) return;
+              void completion.catch((error) =>
+                klack.logger.error("[Klack] Could not complete first-install onboarding", error),
+              );
+            }, 1_000);
+          })
+          .catch((error) => klack.logger.error("[Klack] Could not open first-install onboarding", error))
+          .finally(() => {
+            firstInstallClaimPending = false;
+          });
+      };
 
       on(nextOverlay, "click", onOverlayClick);
       on(closeButton, "click", close);
@@ -661,6 +730,7 @@ export default definePlugin({
       on(themesTab, "click", () => showPage("themes"));
       on(document, "keydown", onKeyDown, true);
       on(document, "klack:open-plugin-manager", onOpen);
+      on(document, "klack:plugins-ready", openFirstInstall);
 
       dialog.append(header, tabs, toolbar, list, footer);
       nextOverlay.append(dialog);
@@ -668,6 +738,7 @@ export default definePlugin({
       cleanup(() => {
         if (overlay === nextOverlay) overlay = null;
       });
+      openFirstInstall();
 
       return nextOverlay;
     });
