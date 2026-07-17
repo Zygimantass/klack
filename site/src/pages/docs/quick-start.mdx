@@ -39,10 +39,35 @@ export default definePlugin({
   name: "Hello",
   description: "My first Klack plugin",
   setup(klack) {
+    klack.ui.addStyle(
+      `
+        [data-klack-button="Hello:hello"] {
+          position: fixed;
+          right: 16px;
+          bottom: 16px;
+          z-index: 2147483647;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          border-radius: 6px;
+          padding: 8px 12px;
+          color: white;
+          background: #611f69;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+          font: 600 13px/1.2 Slack-Lato, Lato, sans-serif;
+          cursor: pointer;
+        }
+
+        [data-klack-button="Hello:hello"]:hover {
+          background: #7c3085;
+        }
+      `,
+      { id: "hello" },
+    );
+
     klack.ui.addButton({
       id: "hello",
       target: "body",
       label: "Hello from Klack",
+      title: "Click to test your first Klack plugin",
       onClick(_event, { button }) {
         button.textContent = "Clicked!";
       },
@@ -51,4 +76,4 @@ export default definePlugin({
 });
 ```
 
-Save the file. Klack bundles it in memory and applies the new plugin without a manual build or Slack restart.
+Save the file. A purple **Hello from Klack** button appears in Slack’s bottom-right corner; click it to verify the plugin is interactive. Klack bundles the file in memory and applies it without a manual build or Slack restart.
