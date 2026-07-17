@@ -12,26 +12,6 @@ sandboxed preload because current Slack releases close windows that disable
 > application bundle, invalidates its vendor code signature, and may violate
 > Slack or workspace policies.
 
-## Current status
-
-The MVP supports:
-
-- reversible `app.asar` bootstrap installation;
-- preservation of Slack's original ASAR and native unpacked modules;
-- automatic updates to Electron's embedded ASAR-integrity metadata;
-- outer-app ad-hoc signing while preserving Slack's vendor-signed helpers;
-- injection without disabling Slack's renderer sandbox;
-- typed plugin definitions with automatically scoped UI contributions;
-- plugin enablement overrides stored in the renderer's local storage;
-- first-class local CSS themes with isolated hot reload;
-- a shared, typed Slack selector compatibility registry;
-- a built-in manager for plugins and themes;
-- resilient buttons, custom DOM mounts, styles, events, timers, and DOM watchers;
-- `--klack-vanilla` for starting through the bootstrap without injection.
-
-It has been developed against Slack `4.50.143` on macOS. It does not yet patch
-Slack's remote Webpack modules or provide a plugin marketplace.
-
 ## Install
 
 Release installs require macOS and Node.js 24 or newer. Downloading Klack and
