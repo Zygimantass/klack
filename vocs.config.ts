@@ -65,5 +65,11 @@ export default defineConfig({
       themeColor: '#0a0a0a',
       twitterCard: 'summary_large_image',
     },
+    script: [
+      {
+        key: 'homepage-refresh-scroll',
+        textContent: `if (location.pathname === '/' && location.hash && performance.getEntriesByType('navigation')[0]?.type === 'reload') history.replaceState(history.state, '', location.pathname + location.search)`,
+      },
+    ],
   },
 })

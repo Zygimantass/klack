@@ -31,6 +31,18 @@ listen(menuButton, "click", () => {
 
 mobileNav?.querySelectorAll("a").forEach((link) => listen(link, "click", closeMobileNav));
 
+document.querySelectorAll("[data-scroll-target]").forEach((link) => {
+  listen(link, "click", (event) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = document.getElementById(link.dataset.scrollTarget);
+    if (!target) return;
+
+    event.preventDefault();
+    target.scrollIntoView();
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}`);
+  });
+});
+
 const docsSidebar = document.querySelector("[data-docs-sidebar]");
 const docsToggle = document.querySelector("[data-docs-toggle]");
 
