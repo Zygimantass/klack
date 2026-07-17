@@ -1,0 +1,311 @@
+---
+title: Klack — Make Slack yours
+description: Remove distractions, browse in tabs, change the entire look, and add the features Slack forgot.
+layout: blank
+outline: false
+showAskAi: false
+showFeedback: false
+searchPriority: 0
+---
+
+import { SiteRuntime } from './_components/SiteRuntime.client'
+
+<a className="skip-link" href="#main">Skip to content</a>
+<noscript><div className="noscript">Klack’s site works without JavaScript; the Visual Lab, plugin demo, search, and copy buttons need it.</div></noscript>
+
+<header className="site-header">
+  <div className="header-inner">
+    <a className="brand" href="/" aria-label="Klack home">
+      <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#c8f35d"></rect>
+        <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path>
+      </svg>
+      <span>klack</span>
+    </a>
+
+    <nav className="header-nav" aria-label="Main navigation">
+      <a href="/docs">Docs</a>
+      <a href="#features">Features</a>
+      <a href="#plugins">Plugins</a>
+      <a href="https://github.com/zygimantass/klack" rel="noreferrer">GitHub</a>
+    </nav>
+
+    <div className="header-actions">
+      <button className="search-trigger" type="button" data-search-trigger aria-label="Search documentation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <circle cx="11" cy="11" r="6.5"></circle>
+          <path d="m16 16 4 4"></path>
+        </svg>
+        <span>Search docs…</span>
+        <kbd>⌘K</kbd>
+      </button>
+      <span className="version-pill">v0.1.0</span>
+      <button className="mobile-menu-button" type="button" data-menu-toggle aria-label="Toggle navigation" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav className="mobile-nav" data-mobile-nav aria-label="Mobile navigation">
+  <a href="/docs">Docs</a>
+  <a href="#features">Features</a>
+  <a href="#plugins">Plugins</a>
+  <a href="https://github.com/zygimantass/klack" rel="noreferrer">GitHub</a>
+  <button className="mobile-search" type="button" data-search-trigger>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path>
+    </svg>
+    Search documentation
+  </button>
+</nav>
+
+<main id="main">
+  <section className="hero">
+    <div className="hero-inner">
+      <div className="hero-poster">
+        <div className="hero-art" aria-hidden="true">
+          <span className="hero-art-ring"></span>
+          <span className="hero-art-field"></span>
+        </div>
+        <h1>Your Slack.<br /><span className="accent-word">Your rules.</span></h1>
+
+        <div className="hero-details">
+          <p className="hero-copy">Remove distractions, browse conversations in tabs, change the entire look, and add the features Slack forgot. Keep what you want; leave the rest.</p>
+          <div className="hero-actions">
+            <a className="button button-primary" href="/docs#installation">Install Klack <span className="arrow" aria-hidden="true">→</span></a>
+            <a className="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse plugins</a>
+          </div>
+          <div className="install-command">
+            <code id="install-command"><span className="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh</code>
+            <button className="copy-inline" type="button" data-copy="#install-command" aria-label="Copy to clipboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section className="product-showcase" aria-label="Klack in use">
+    <div className="section-inner">
+      <div className="product-window" data-plugin-demo data-remove-distractions="true" data-tabbed-slack="true" data-minimal-irc="true" aria-label="Interactive preview of Klack plugins changing Slack">
+        <div className="window-bar">
+          <span className="window-dot"></span><span className="window-dot"></span><span className="window-dot"></span>
+          <span className="window-title">Slack</span>
+        </div>
+        <div className="product-body">
+          <div className="mock-rail" aria-hidden="true">
+            <span className="workspace-dot active">K</span>
+            <span className="workspace-dot">W</span>
+            <span className="workspace-dot">D</span>
+          </div>
+          <div className="mock-app" aria-hidden="true">
+            <div className="mock-slack-topbar">
+              <span className="mock-history">‹ &nbsp;›</span>
+              <span className="mock-slack-search">Search your workspace</span>
+              <span className="mock-noise mock-help">?</span>
+            </div>
+            <div className="mock-tabs">
+              <span className="mock-tab"><i>#</i> design</span>
+              <span className="mock-tab active"><i>#</i> team-chat</span>
+              <span className="mock-tab"><i>⌕</i> launch notes</span>
+            </div>
+            <div className="mock-workspace">
+              <div className="mock-sidebar">
+                <strong>Acme</strong>
+                <span>⌂ &nbsp;Home</span>
+                <span>◌ &nbsp;DMs</span>
+                <span className="mock-noise">✦ &nbsp;AI assistants</span>
+                <small>Channels</small>
+                <span># &nbsp;design</span>
+                <span className="active"># &nbsp;team-chat</span>
+                <span># &nbsp;shipping</span>
+                <span className="mock-noise">▱ &nbsp;Canvases</span>
+              </div>
+              <div className="mock-conversation">
+                <div className="mock-app-header">
+                  <strong># team-chat</strong>
+                  <span className="mock-status">3 plugins active</span>
+                  <span className="mock-noise mock-channel-actions">☆ &nbsp;Search &nbsp;⋯</span>
+                </div>
+                <div className="mock-messages">
+                  <div className="mock-message">
+                    <span className="mock-avatar">M</span>
+                    <div><div className="mock-name"><strong>Maya</strong><time>10:42</time></div><p>Can we keep the launch thread open while we check search?</p></div>
+                  </div>
+                  <div className="mock-message">
+                    <span className="mock-avatar purple">J</span>
+                    <div><div className="mock-name"><strong>Jon</strong><time>10:43</time></div><p>Yep — Tabbed Slack keeps both one click away.</p><span className="mock-reply">↳ 3 replies</span></div>
+                  </div>
+                  <div className="mock-message">
+                    <span className="mock-avatar">M</span>
+                    <div><div className="mock-name"><strong>Maya</strong><time>10:44</time></div><p>And this is much quieter without the extra chrome.</p></div>
+                  </div>
+                </div>
+                <div className="mock-composer"><span>Message #team-chat</span><i>＋ &nbsp;Aa &nbsp;☺</i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="plugin-card">
+          <div className="plugin-card-header"><span>Try the plugins</span><span data-demo-enabled-count>3 enabled</span></div>
+          <div className="plugin-preview-list">
+            <label className="plugin-preview-item"><span className="plugin-preview-mark">R</span><span><strong>Remove distractions</strong><small>Hide noisy Slack chrome</small></span><input type="checkbox" data-demo-plugin="removeDistractions" defaultChecked /><i aria-hidden="true"></i></label>
+            <label className="plugin-preview-item"><span className="plugin-preview-mark">T</span><span><strong>Tabbed Slack</strong><small>Keep conversations open</small></span><input type="checkbox" data-demo-plugin="tabbedSlack" defaultChecked /><i aria-hidden="true"></i></label>
+            <label className="plugin-preview-item"><span className="plugin-preview-mark">M</span><span><strong>Minimal IRC</strong><small>Compact terminal-like theme</small></span><input type="checkbox" data-demo-plugin="minimalIrc" defaultChecked /><i aria-hidden="true"></i></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section className="trust-strip" aria-label="Project highlights">
+    <div className="trust-strip-inner">
+      <div className="trust-item">
+        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 8.2 7 10 4.1-1.8 7-5.5 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+        <div><strong>Less clutter</strong><span>Hide AI and unused controls</span></div>
+      </div>
+      <div className="trust-item">
+        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"></path></svg></span>
+        <div><strong>Real tabs</strong><span>Keep conversations open</span></div>
+      </div>
+      <div className="trust-item">
+        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 7h16M7 4v6M17 4v6M5 11h14v9H5z"></path><path d="m9 15 2 2 4-4"></path></svg></span>
+        <div><strong>Complete themes</strong><span>Restyle every Slack surface</span></div>
+      </div>
+      <div className="trust-item">
+        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"></path><path d="M4 4v4.6h4.6"></path></svg></span>
+        <div><strong>Easy to undo</strong><span>Disable anything you do not want</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section className="section" id="features">
+    <div className="section-inner">
+      <div className="section-heading">
+        <h2>Make Slack feel like yours.</h2>
+        <p>Change the parts of Slack that get in your way—without waiting for Slack to ship the setting.</p>
+      </div>
+
+      <div className="feature-grid">
+        <article className="feature-card">
+          <span className="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><rect x="7" y="7" width="50" height="50"></rect><path d="M17 23h30M17 32h20M17 41h26"></path><path d="m44 16 4 4-4 4"></path></svg></span>
+          <h3>A calmer workspace</h3>
+          <p>Hide AI agent menus, canvases, helper buttons, channel controls, and other chrome you never use.</p>
+        </article>
+        <article className="feature-card">
+          <span className="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><path d="M14 34a18 18 0 1 0 4.4-11.8L14 27"></path><path d="M14 15v12h12"></path><path d="m35 20-9 15h9l-2 10 9-15h-9l2-10Z"></path></svg></span>
+          <h3>Conversations in tabs</h3>
+          <p>Keep channels, threads, search results, and linked conversations open, then jump back without losing your place.</p>
+        </article>
+        <article className="feature-card">
+          <span className="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><rect x="9" y="12" width="46" height="39" rx="3"></rect><path d="M9 22h46M19 17h1M25 17h1M31 17h1"></path><rect x="19" y="31" width="26" height="10" rx="5"></rect></svg></span>
+          <h3>A completely different look</h3>
+          <p>Turn Slack into a compact IRC-style client or build a theme around your own colors, spacing, and type.</p>
+        </article>
+        <article className="feature-card">
+          <span className="feature-glyph"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><path d="M21 18h22l-2 33H23L21 18Z"></path><path d="M17 18h30M27 18v-5h10v5M28 25v18M36 25v18"></path></svg></span>
+          <h3>The small fixes Slack will not ship</h3>
+          <p>Change link behavior, simplify awkward screens, or add one missing button. A plugin can change one detail or the whole app.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section className="section architecture" id="plugins">
+    <div className="section-inner architecture-grid">
+      <div className="architecture-copy">
+        <h2>Start with what you want.</h2>
+        <p>Klack comes with focused plugins and themes you can switch on independently. There is no all-or-nothing redesign and no reason to keep features you do not use.</p>
+        <a className="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">See included plugins <span className="arrow" aria-hidden="true">→</span></a>
+      </div>
+
+      <div className="flow-diagram" aria-label="Included Klack customizations">
+        <div className="flow-item"><div className="flow-text"><strong>Remove distractions</strong><span>Trim AI controls, channel chrome, and other visual noise</span></div></div>
+        <div className="flow-item"><div className="flow-text"><strong>Tabbed conversations</strong><span>Keep more than one Slack view open at a time</span></div></div>
+        <div className="flow-item"><div className="flow-text"><strong>Minimal IRC</strong><span>Give Slack a dense, terminal-inspired interface</span></div></div>
+        <div className="flow-item"><div className="flow-text"><strong>Plugin Manager</strong><span>Enable or disable every change from inside Slack</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section className="section code-section" id="build">
+    <div className="section-inner">
+      <div className="section-heading">
+        <h2>And if it is missing, make it.</h2>
+        <p>A Klack plugin is one small TypeScript file. Start from an example, save it, and see the change in Slack.</p>
+      </div>
+
+      <div className="code-layout">
+        <div className="code-frame" data-code>
+          <div className="code-header"><span>~/.klack/plugins/focus-mode.ts</span></div>
+          <pre><code><span className="syntax-keyword">import</span> {'{ definePlugin }'} <span className="syntax-keyword">from</span> <span className="syntax-string">"klack/sdk"</span>{'\n\n'}<span className="syntax-keyword">export default</span> <span className="syntax-fn">definePlugin</span>{'({\n  '}<span className="syntax-property">name</span>: <span className="syntax-string">"FocusMode"</span>{',\n  '}<span className="syntax-property">description</span>: <span className="syntax-string">"Hides the Slack controls I never use"</span>{',\n  '}<span className="syntax-fn">setup</span>{'(klack) {\n    klack.ui.'}<span className="syntax-fn">hide</span>{'([\n      '}<span className="syntax-string">{'\'[data-qa="ai-apps-menu-container"]\''}</span>{',\n      '}<span className="syntax-string">{'\'[data-qa="top-nav-help-button"]\''}</span>{',\n    ])\n  },\n})'}</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section className="final-cta">
+    <div className="section-inner">
+      <div className="cta-panel">
+        <h2>Make Slack yours.</h2>
+        <p>Install Klack, open the Plugin Manager, and enable only the changes you want.</p>
+        <div className="hero-actions">
+          <a className="button button-primary" href="/docs#installation">Install Klack <span className="arrow" aria-hidden="true">→</span></a>
+          <a className="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse included plugins</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer className="site-footer">
+  <div className="footer-inner">
+    <div className="footer-top">
+      <div className="footer-brand">
+        <a className="brand" href="/">
+          <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#c8f35d"></rect><path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path></svg>
+          <span>klack</span>
+        </a>
+        <p>Customize Slack with focused plugins and complete themes. Unofficial, local-first, and reversible.</p>
+      </div>
+      <div className="footer-column"><strong>Start</strong><a href="/docs#installation">Installation</a><a href="/docs#quick-start">Quick start</a><a href="/docs#your-first-plugin">First plugin</a></div>
+      <div className="footer-column"><strong>Reference</strong><a href="/docs#ui-api">UI API</a><a href="/docs#cli">CLI</a><a href="/docs#devtools">DevTools</a></div>
+      <div className="footer-column"><strong>Project</strong><a href="https://github.com/zygimantass/klack">GitHub</a><a href="https://github.com/zygimantass/klack/issues">Issues</a><a href="/docs#security">Security</a></div>
+    </div>
+    <div className="footer-bottom">
+      <span>© <span data-year>2026</span> Klack contributors</span>
+      <span>Not affiliated with or endorsed by Slack Technologies, LLC.</span>
+    </div>
+  </div>
+</footer>
+
+<div hidden aria-hidden="true">
+  <a href="/docs#overview" data-search-item data-search-group="Introduction" data-search-title="Overview" data-search-description="What Klack is and how it works"></a>
+  <a href="/docs#installation" data-search-item data-search-group="Introduction" data-search-title="Installation" data-search-description="Download and install Klack on macOS"></a>
+  <a href="/docs#quick-start" data-search-item data-search-group="Introduction" data-search-title="Quick start" data-search-description="Verify Klack and create a plugin"></a>
+  <a href="/docs#your-first-plugin" data-search-item data-search-group="Plugins" data-search-title="Your first plugin" data-search-description="Plugin anatomy and setup"></a>
+  <a href="/docs#ui-api" data-search-item data-search-group="Plugins" data-search-title="UI contributions" data-search-description="Buttons, mounts, styles, and observers"></a>
+  <a href="/docs#hot-reload" data-search-item data-search-group="Plugins" data-search-title="Hot reload" data-search-description="How live plugin updates work"></a>
+  <a href="/docs#cli" data-search-item data-search-group="Reference" data-search-title="CLI reference" data-search-description="status, install, and uninstall commands"></a>
+  <a href="/docs#plugin-api" data-search-item data-search-group="Reference" data-search-title="Plugin API" data-search-description="Definitions, metadata, and globals"></a>
+  <a href="/docs#security" data-search-item data-search-group="Reference" data-search-title="Security" data-search-description="Trust model and macOS signing implications"></a>
+  <a href="/docs#architecture" data-search-item data-search-group="Reference" data-search-title="Architecture" data-search-description="How Klack injects while preserving the sandbox"></a>
+</div>
+
+<dialog className="command-dialog" data-command-dialog aria-label="Search documentation">
+  <div className="command-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+    <input type="search" name="docs-search" data-command-input placeholder="Search the docs…" autoComplete="off" aria-label="Search documentation" />
+    <kbd>esc</kbd>
+  </div>
+  <div className="command-results" data-command-results aria-live="polite"></div>
+  <div className="command-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span></div>
+</dialog>
+
+<SiteRuntime />

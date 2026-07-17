@@ -1,5 +1,12 @@
+export function initializeSite() {
 const root = document.documentElement;
 const body = document.body;
+const eventController = new AbortController();
+let sectionObserver;
+
+function listen(target, type, listener) {
+  target?.addEventListener(type, listener, { signal: eventController.signal });
+}
 
 const icons = {
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>`,
@@ -16,13 +23,13 @@ function closeMobileNav() {
   body.classList.remove("nav-open");
 }
 
-menuButton?.addEventListener("click", () => {
+listen(menuButton, "click", () => {
   const open = mobileNav?.classList.toggle("open") ?? false;
   menuButton.setAttribute("aria-expanded", String(open));
   body.classList.toggle("nav-open", open);
 });
 
-mobileNav?.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMobileNav));
+mobileNav?.querySelectorAll("a").forEach((link) => listen(link, "click", closeMobileNav));
 
 const docsSidebar = document.querySelector("[data-docs-sidebar]");
 const docsToggle = document.querySelector("[data-docs-toggle]");
@@ -33,15 +40,15 @@ function closeDocsSidebar() {
   body.classList.remove("nav-open");
 }
 
-docsToggle?.addEventListener("click", () => {
+listen(docsToggle, "click", () => {
   const open = docsSidebar?.classList.toggle("open") ?? false;
   docsToggle.setAttribute("aria-expanded", String(open));
   body.classList.toggle("nav-open", open);
 });
 
-docsSidebar?.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeDocsSidebar));
+docsSidebar?.querySelectorAll("a").forEach((link) => listen(link, "click", closeDocsSidebar));
 
-document.addEventListener("click", (event) => {
+listen(document, "click", (event) => {
   if (mobileNav?.classList.contains("open") && !mobileNav.contains(event.target) && !menuButton?.contains(event.target)) {
     closeMobileNav();
   }
@@ -898,39 +905,39 @@ function createVisualLab() {
     trigger.focus();
   }
 
-  trigger.addEventListener("click", () => {
+  listen(trigger, "click", () => {
     panel.hidden = !panel.hidden;
     trigger.setAttribute("aria-expanded", String(!panel.hidden));
     if (!panel.hidden) panel.querySelector("[data-visual-close]").focus();
   });
-  panel.querySelector("[data-visual-close]").addEventListener("click", closeVisualLab);
+  listen(panel.querySelector("[data-visual-close]"), "click", closeVisualLab);
   panel.querySelectorAll("[data-visual-version]").forEach((button) => {
-    button.addEventListener("click", () => {
+    listen(button, "click", () => {
       visualSettings.version = button.dataset.visualVersion;
       updateVisualSettings();
     });
   });
   panel.querySelectorAll("[data-visual-preset]").forEach((button) => {
-    button.addEventListener("click", () => {
+    listen(button, "click", () => {
       visualSettings.colors = { ...visualLabPresets[button.dataset.visualPreset].colors };
       updateVisualSettings();
     });
   });
   panel.querySelectorAll("[data-visual-motion-preset]").forEach((button) => {
-    button.addEventListener("click", () => {
+    listen(button, "click", () => {
       visualSettings.dither = { ...visualLabMotionPresets[button.dataset.visualMotionPreset].dither };
       updateVisualSettings();
     });
   });
   for (const input of colorInputs) {
-    input.addEventListener("input", () => {
+    listen(input, "input", () => {
       visualSettings.colors[input.dataset.visualColor] = input.value;
       updateVisualSettings();
     });
   }
   for (const input of ditherInputs) {
     const eventName = input.type === "checkbox" || input.tagName === "SELECT" ? "change" : "input";
-    input.addEventListener(eventName, () => {
+    listen(input, eventName, () => {
       const property = input.dataset.visualDither;
       visualSettings.dither[property] = input.type === "checkbox"
         ? input.checked
@@ -940,7 +947,7 @@ function createVisualLab() {
       updateVisualSettings();
     });
   }
-  panel.querySelector("[data-visual-reset]").addEventListener("click", () => {
+  listen(panel.querySelector("[data-visual-reset]"), "click", () => {
     visualSettings = copyVisualSettings(visualLabDefaults);
     try {
       localStorage.removeItem(visualLabStorageKey);
@@ -948,7 +955,7 @@ function createVisualLab() {
     applyVisualSettings();
     syncVisualLab();
   });
-  panel.querySelector("[data-visual-copy]").addEventListener("click", async (event) => {
+  listen(panel.querySelector("[data-visual-copy]"), "click", async (event) => {
     const button = event.currentTarget;
     const properties = { ...visualSettings.colors, ...derivedVisualColors(visualSettings.colors) };
     const dither = visualSettings.dither;
@@ -961,7 +968,7 @@ function createVisualLab() {
       button.textContent = "Copy failed";
     }
   });
-  document.addEventListener("keydown", (event) => {
+  listen(document, "keydown", (event) => {
     if (event.key === "Escape" && !panel.hidden) closeVisualLab();
   });
 
@@ -982,7 +989,7 @@ function resetDitherPointer() {
   root.style.setProperty("--dither-pointer-rotate", "0deg");
 }
 
-hero?.addEventListener("pointermove", (event) => {
+listen(hero, "pointermove", (event) => {
   if (!visualSettings.dither.reactive || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (ditherPointerFrame) cancelAnimationFrame(ditherPointerFrame);
   ditherPointerFrame = requestAnimationFrame(() => {
@@ -996,7 +1003,7 @@ hero?.addEventListener("pointermove", (event) => {
     ditherPointerFrame = 0;
   });
 });
-hero?.addEventListener("pointerleave", resetDitherPointer);
+listen(hero, "pointerleave", resetDitherPointer);
 
 applyVisualSettings();
 createVisualLab();
@@ -1041,7 +1048,7 @@ if (pluginDemo) {
   }
 
   for (const input of pluginInputs) {
-    input.addEventListener("change", () => {
+    listen(input, "change", () => {
       pluginSettings[input.dataset.demoPlugin] = input.checked;
       try {
         localStorage.setItem(pluginDemoStorageKey, JSON.stringify(pluginSettings));
@@ -1055,7 +1062,7 @@ if (pluginDemo) {
 
 document.querySelectorAll("[data-copy]").forEach((button) => {
   const original = button.innerHTML;
-  button.addEventListener("click", async () => {
+  listen(button, "click", async () => {
     const target = document.querySelector(button.dataset.copy);
     const text = target?.textContent?.replace(/^\$\s*/, "").trim();
     if (!text) return;
@@ -1084,7 +1091,7 @@ document.querySelectorAll(".code-frame[data-code]").forEach((frame) => {
   button.type = "button";
   button.textContent = "Copy";
   button.setAttribute("aria-label", "Copy code");
-  button.addEventListener("click", async () => {
+  listen(button, "click", async () => {
     try {
       await writeClipboard(code.textContent.trim());
       button.textContent = "Copied";
@@ -1148,7 +1155,7 @@ function renderSearch(query = "") {
       link.innerHTML = `<span class="command-result-icon">${icons.file}</span><span class="command-result-text"><strong></strong><span></span></span>`;
       link.querySelector("strong").textContent = item.title;
       link.querySelector(".command-result-text span").textContent = item.description;
-      link.addEventListener("click", () => dialog.close());
+      listen(link, "click", () => dialog.close());
       resultsRoot.append(link);
       resultLinks.push(link);
     }
@@ -1168,18 +1175,18 @@ function openSearch() {
 }
 
 document.querySelectorAll("[data-search-trigger]").forEach((button) => {
-  button.addEventListener("click", openSearch);
+  listen(button, "click", openSearch);
 });
 
-dialog?.addEventListener("close", () => body.classList.remove("dialog-open"));
-dialog?.addEventListener("click", (event) => {
+listen(dialog, "close", () => body.classList.remove("dialog-open"));
+listen(dialog, "click", (event) => {
   const rect = dialog.getBoundingClientRect();
   const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
   if (outside) dialog.close();
 });
 
-searchInput?.addEventListener("input", () => renderSearch(searchInput.value));
-searchInput?.addEventListener("keydown", (event) => {
+listen(searchInput, "input", () => renderSearch(searchInput.value));
+listen(searchInput, "keydown", (event) => {
   if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") return;
   event.preventDefault();
   if (!resultLinks.length) return;
@@ -1197,7 +1204,7 @@ searchInput?.addEventListener("keydown", (event) => {
   resultLinks[selectedIndex].scrollIntoView({ block: "nearest" });
 });
 
-document.addEventListener("keydown", (event) => {
+listen(document, "keydown", (event) => {
   const target = event.target;
   const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -1217,7 +1224,7 @@ if (observedSections.length && "IntersectionObserver" in window) {
     sectionLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === `#${id}`));
   };
 
-  const observer = new IntersectionObserver(
+  sectionObserver = new IntersectionObserver(
     (entries) => {
       const visible = entries
         .filter((entry) => entry.isIntersecting)
@@ -1226,9 +1233,19 @@ if (observedSections.length && "IntersectionObserver" in window) {
     },
     { rootMargin: "-18% 0px -68%", threshold: [0, 0.05] },
   );
-  observedSections.forEach((section) => observer.observe(section));
+  observedSections.forEach((section) => sectionObserver.observe(section));
 }
 
 document.querySelectorAll("[data-year]").forEach((element) => {
   element.textContent = String(new Date().getFullYear());
 });
+
+return () => {
+  eventController.abort();
+  sectionObserver?.disconnect();
+  if (ditherPointerFrame) cancelAnimationFrame(ditherPointerFrame);
+  document.querySelector(".visual-lab-trigger")?.remove();
+  document.querySelector("#visual-lab")?.remove();
+  body.classList.remove("nav-open", "dialog-open");
+};
+}

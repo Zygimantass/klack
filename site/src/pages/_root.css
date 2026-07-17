@@ -1,0 +1,28 @@
+@import "../../assets/styles.css";
+
+:root {
+  --vocs-color-accent: var(--accent);
+  --vocs-background-color-primary: var(--bg);
+  --vocs-background-color-surface: var(--bg-raised);
+  --vocs-background-color-surfaceMuted: var(--bg-soft);
+  --vocs-background-color-surfaceTint: var(--bg-tint);
+  --vocs-text-color-primary: var(--ink);
+  --vocs-text-color-secondary: var(--ink-muted);
+  --vocs-text-color-muted: var(--ink-muted);
+  --vocs-text-color-heading: var(--ink);
+  --vocs-text-color-link: var(--accent);
+  --vocs-text-color-link-hover: var(--accent-hover);
+  --vocs-border-color-primary: var(--line-strong);
+  --vocs-border-color-secondary: var(--line);
+  --vocs-background-color-code-block: var(--code-bg);
+  --vocs-background-color-inline-code: var(--bg-soft);
+  --vocs-font-family: var(--sans);
+  --vocs-font-family-mono: var(--mono);
+  --vocs-spacing-content: 760px;
+}
+
+/* Vocs owns the docs shell; the custom landing page retains its own chrome. */
+[data-layout="full"] {
+  color: var(--ink);
+  background: var(--bg);
+}

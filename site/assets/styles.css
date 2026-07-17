@@ -3076,6 +3076,13 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
     --header-height: 62px;
   }
 
+  .visual-lab-trigger {
+    position: absolute;
+    top: 106px;
+    bottom: auto;
+    left: 31px;
+  }
+
   .header-inner,
   .hero-inner,
   .section-inner,
