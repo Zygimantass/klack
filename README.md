@@ -47,18 +47,6 @@ pnpm check
 pnpm test
 ```
 
-## Website
-
-The Vocs site for `klack.sh` lives in `site/src/pages/`, with the custom landing
-page styles and runtime in `site/assets/`. Run `pnpm site:dev` and open
-`http://localhost:4173` to preview it. Use `pnpm site:build` to verify the
-production build.
-
-For Vercel, import this repository with the repository root as the project root.
-The checked-in `vercel.json` runs the Vocs build and uses Vocs' Vercel adapter.
-Add `klack.sh` under the Vercel project's Domains settings after the first
-deployment.
-
 ## Manage Slack
 
 Quit Slack completely before install or uninstall. Do not install this into a
