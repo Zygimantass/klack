@@ -5,7 +5,7 @@
   "trailingSlash": true,
   "redirects": [
     {
-      "source": "/install",
+      "source": "/install/",
       "destination": "https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh",
       "permanent": false
     }
