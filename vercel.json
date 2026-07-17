@@ -2,5 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm site:build",
   "outputDirectory": "dist/public",
-  "trailingSlash": true
+  "trailingSlash": true,
+  "redirects": [
+    {
+      "source": "/install",
+      "destination": "https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh",
+      "permanent": false
+    }
+  ]
 }

@@ -1381,55 +1381,6 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
   color: var(--code-muted);
 }
 
-.trust-strip {
-  border-bottom: 1px solid var(--line);
-  background: var(--bg-tint);
-}
-
-.trust-strip-inner {
-  width: min(calc(100% - 48px), var(--content-width));
-  margin: 0 auto;
-  padding: 38px 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 40px 64px;
-  flex-wrap: wrap;
-}
-
-.trust-item {
-  min-height: 0;
-  padding: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  flex: 1 1 0;
-}
-
-.trust-icon {
-  display: none;
-}
-
-.trust-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.trust-item strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.trust-item > div > span {
-  display: block;
-  margin-top: 2px;
-  color: var(--ink-muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
 .section {
   padding: 144px 0;
   border-bottom: 1px solid var(--line);
@@ -2908,10 +2859,6 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
     right: -10px;
   }
 
-  .trust-item {
-    padding: 0;
-  }
-
   .docs-shell {
     grid-template-columns: 240px minmax(0, 1fr);
   }
@@ -2990,14 +2937,6 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
     width: min(90%, 610px);
     min-width: 0;
     margin: 0 auto;
-  }
-
-  .trust-strip-inner {
-    flex-wrap: wrap;
-  }
-
-  .trust-item {
-    flex: 1 1 calc(50% - 32px);
   }
 
   .architecture-copy {
@@ -3094,7 +3033,6 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
   .header-inner,
   .hero-inner,
   .section-inner,
-  .trust-strip-inner,
   .footer-inner {
     width: min(calc(100% - 30px), var(--content-width));
   }
@@ -3219,19 +3157,6 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
 
   .mock-messages {
     padding: 18px 12px;
-  }
-
-  .trust-strip-inner {
-    width: min(calc(100% - 30px), var(--content-width));
-    padding: 28px 0;
-    flex-direction: column;
-    gap: 22px;
-  }
-
-  .trust-item {
-    min-height: 0;
-    padding: 0;
-    border: 0;
   }
 
   .section {
@@ -3402,10 +3327,6 @@ html[data-visual-version="compact"] .hero-details {
 
 html[data-visual-version="compact"] .product-showcase {
   padding: 94px 0;
-}
-
-html[data-visual-version="compact"] .trust-strip-inner {
-  padding: 28px 0;
 }
 
 html[data-visual-version="compact"] .section {
