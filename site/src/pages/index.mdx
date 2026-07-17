@@ -205,8 +205,20 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
 
       <div className="code-layout">
         <div className="code-frame" data-code>
-          <div className="code-header"><span>~/.klack/plugins/focus-mode.ts</span></div>
-          <pre><code><span className="syntax-keyword">import</span> &#123; definePlugin &#125; <span className="syntax-keyword">from</span> <span className="syntax-string">"klack/sdk"</span>{';\n\n'}<span className="syntax-keyword">export default</span> <span className="syntax-fn">definePlugin</span>{'({\n  '}<span className="syntax-property">name</span>: <span className="syntax-string">"FocusMode"</span>{',\n  '}<span className="syntax-property">description</span>: <span className="syntax-string">"Hides the Slack controls I never use"</span>{',\n  '}<span className="syntax-fn">setup</span>{'(klack) {\n    klack.ui.'}<span className="syntax-fn">hide</span>{'([\n      '}<span className="syntax-string">{'\'[data-qa="ai-apps-menu-container"]\''}</span>{',\n      '}<span className="syntax-string">{'\'[data-qa="top-nav-help-button"]\''}</span>{',\n    ])\n  },\n})'}</code></pre>
+```ts twoslash [~/.klack/plugins/focus-mode.ts]
+import { definePlugin } from "klack/sdk"
+
+export default definePlugin({
+  name: "FocusMode",
+  description: "Hides the Slack controls I never use",
+  setup(klack) {
+    klack.ui.hide([
+      '[data-qa="ai-apps-menu-container"]',
+      '[data-qa="top-nav-help-button"]',
+    ])
+  },
+})
+```
         </div>
       </div>
     </div>

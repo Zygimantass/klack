@@ -1103,7 +1103,7 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
 });
 
 document.querySelectorAll(".code-frame[data-code]").forEach((frame) => {
-  const header = frame.querySelector(".code-header");
+  const header = frame.querySelector(".code-header, [data-v-code-header]");
   const code = frame.querySelector("code");
   if (!header || !code || header.querySelector(".code-header-copy")) return;
 
