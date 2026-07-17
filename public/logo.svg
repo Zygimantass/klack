@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 32">
-  <rect width="32" height="32" rx="8" fill="#c8ff4d"/>
-  <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="#10150b"/>
-  <text x="42" y="23" fill="#edeee8" font-family="Helvetica Neue,Arial,sans-serif" font-size="20" font-weight="600">klack</text>
+  <rect width="32" height="32" rx="8" fill="#deded7"/>
+  <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="#10110f"/>
+  <text x="42" y="23" fill="#eeeeea" font-family="Helvetica Neue,Arial,sans-serif" font-size="20" font-weight="600">klack</text>
 </svg>

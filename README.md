@@ -39,7 +39,7 @@ patching Slack are separate steps so modifying the application remains an
 explicit action:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh
+curl -fsSL https://klack.sh/install | sh
 ~/.local/bin/klack install
 ```
 
@@ -49,7 +49,7 @@ not require pnpm or build anything locally. To download Klack and patch Slack
 in one command, pass `--install`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh -s -- --install
+curl -fsSL https://klack.sh/install | sh -s -- --install
 ```
 
 Re-run the download command to update Klack, then run `klack install` to apply

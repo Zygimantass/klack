@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b0d0c" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta
       name="description"
       content="Make Slack yours with focused plugins, complete themes, real tabs, and a calmer interface."
@@ -31,7 +31,7 @@
       <div class="header-inner">
         <a class="brand" href="./" aria-label="Klack home">
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="8" fill="#c8f35d"></rect>
+            <rect width="32" height="32" rx="8" fill="#deded7"></rect>
             <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path>
           </svg>
           <span>klack</span>
@@ -95,7 +95,7 @@
                 <a class="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse plugins</a>
               </div>
               <div class="install-command">
-                <code id="install-command"><span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh</code>
+                <code id="install-command"><span class="prompt">$</span> curl -fsSL https://klack.sh/install | sh</code>
                 <button class="copy-inline" type="button" data-copy="#install-command" aria-label="Copy to clipboard">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
@@ -180,27 +180,6 @@
         </div>
       </section>
 
-      <section class="trust-strip" aria-label="Project highlights">
-        <div class="trust-strip-inner">
-          <div class="trust-item">
-            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 8.2 7 10 4.1-1.8 7-5.5 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
-            <div><strong>Less clutter</strong><span>Hide AI and unused controls</span></div>
-          </div>
-          <div class="trust-item">
-            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"></path></svg></span>
-            <div><strong>Real tabs</strong><span>Keep conversations open</span></div>
-          </div>
-          <div class="trust-item">
-            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M7 4v6M17 4v6M5 11h14v9H5z"></path><path d="m9 15 2 2 4-4"></path></svg></span>
-            <div><strong>Complete themes</strong><span>Restyle every Slack surface</span></div>
-          </div>
-          <div class="trust-item">
-            <span class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"></path><path d="M4 4v4.6h4.6"></path></svg></span>
-            <div><strong>Easy to undo</strong><span>Disable anything you do not want</span></div>
-          </div>
-        </div>
-      </section>
-
       <section class="section" id="features">
         <div class="section-inner">
           <div class="section-heading">
@@ -243,7 +222,7 @@
           <div class="code-layout">
             <div class="code-frame" data-code>
               <div class="code-header"><span>~/.klack/plugins/focus-mode.ts</span></div>
-              <pre><code><span class="syntax-keyword">import</span> { definePlugin } <span class="syntax-keyword">from</span> <span class="syntax-string">"klack/sdk"</span>
+              <pre><code><span class="syntax-keyword">import</span> { definePlugin } <span class="syntax-keyword">from</span> <span class="syntax-string">"klack/sdk"</span>;
 
 <span class="syntax-keyword">export default</span> <span class="syntax-fn">definePlugin</span>({
   <span class="syntax-property">name</span>: <span class="syntax-string">"FocusMode"</span>,
@@ -279,7 +258,7 @@
         <div class="footer-top">
           <div class="footer-brand">
             <a class="brand" href="./">
-              <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#c8f35d"></rect><path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path></svg>
+              <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#deded7"></rect><path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path></svg>
               <span>klack</span>
             </a>
             <p>Customize Slack with focused plugins and complete themes. Unofficial, local-first, and reversible.</p>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b0d0c" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta
       name="description"
       content="Install Klack, build your first Slack desktop plugin, and explore the typed UI API."
@@ -29,7 +29,7 @@
       <div class="header-inner">
         <a class="brand" href="../" aria-label="Klack home">
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="8" fill="#c8f35d"></rect>
+            <rect width="32" height="32" rx="8" fill="#deded7"></rect>
             <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path>
           </svg>
           <span>klack</span>
@@ -142,7 +142,7 @@
                 <p>The installer selects the release for your Mac, verifies its SHA-256 checksum, and adds a launcher at <code>~/.local/bin/klack</code>. It does not patch Slack yet.</p>
                 <div class="code-frame" data-code>
                   <div class="code-header"><span>Terminal</span></div>
-                  <pre><code>curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh</code></pre>
+                  <pre><code>curl -fsSL https://klack.sh/install | sh</code></pre>
                 </div>
               </div>
               <div class="step">
@@ -180,7 +180,7 @@
             <p>To download Klack and patch Slack in one command, add <code>--install</code> to the installer:</p>
             <div class="code-frame" data-code>
               <div class="code-header"><span>Terminal</span></div>
-              <pre><code>curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh -s -- --install</code></pre>
+              <pre><code>curl -fsSL https://klack.sh/install | sh -s -- --install</code></pre>
             </div>
 
             <h3>Restore Slack</h3>

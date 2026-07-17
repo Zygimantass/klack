@@ -17,7 +17,7 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
   <div className="header-inner">
     <a className="brand" href="/" aria-label="Klack home">
       <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="8" fill="#c8f35d"></rect>
+        <rect width="32" height="32" rx="8" fill="#deded7"></rect>
         <path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path>
       </svg>
       <span>klack</span>
@@ -79,7 +79,7 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
             <a className="button button-secondary" href="https://github.com/zygimantass/klack/tree/main/plugins" rel="noreferrer">Browse plugins</a>
           </div>
           <div className="install-command">
-            <code id="install-command"><span className="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh</code>
+            <code id="install-command"><span className="prompt">$</span> curl -fsSL https://klack.sh/install | sh</code>
             <button className="copy-inline" type="button" data-copy="#install-command" aria-label="Copy to clipboard">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 <rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
@@ -164,27 +164,6 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
     </div>
   </section>
 
-  <section className="trust-strip" aria-label="Project highlights">
-    <div className="trust-strip-inner">
-      <div className="trust-item">
-        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 8.2 7 10 4.1-1.8 7-5.5 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
-        <div><strong>Less clutter</strong><span>Hide AI and unused controls</span></div>
-      </div>
-      <div className="trust-item">
-        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"></path></svg></span>
-        <div><strong>Real tabs</strong><span>Keep conversations open</span></div>
-      </div>
-      <div className="trust-item">
-        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 7h16M7 4v6M17 4v6M5 11h14v9H5z"></path><path d="m9 15 2 2 4-4"></path></svg></span>
-        <div><strong>Complete themes</strong><span>Restyle every Slack surface</span></div>
-      </div>
-      <div className="trust-item">
-        <span className="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"></path><path d="M4 4v4.6h4.6"></path></svg></span>
-        <div><strong>Easy to undo</strong><span>Disable anything you do not want</span></div>
-      </div>
-    </div>
-  </section>
-
   <section className="section" id="features">
     <div className="section-inner">
       <div className="section-heading">
@@ -227,7 +206,7 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
       <div className="code-layout">
         <div className="code-frame" data-code>
           <div className="code-header"><span>~/.klack/plugins/focus-mode.ts</span></div>
-          <pre><code><span className="syntax-keyword">import</span> {'{ definePlugin }'} <span className="syntax-keyword">from</span> <span className="syntax-string">"klack/sdk"</span>{'\n\n'}<span className="syntax-keyword">export default</span> <span className="syntax-fn">definePlugin</span>{'({\n  '}<span className="syntax-property">name</span>: <span className="syntax-string">"FocusMode"</span>{',\n  '}<span className="syntax-property">description</span>: <span className="syntax-string">"Hides the Slack controls I never use"</span>{',\n  '}<span className="syntax-fn">setup</span>{'(klack) {\n    klack.ui.'}<span className="syntax-fn">hide</span>{'([\n      '}<span className="syntax-string">{'\'[data-qa="ai-apps-menu-container"]\''}</span>{',\n      '}<span className="syntax-string">{'\'[data-qa="top-nav-help-button"]\''}</span>{',\n    ])\n  },\n})'}</code></pre>
+          <pre><code><span className="syntax-keyword">import</span> &#123; definePlugin &#125; <span className="syntax-keyword">from</span> <span className="syntax-string">"klack/sdk"</span>{';\n\n'}<span className="syntax-keyword">export default</span> <span className="syntax-fn">definePlugin</span>{'({\n  '}<span className="syntax-property">name</span>: <span className="syntax-string">"FocusMode"</span>{',\n  '}<span className="syntax-property">description</span>: <span className="syntax-string">"Hides the Slack controls I never use"</span>{',\n  '}<span className="syntax-fn">setup</span>{'(klack) {\n    klack.ui.'}<span className="syntax-fn">hide</span>{'([\n      '}<span className="syntax-string">{'\'[data-qa="ai-apps-menu-container"]\''}</span>{',\n      '}<span className="syntax-string">{'\'[data-qa="top-nav-help-button"]\''}</span>{',\n    ])\n  },\n})'}</code></pre>
         </div>
       </div>
     </div>
@@ -252,7 +231,7 @@ import { SiteRuntime } from './_components/SiteRuntime.client'
     <div className="footer-top">
       <div className="footer-brand">
         <a className="brand" href="/">
-          <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#c8f35d"></rect><path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path></svg>
+          <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#deded7"></rect><path d="M9 7v18h4.5v-6l5 6H24l-7.4-8.7L23 7h-5.2l-4.3 6.6V7H9Z" fill="currentColor"></path></svg>
           <span>klack</span>
         </a>
         <p>Customize Slack with focused plugins and complete themes. Unofficial, local-first, and reversible.</p>

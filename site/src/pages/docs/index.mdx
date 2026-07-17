@@ -47,7 +47,7 @@ Klack currently supports release installs on macOS for Apple silicon and Intel. 
 The installer selects the release for your Mac, verifies its SHA-256 checksum, and adds a launcher at `~/.local/bin/klack`. It does not patch Slack yet.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh
+curl -fsSL https://klack.sh/install | sh
 ```
 
 ### Quit Slack completely
@@ -81,7 +81,7 @@ Use **Slack → Quit Slack** and confirm no other Slack copy is running. Klack i
 To download Klack and patch Slack in one command, add `--install` to the installer:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh -s -- --install
+curl -fsSL https://klack.sh/install | sh -s -- --install
 ```
 
 ### Restore Slack
