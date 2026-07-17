@@ -74,7 +74,7 @@ async function writeClipboard(text) {
 }
 
 const visualLabStorageKey = "klack-visual-lab";
-const visualLabStorageVersion = 3;
+const visualLabStorageVersion = 4;
 const visualLabVersions = {
   editorial: {
     label: "Editorial",
@@ -186,15 +186,15 @@ const visualLabDitherRanges = {
 const visualLabDefaults = {
   version: "editorial",
   colors: {
-    "--bg": "#0b0d0c",
-    "--bg-raised": "#101311",
-    "--ink": "#edeee8",
-    "--ink-muted": "#92978f",
-    "--edge": "#899188",
-    "--accent": "#c8ff4d",
-    "--art": "#56bdf3",
-    "--art-secondary": "#776bff",
-    "--purple": "#776bff",
+    "--bg": "#0a0a0a",
+    "--bg-raised": "#141414",
+    "--ink": "#eeeeea",
+    "--ink-muted": "#91918c",
+    "--edge": "#8b8b85",
+    "--accent": "#deded7",
+    "--art": "#a2a29b",
+    "--art-secondary": "#d1d1ca",
+    "--purple": "#bdbdb7",
   },
   dither: {
     animated: true,
@@ -218,7 +218,17 @@ const visualLabDefaults = {
 const visualLabPresets = {
   signal: {
     label: "Signal",
-    colors: visualLabDefaults.colors,
+    colors: {
+      "--bg": "#0b0d0c",
+      "--bg-raised": "#101311",
+      "--ink": "#edeee8",
+      "--ink-muted": "#92978f",
+      "--edge": "#899188",
+      "--accent": "#c8ff4d",
+      "--art": "#56bdf3",
+      "--art-secondary": "#776bff",
+      "--purple": "#776bff",
+    },
   },
   matcha: {
     label: "Matcha",
@@ -376,17 +386,7 @@ const visualLabPresets = {
   },
   mono: {
     label: "Mono",
-    colors: {
-      "--bg": "#0a0a0a",
-      "--bg-raised": "#141414",
-      "--ink": "#eeeeea",
-      "--ink-muted": "#91918c",
-      "--edge": "#8b8b85",
-      "--accent": "#deded7",
-      "--art": "#a2a29b",
-      "--art-secondary": "#d1d1ca",
-      "--purple": "#bdbdb7",
-    },
+    colors: visualLabDefaults.colors,
   },
 };
 const visualLabMotionPresets = {
@@ -692,11 +692,14 @@ function loadVisualSettings() {
     dither.animated = typeof dither.animated === "boolean" ? dither.animated : visualLabDefaults.dither.animated;
     dither.reactive = typeof dither.reactive === "boolean" ? dither.reactive : visualLabDefaults.dither.reactive;
 
+    const savedIsCurrent = saved?.storageVersion === visualLabStorageVersion;
     return {
-      version: saved?.storageVersion === visualLabStorageVersion && visualLabVersions[saved?.version]
+      version: savedIsCurrent && visualLabVersions[saved?.version]
         ? saved.version
         : visualLabDefaults.version,
-      colors: { ...visualLabDefaults.colors, ...saved?.colors },
+      colors: savedIsCurrent
+        ? { ...visualLabDefaults.colors, ...saved?.colors }
+        : { ...visualLabDefaults.colors },
       dither,
     };
   } catch {

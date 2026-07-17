@@ -8,7 +8,7 @@ export default defineConfig({
   baseUrl: 'https://klack.sh',
   renderStrategy: 'full-static',
   colorScheme: 'dark',
-  accentColor: '#c8ff4d',
+  accentColor: '#deded7',
   iconUrl: '/icon.svg',
   logoUrl: '/logo.svg',
   topNav: [
@@ -62,7 +62,7 @@ export default defineConfig({
   },
   head: {
     meta: {
-      themeColor: '#0b0d0c',
+      themeColor: '#0a0a0a',
       twitterCard: 'summary_large_image',
     },
   },
