@@ -101,6 +101,31 @@ test("downloads an update without removing the previously installed release", (t
   );
 });
 
+test("CLI update downloads the release and forwards install options", (t) => {
+  const fixture = releaseFixture(t);
+  const fakeBin = path.join(fixture.root, "fake-bin");
+  const customApp = path.join(fixture.root, "Custom Slack.app");
+  fs.mkdirSync(fakeBin);
+  fs.writeFileSync(path.join(fakeBin, "pgrep"), "#!/bin/sh\nexit 1\n");
+  fs.chmodSync(path.join(fakeBin, "pgrep"), 0o755);
+
+  execFileSync(
+    process.execPath,
+    [path.resolve("dist/cli.cjs"), "update", "--app", customApp, "--no-resign"],
+    {
+      env: {
+        ...fixture.environment,
+        PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+      },
+    },
+  );
+
+  assert.equal(
+    fs.readFileSync(fixture.invocationLog, "utf8"),
+    `install --app ${customApp} --no-resign\n`,
+  );
+});
+
 test("refuses to replace an unrelated launcher", (t) => {
   const fixture = releaseFixture(t);
   fs.mkdirSync(fixture.binDirectory, { recursive: true });

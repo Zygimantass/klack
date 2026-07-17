@@ -12,9 +12,10 @@ function usage(): string {
 Usage:
   klack status [--app /Applications/Slack.app]
   klack install [--app /Applications/Slack.app] [--no-resign]
+  klack update [--app /Applications/Slack.app] [--no-resign]
   klack uninstall [--app /Applications/Slack.app] [--no-resign]
 
-Slack must be fully quit before install or uninstall. Installing modifies
+Slack must be fully quit before install, update, or uninstall. Installing modifies
 Slack's app.asar and replaces the outer app's vendor signature with an ad-hoc
 signature. --no-resign leaves the modified app unable to launch until signed.`;
 }
@@ -143,6 +144,17 @@ function uninstallApp(appPath: string, resign: boolean) {
   return getStatus(appPath);
 }
 
+function updateKlack(appPath: string, klackRoot: string, resign: boolean): void {
+  const updateScript = path.join(klackRoot, "install.sh");
+  if (!fs.existsSync(updateScript)) {
+    throw new Error(`This Klack installation cannot update itself because ${updateScript} is missing`);
+  }
+
+  const args = [updateScript, "--install", "--app", appPath];
+  if (!resign) args.push("--no-resign");
+  execFileSync("/bin/sh", args, { stdio: "inherit" });
+}
+
 async function main(): Promise<void> {
   const { appPath, command, resign } = parseArguments(process.argv.slice(2));
   // Release installs use a `current` symlink for the CLI. Resolve it before
@@ -158,11 +170,16 @@ async function main(): Promise<void> {
     printStatus(getStatus(appPath));
     return;
   }
-  if (command !== "install" && command !== "uninstall") {
+  if (command !== "install" && command !== "update" && command !== "uninstall") {
     throw new Error(`Unknown command: ${command}\n\n${usage()}`);
   }
   if (slackIsRunning()) {
     throw new Error("A Slack app is running. Quit every Slack copy before modifying an application bundle.");
+  }
+
+  if (command === "update") {
+    updateKlack(appPath, klackRoot, resign);
+    return;
   }
 
   if (command === "install") {

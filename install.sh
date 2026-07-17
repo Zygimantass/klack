@@ -9,6 +9,8 @@ RELEASE_BASE_URL=${KLACK_RELEASE_BASE_URL:-https://github.com/${REPOSITORY}/rele
 LATEST_URL=${KLACK_LATEST_URL:-https://github.com/${REPOSITORY}/releases/latest}
 VERSION=${KLACK_VERSION:-}
 INSTALL_SLACK=false
+APP_PATH=
+NO_RESIGN=false
 
 say() {
   printf '%s\n' "$*"
@@ -24,11 +26,13 @@ usage() {
 Install the latest Klack release for macOS.
 
 Usage:
-  install.sh [--install] [--version vX.Y.Z]
+  install.sh [--install] [--version vX.Y.Z] [--app /Applications/Slack.app] [--no-resign]
 
 Options:
   --install         Run `klack install` after installing the Klack runtime.
   --version VERSION Install a specific release tag instead of the latest.
+  --app PATH        Forward a custom Slack app path to `klack install`.
+  --no-resign       Forward `--no-resign` to `klack install`.
   -h, --help        Show this help.
 
 Environment:
@@ -46,6 +50,14 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -ge 2 ] || fail "--version requires a release tag"
       VERSION=$2
       shift
+      ;;
+    --app)
+      [ "$#" -ge 2 ] || fail "--app requires a path"
+      APP_PATH=$2
+      shift
+      ;;
+    --no-resign)
+      NO_RESIGN=true
       ;;
     -h|--help)
       usage
@@ -193,7 +205,14 @@ esac
 
 if [ "$INSTALL_SLACK" = true ]; then
   say "Installing Klack into Slack..."
-  "$LAUNCHER" install
+  set -- install
+  if [ -n "$APP_PATH" ]; then
+    set -- "$@" --app "$APP_PATH"
+  fi
+  if [ "$NO_RESIGN" = true ]; then
+    set -- "$@" --no-resign
+  fi
+  "$LAUNCHER" "$@"
 else
   say "Quit Slack completely, then run:"
   say "  ${LAUNCHER} install"

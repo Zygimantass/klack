@@ -51,6 +51,16 @@ On the first launch, Klack enables only **Plugin Manager** and **Loaded Indicato
 **After a Slack update:** Slack replaces its application resources when it updates. Quit Slack and run `klack install` again to regenerate the combined preload.
 :::
 
+## Update Klack
+
+Quit Slack, then download, verify, and apply the latest Klack release with one command:
+
+```sh
+klack update
+```
+
+Use the same `--app` or `--no-resign` options accepted by `klack install` when needed. Klack keeps previously downloaded releases and only switches Slack to the new runtime after the verified download succeeds.
+
 To download Klack and patch Slack in one command, add `--install` to the installer:
 
 ```sh

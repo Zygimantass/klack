@@ -33,10 +33,10 @@ in one command, pass `--install`:
 curl -fsSL https://klack.sh/install | sh -s -- --install
 ```
 
-Re-run the download command to update Klack, then run `klack install` to apply
-the new version. Previously installed releases are retained because a patched
-Slack installation contains an absolute path to the Klack version that created
-it.
+After the initial installation, quit Slack and run `klack update` to download,
+verify, and apply the latest Klack release. Previously installed releases are
+retained because a patched Slack installation contains an absolute path to the
+Klack version that created it.
 
 ## Build from source
 
@@ -50,14 +50,15 @@ pnpm test
 
 ## Manage Slack
 
-Quit Slack completely before install or uninstall. Do not install this into a
-managed work computer without authorization.
+Quit Slack completely before install, update, or uninstall. Do not install
+this into a managed work computer without authorization.
 
 For a release installation:
 
 ```sh
 klack status
 klack install
+klack update
 klack uninstall
 ```
 
@@ -66,6 +67,7 @@ When running from a source checkout, use the equivalent pnpm commands:
 ```sh
 pnpm klack status
 pnpm klack install
+pnpm klack update
 pnpm klack uninstall
 ```
 
