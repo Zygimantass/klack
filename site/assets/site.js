@@ -74,6 +74,7 @@ async function writeClipboard(text) {
 }
 
 const visualLabStorageKey = "klack-visual-lab";
+const visualLabStorageVersion = 2;
 const visualLabVersions = {
   editorial: {
     label: "Editorial",
@@ -183,7 +184,7 @@ const visualLabDitherRanges = {
   parallax: { label: "Cursor pull", min: 0, max: 30, step: 1, unit: "px" },
 };
 const visualLabDefaults = {
-  version: "centered",
+  version: "editorial",
   colors: {
     "--bg": "#0b0d0c",
     "--bg-raised": "#101311",
@@ -692,7 +693,9 @@ function loadVisualSettings() {
     dither.reactive = typeof dither.reactive === "boolean" ? dither.reactive : visualLabDefaults.dither.reactive;
 
     return {
-      version: visualLabVersions[saved?.version] ? saved.version : visualLabDefaults.version,
+      version: saved?.storageVersion === visualLabStorageVersion && visualLabVersions[saved?.version]
+        ? saved.version
+        : visualLabDefaults.version,
       colors: { ...visualLabDefaults.colors, ...saved?.colors },
       dither,
     };
@@ -741,7 +744,10 @@ function applyVisualSettings() {
 
 function saveVisualSettings() {
   try {
-    localStorage.setItem(visualLabStorageKey, JSON.stringify(visualSettings));
+    localStorage.setItem(visualLabStorageKey, JSON.stringify({
+      ...visualSettings,
+      storageVersion: visualLabStorageVersion,
+    }));
   } catch {}
 }
 
