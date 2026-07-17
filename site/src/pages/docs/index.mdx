@@ -1,0 +1,417 @@
+---
+title: Klack documentation
+description: Install Klack, create local Slack extensions, and use its typed plugin API.
+layout: full
+outline: 3
+showAskAi: false
+showFeedback: false
+---
+
+# Klack documentation
+
+A practical guide to installing Klack, creating local Slack extensions, and using its typed plugin API.
+
+<span id="overview" />
+
+## Overview
+
+Klack is an experimental plugin loader for Slack’s Electron desktop app. It inserts a small bootstrap into the application bundle, loads local plugins before Slack finishes starting, and keeps the current renderer sandbox and context isolation settings intact.
+
+Use it to prototype personal workflows, add small interface contributions, or observe Slack’s DOM from code you control. Klack is not a marketplace or a security boundary: every installed plugin is trusted code.
+
+:::warning
+**Start with a disposable Slack copy.** Installing Klack changes Slack’s application bundle and invalidates its vendor signature. Do not install it on a managed work computer without authorization.
+:::
+
+### What the MVP supports
+
+- Reversible `app.asar` bootstrap installation.
+- Typed TypeScript plugin definitions and zero-build JavaScript definitions.
+- Plugin-scoped buttons, custom DOM mounts, styles, events, timers, and DOM watchers.
+- Automatic recompilation and reload across every open Slack window.
+- A built-in plugin manager, enablement overrides, and automatic resource cleanup.
+- A vanilla launch flag for starting through the bootstrap without injection.
+
+Klack does not yet patch Slack’s remote Webpack modules or provide a plugin marketplace.
+
+<span id="installation" />
+
+## Installation
+
+Klack currently supports release installs on macOS for Apple silicon and Intel. It has been developed against Slack `4.50.143` and requires Node.js 24 or newer.
+
+::::steps
+
+### Download Klack
+
+The installer selects the release for your Mac, verifies its SHA-256 checksum, and adds a launcher at `~/.local/bin/klack`. It does not patch Slack yet.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh
+```
+
+### Quit Slack completely
+
+Use **Slack → Quit Slack** and confirm no other Slack copy is running. Klack intentionally refuses to modify an app while Slack is open.
+
+### Inspect before changing anything
+
+```sh
+~/.local/bin/klack status
+
+# Use a separate app path while testing:
+~/.local/bin/klack status --app "$HOME/Applications/Slack-Klack.app"
+```
+
+### Install the bootstrap
+
+```sh
+~/.local/bin/klack install
+
+# Or install into a disposable copy:
+~/.local/bin/klack install --app "$HOME/Applications/Slack-Klack.app"
+```
+
+::::
+
+:::note
+**After a Slack update:** Slack replaces its application resources when it updates. Quit Slack and run `klack install` again to regenerate the combined preload.
+:::
+
+To download Klack and patch Slack in one command, add `--install` to the installer:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Zygimantass/klack/main/install.sh | sh -s -- --install
+```
+
+### Restore Slack
+
+Quit every Slack copy, then run:
+
+```sh
+klack uninstall
+
+# Match the custom app path if you used one:
+klack uninstall --app "$HOME/Applications/Slack-Klack.app"
+```
+
+For protected canonical installs, Klack restores the complete vendor-signed bundle it preserved. Directly writable copies restore the original ASAR but remain ad-hoc signed.
+
+### Build from source
+
+Source builds additionally require pnpm. Clone the repository, run its checks, then use `pnpm klack` in place of the release launcher.
+
+```sh
+git clone https://github.com/zygimantass/klack.git
+cd klack
+pnpm install
+pnpm check
+pnpm test
+pnpm klack status
+```
+
+<span id="quick-start" />
+
+## Quick start
+
+Once Slack launches through Klack, verify the runtime and add a tiny plugin.
+
+### 1. Confirm Klack loaded
+
+Open Slack’s DevTools with <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> and run:
+
+```js
+Klack.version
+Klack.list()
+```
+
+The built-in `LoadedIndicator` plugin also adds a small badge in the lower-right corner of Slack.
+
+### 2. Create the plugin directory
+
+```sh
+mkdir -p ~/.klack/plugins
+```
+
+### 3. Add a plugin
+
+Create `~/.klack/plugins/hello.ts`:
+
+```ts
+import { definePlugin } from "klack/sdk";
+
+export default definePlugin({
+  name: "Hello",
+  description: "My first Klack plugin",
+  setup(klack) {
+    klack.ui.addButton({
+      id: "hello",
+      target: "body",
+      label: "Hello from Klack",
+      onClick(_event, { button }) {
+        button.textContent = "Clicked!";
+      },
+    });
+  },
+});
+```
+
+Save the file. Klack bundles it in memory and applies the new plugin without a manual build or Slack restart.
+
+<span id="architecture" />
+
+## How injection works
+
+Klack uses a small bootstrap rather than disabling Electron’s renderer protections.
+
+1. The installer renames Slack’s `app.asar` to `_app.asar` and puts a tiny bootstrap archive in its place.
+2. On macOS, it updates Electron’s embedded ASAR-integrity metadata and ad-hoc signs the outer app while leaving Slack’s signed helpers and frameworks untouched.
+3. The bootstrap starts Klack’s main-process patcher, redirects Electron to Slack’s original package, and wraps `BrowserWindow`.
+4. Windows using Slack’s primary preload receive a generated file containing Klack followed by Slack’s exact original preload.
+5. Klack injects the renderer and the compiled local plugin set before Slack finishes loading.
+
+:::note
+**Renderer settings remain unchanged.** Slack still launches windows with `sandbox: true` and `contextIsolation: true`. This is a compatibility property, not a sandbox for Klack plugins.
+:::
+
+<span id="your-first-plugin" />
+
+## Your first plugin
+
+A typed plugin exports a definition created with `definePlugin`. The helper is intentionally an identity function at runtime; its job is to provide type checking and autocomplete.
+
+```ts title="plugin.ts"
+import { definePlugin } from "klack/sdk";
+
+export default definePlugin({
+  name: "Example", // A-Z, a-z, 0-9, _ and -
+  description: "Example plugin",
+  version: "1.0.0",
+  defaultEnabled: true,
+  setup(klack) {
+    klack.logger.info("Example started");
+
+    klack.cleanup(() => {
+      klack.logger.info("Example stopped");
+    });
+  },
+});
+```
+
+The filename is the source identity. A file in the user plugin directory replaces a built-in plugin with the same filename.
+
+### JavaScript without a build step
+
+A CommonJS definition also works. It uses the same required `name` and `setup` fields:
+
+```js title="simple.js"
+module.exports = {
+  name: "Simple",
+  setup(klack) {
+    klack.logger.info("Simple plugin loaded");
+  },
+};
+```
+
+<span id="ui-api" />
+
+## UI contributions
+
+Everything registered through `klack.ui`, `klack.dom`, `klack.events`, and `klack.timers` belongs to the current plugin. Disabling or reloading that plugin removes the contribution automatically.
+
+| Method | Purpose |
+| --- | --- |
+| `ui.addButton(options)` | Mount a resilient button at every matching target, with click context and accessible attributes. |
+| `ui.mount(target, render, options)` | Mount an arbitrary element with mount-scoped events and cleanup. |
+| `ui.addStyle(css, options?)` | Inject plugin-owned CSS with an optional style identifier. |
+| `ui.hide(selectors, options?)` | Hide one or more selectors with plugin-owned CSS. |
+| `dom.watch(selector, callback)` | Initialize current and future matches incrementally, with per-element cleanup. |
+| `events.on(target, type, listener)` | Add a listener that is removed automatically. |
+
+### Targets and positions
+
+A UI target can be a CSS selector, one `Element`, or a function that returns an element or iterable of elements. Buttons and mounts support four positions:
+
+| Position | Behavior |
+| --- | --- |
+| `append` | Add inside the target, after its existing children. This is the default. |
+| `prepend` | Add inside the target, before its existing children. |
+| `before` | Add as the target’s previous sibling. |
+| `after` | Add as the target’s next sibling. |
+
+### Mount custom DOM
+
+```ts title="custom-mount.ts"
+klack.ui.mount(
+  "[data-qa='message_input']",
+  ({ cleanup, plugin, target }) => {
+    const badge = document.createElement("span");
+    badge.textContent = `Mounted by ${plugin}`;
+    cleanup(() => {
+      klack.logger.debug("Removed from", target);
+    });
+    return badge;
+  },
+  { position: "before" },
+);
+```
+
+### Observe Slack’s DOM
+
+```ts title="observer.ts"
+klack.dom.watch("[data-qa='message_container']", (message) => {
+  message.classList.add("my-plugin-message");
+
+  return () => {
+    message.classList.remove("my-plugin-message");
+  };
+});
+```
+
+Klack reconciles contributions when Slack changes the DOM. If the target or mounted element disappears, cleanup runs and the contribution is recreated when a target returns.
+
+<span id="hot-reload" />
+
+## Hot reload
+
+At startup, Klack loads its built-in plugins, then scans `~/.klack/plugins/*.{ts,tsx,js,jsx}`. TypeScript and JavaScript modules are bundled in memory, so no generated files appear beside your source.
+
+- Changes, additions, and deletions trigger a new plugin set.
+- Current plugin resources are cleaned up before the replacement set starts.
+- Every Slack window receives the update.
+- If compilation fails, Klack logs the error and keeps the last working set active.
+
+### Use a different plugin directory
+
+```sh
+KLACK_PLUGIN_DIR="$HOME/code/slack-plugins" open /Applications/Slack.app
+```
+
+The environment variable must be present in the process that launches Slack.
+
+<span id="devtools" />
+
+## DevTools
+
+Klack adds **Toggle DevTools** to Slack’s **View** menu—or to a **Klack** menu if Slack has no View menu.
+
+Use <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd> on Windows and Linux. The element picker helps find stable selectors for UI targets.
+
+```js
+Klack.list()
+Klack.disable("Example")
+Klack.enable("Example")
+Klack.isEnabled("Example")
+```
+
+Enablement choices are stored in Slack renderer local storage under `klack:plugin-overrides`.
+
+<span id="cli" />
+
+## CLI reference
+
+Use `klack` after a release installation. From a source checkout, prefix the same commands with `pnpm`.
+
+| Command | Description |
+| --- | --- |
+| `klack status` | Print the app path, Klack state, and detected Slack version. |
+| `klack install` | Install or refresh the bootstrap and generated preload. |
+| `klack uninstall` | Remove Klack and restore Slack’s original application resources. |
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `--app <path>` | Operate on a Slack app other than `/Applications/Slack.app`. |
+| `--no-resign` | Skip macOS ad-hoc signing. The changed app will not launch until it is signed. |
+| `-h`, `--help` | Print command usage. |
+
+### Launch without injection
+
+To start through the installed bootstrap without Klack’s renderer or local plugins, pass `--klack-vanilla` directly to Slack:
+
+```sh
+/Applications/Slack.app/Contents/MacOS/Slack --klack-vanilla
+```
+
+<span id="plugin-api" />
+
+## Plugin API
+
+### Definition fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `name` | string | Required. Letters, numbers, underscores, and hyphens only. |
+| `setup` | function | Required. Receives `KlackApi`; register cleanup with the provided methods. |
+| `description` | string | Optional human-readable summary. |
+| `version` | string | Optional plugin version shown by `Klack.list()`. |
+| `defaultEnabled` | boolean | Defaults to `true`. A saved user override takes precedence. |
+
+### Setup context
+
+| Property | Description |
+| --- | --- |
+| `klack.ui` | The scoped UI methods described above. |
+| `klack.dom` | Incremental selector watching and scoped mutation observers. |
+| `klack.events` | Plugin-owned event listeners. |
+| `klack.timers` | Plugin-owned timeouts, intervals, and animation frames. |
+| `klack.cleanup` | Registers cleanup for direct changes and third-party APIs. |
+| `klack.logger` | Slack renderer’s `console`, suitable for namespaced development logs. |
+| `klack.version` | The currently running Klack version. |
+
+### Browser global
+
+The frozen `window.Klack` object exposes:
+
+```js
+Klack.version
+Klack.list()
+Klack.isEnabled(name)
+Klack.enable(name)
+Klack.disable(name)
+```
+
+Plugin modules must default-export a definition with `name` and `setup`.
+
+<span id="security" />
+
+## Security
+
+Klack is unofficial, unsupported, and intended for local experimentation. Its plugin system is deliberately powerful.
+
+- **Plugins are trusted code.** They can inspect or modify anything visible to Slack’s renderer. Never install a plugin you have not reviewed.
+- **Plugins are not isolated from one another.** Plugin ownership provides lifecycle cleanup, not a security boundary.
+- **Installation changes Slack’s bundle.** This invalidates Slack’s vendor signature and may violate Slack or workspace policies.
+- **Ad-hoc signing has consequences.** Keychain, notifications, updates, and device permissions can behave differently.
+- **Managed devices may block changes.** Get explicit authorization before using Klack on workplace hardware.
+
+:::warning
+**Preserving Electron’s sandbox does not sandbox plugins.** Klack’s injection is compatible with Slack’s existing renderer protections, but plugin code still runs with access to the renderer environment.
+:::
+
+<span id="troubleshooting" />
+
+## Troubleshooting
+
+### “A Slack app is running”
+
+Quit every Slack copy, including test copies. Klack checks for the Slack process before install and uninstall operations.
+
+### The modified app does not launch
+
+If you passed `--no-resign` on macOS, the bundle needs a valid signature before it can launch. Re-run installation without that option or restore Slack.
+
+### Browser sign-in opens another Slack copy
+
+macOS chooses a `slack://` handler by bundle identifier, not app path. Quit all other Slack copies during sign-in or use the canonical `/Applications/Slack.app`.
+
+### A plugin edit does not apply
+
+Open DevTools and inspect the console for a compile error. Klack intentionally keeps the last working plugin set active when a new source file fails to bundle.
+
+### Slack updated and Klack disappeared
+
+Slack updates replace application resources. Re-run the release download if you want to update Klack too, quit Slack, and run `klack install` again.
+
+[Back to Klack home](/) · [Open an issue](https://github.com/zygimantass/klack/issues)

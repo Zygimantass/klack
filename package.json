@@ -29,18 +29,27 @@
     "check": "tsc --noEmit",
     "klack": "node dist/cli.cjs",
     "package:release": "scripts/package-release.sh",
-    "site:dev": "python3 -m http.server 4173 --directory site",
+    "site:build": "vocs build",
+    "site:dev": "vocs dev --port 4173",
+    "site:preview": "vocs preview --port 4173",
     "test": "pnpm build && node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@electron/asar": "^4.2.0",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.27.7"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "react": "~19.2.7",
+    "react-dom": "~19.2.7",
     "sass": "^1.89.0",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vite": "^8.1.5",
+    "vocs": "^2.6.0",
+    "waku": "1.0.0-beta.6"
   },
   "packageManager": "pnpm@10.12.1"
 }

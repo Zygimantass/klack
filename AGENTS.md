@@ -72,6 +72,15 @@ pnpm test
 - After a live renderer/plugin change, inspect Slack's webapp console log for
   `[Klack]` startup, reload, and failure messages.
 
+## Website design iterations
+
+- Preserve distinct website directions as named versions in the Visual Lab
+  instead of replacing the previous direction.
+- When iterating on site design, add multiple reviewable versions and keep the
+  current default unless the user explicitly chooses a replacement.
+- Make version selection persistent so screenshots and feedback can reference
+  a stable version name.
+
 ## Plugin implementation rules
 
 - Export a typed default definition using `definePlugin` from `klack/sdk`.
