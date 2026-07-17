@@ -1,6 +1,7 @@
 export function initializeSite() {
 const root = document.documentElement;
 const body = document.body;
+const isLocalSite = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 const eventController = new AbortController();
 let sectionObserver;
 
@@ -211,20 +212,20 @@ const visualLabDefaults = {
   dither: {
     animated: true,
     reactive: true,
-    pattern: "pixels",
-    shape: "shards",
-    motion: "glitch",
-    timing: "stepped",
-    blend: "difference",
-    density: 4,
-    speed: 6,
-    drift: 58,
-    spin: 28,
-    pulse: 12,
-    hue: 90,
+    pattern: "dots",
+    shape: "orbit",
+    motion: "drift",
+    timing: "fluid",
+    blend: "normal",
+    density: 6,
+    speed: 22,
+    drift: 34,
+    spin: 18,
+    pulse: 6,
+    hue: 0,
     bloom: 4,
-    opacity: 74,
-    parallax: 18,
+    opacity: 90,
+    parallax: 5,
   },
 };
 const visualLabPresets = {
@@ -412,7 +413,7 @@ const visualLabMotionPresets = {
       motion: "drift",
       timing: "fluid",
       blend: "normal",
-      density: 5,
+      density: 6,
       speed: 22,
       drift: 34,
       spin: 18,
@@ -420,7 +421,7 @@ const visualLabMotionPresets = {
       hue: 0,
       bloom: 4,
       opacity: 90,
-      parallax: 10,
+      parallax: 5,
     },
   },
   orbit: {
@@ -719,7 +720,9 @@ function loadVisualSettings() {
   }
 }
 
-let visualSettings = loadVisualSettings();
+let visualSettings = isLocalSite
+  ? loadVisualSettings()
+  : copyVisualSettings(visualLabDefaults);
 
 function applyVisualSettings() {
   root.dataset.visualVersion = visualSettings.version;
@@ -1027,7 +1030,7 @@ listen(hero, "pointermove", (event) => {
 listen(hero, "pointerleave", resetDitherPointer);
 
 applyVisualSettings();
-createVisualLab();
+if (isLocalSite) createVisualLab();
 
 const pluginDemo = document.querySelector("[data-plugin-demo]");
 const pluginDemoStorageKey = "klack-product-demo";
