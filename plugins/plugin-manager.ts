@@ -743,8 +743,9 @@ export default definePlugin({
       return nextOverlay;
     });
 
+    const helpButton = klack.selectors.get("slack.top-nav.help-button");
     klack.ui.mount(
-      klack.selectors.get("slack.top-nav.help-button"),
+      () => document.querySelector(helpButton)?.parentElement,
       ({ on }) => {
         const button = document.createElement("button");
         button.type = "button";

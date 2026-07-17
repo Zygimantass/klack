@@ -3,7 +3,7 @@ import { definePlugin } from "klack/sdk";
 export default definePlugin({
   name: "RemoveDistractions",
   description:
-    "Removes agent features, channel tabs, and low-value channel header controls.",
+    "Removes agent features, channel tabs, sidebar filters, help, and low-value channel controls.",
   setup(klack) {
     const channelTabs = klack.selectors.get("slack.channel-header.tabs");
     const viewHeader = klack.selectors.get("slack.channel-header.root");
@@ -11,9 +11,12 @@ export default definePlugin({
     const contextBar = klack.selectors.get("slack.channel-header.context-bar");
     const sharedContextText = klack.selectors.get("slack.channel-header.shared-context-text");
     const dndContextText = klack.selectors.get("slack.channel-header.dnd-context-text");
+    const conversationFilter = klack.selectors.get("slack.sidebar.conversation-filter");
     const sharedContext = `${contextBar}:has(${sharedContextText})`;
     klack.ui.hide(
       [
+        `.p-sidebar_text_filter_input_header:has(${conversationFilter})`,
+        klack.selectors.get("slack.top-nav.help-button"),
         '[data-qa="ai-apps-menu-container"]',
         '[data-qa-channel-sidebar-section-heading="recent_apps"]',
         klack.selectors.get("slack.channel-header.favorite-action"),
