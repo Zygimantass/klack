@@ -1591,6 +1591,7 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
 
 .code-frame code {
   font-family: inherit;
+  padding-inline: 0;
 }
 
 .final-cta {
