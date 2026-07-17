@@ -5,7 +5,7 @@ export default defineConfig({
   title: 'Klack',
   titleTemplate: (path) => path === '/' ? '%s' : '%s · Klack',
   description: 'Make Slack yours with focused plugins, complete themes, real tabs, and a calmer interface.',
-  baseUrl: 'https://klack.sh',
+  baseUrl: 'https://www.klack.sh',
   renderStrategy: 'full-static',
   colorScheme: 'dark',
   accentColor: '#deded7',
