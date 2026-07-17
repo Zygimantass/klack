@@ -12,18 +12,3 @@ showFeedback: false
 Klack is an experimental plugin loader for Slack’s Electron desktop app. It inserts a small bootstrap into the application bundle, loads local plugins before Slack finishes starting, and keeps the current renderer sandbox and context isolation settings intact.
 
 Use it to prototype personal workflows, add small interface contributions, or observe Slack’s DOM from code you control. Klack is not a marketplace or a security boundary: every installed plugin is trusted code.
-
-:::warning
-**Start with a disposable Slack copy.** Installing Klack changes Slack’s application bundle and invalidates its vendor signature. Do not install it on a managed work computer without authorization.
-:::
-
-## What the MVP supports
-
-- Reversible `app.asar` bootstrap installation.
-- Typed TypeScript plugin definitions and zero-build JavaScript definitions.
-- Plugin-scoped buttons, custom DOM mounts, styles, events, timers, and DOM watchers.
-- Automatic recompilation and reload across every open Slack window.
-- A built-in plugin manager, enablement overrides, and automatic resource cleanup.
-- A vanilla launch flag for starting through the bootstrap without injection.
-
-Klack does not yet patch Slack’s remote Webpack modules or provide a plugin marketplace.
