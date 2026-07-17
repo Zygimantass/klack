@@ -6,6 +6,7 @@ export default defineConfig({
   titleTemplate: (path) => path === '/' ? '%s' : '%s · Klack',
   description: 'Make Slack yours with focused plugins, complete themes, real tabs, and a calmer interface.',
   baseUrl: 'https://www.klack.sh',
+  ogImageUrl: (_path, { baseUrl }) => `${baseUrl}/og.png`,
   renderStrategy: 'full-static',
   colorScheme: 'dark',
   accentColor: '#deded7',
@@ -62,8 +63,13 @@ export default defineConfig({
   },
   head: {
     meta: {
+      ogImageAlt: 'Klack — an open plugin layer for Slack',
+      ogImageHeight: 630,
+      ogImageType: 'image/png',
+      ogImageWidth: 1200,
       themeColor: '#0a0a0a',
       twitterCard: 'summary_large_image',
+      twitterImageAlt: 'Klack — an open plugin layer for Slack',
     },
     script: [
       {
