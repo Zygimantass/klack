@@ -74,7 +74,7 @@ async function writeClipboard(text) {
 }
 
 const visualLabStorageKey = "klack-visual-lab";
-const visualLabStorageVersion = 2;
+const visualLabStorageVersion = 3;
 const visualLabVersions = {
   editorial: {
     label: "Editorial",

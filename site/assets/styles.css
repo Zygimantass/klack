@@ -50,7 +50,7 @@
   --dither-pointer-y: 0px;
   --dither-pointer-rotate: 0deg;
   --header-height: 64px;
-  --content-width: 1360px;
+  --content-width: 100%;
   --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --sans: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -841,7 +841,7 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
 
 .product-window {
   position: relative;
-  width: min(100%, 1200px);
+  width: 100%;
   margin: 0 auto;
   border: 1px solid var(--line-strong);
   border-radius: 0;
@@ -1466,8 +1466,8 @@ html[data-dither-timing="elastic"] :is(.hero-art-ring, .hero-art-field) {
 }
 
 .feature-grid {
-  width: min(1120px, 88%);
-  margin: 88px 0 0 auto;
+  width: 100%;
+  margin: 88px 0 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 64px 80px;
