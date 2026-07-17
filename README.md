@@ -6,11 +6,12 @@ sandboxed preload because current Slack releases close windows that disable
 `sandbox` or `contextIsolation`.
 
 > [!WARNING]
-> Klack is unofficial, unsupported, and currently intended only for local
-> experimentation. Plugins execute as trusted code inside Slack and can read or
-> modify anything visible to the renderer. Installing Klack modifies Slack's
-> application bundle, invalidates its vendor code signature, and may violate
-> Slack or workspace policies.
+> Klack is not affiliated with, endorsed by, or associated with Slack or
+> Salesforce. It is unofficial, unsupported, and currently intended only for
+> local experimentation. Plugins execute as trusted code inside Slack and can
+> read or modify anything visible to the renderer. Installing Klack modifies
+> Slack's application bundle, invalidates its vendor code signature, and may
+> violate Slack or workspace policies.
 
 ## Install
 
