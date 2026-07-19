@@ -6,6 +6,7 @@ import {
   keyCommand,
   movedIndex,
   movedVisualIndex,
+  shouldEnterGlobalSearchResults,
   shouldSuppressNormalModeKey,
   threadTimestampFromUrl,
   visualMotionCommand,
@@ -14,7 +15,7 @@ import {
   type VisualMotion,
 } from "./lib/vim-navigation";
 
-type CursorKind = "message" | "sidebar";
+type CursorKind = "message" | "search" | "sidebar";
 type Surface = "main" | "sidebar" | "thread" | "threads";
 
 type Cursor = {
@@ -40,11 +41,13 @@ type InsertSession = {
 };
 
 type SearchSession = {
+  awaitingResults: boolean;
   initialText: string;
   kind: "global" | "sidebar";
   origin: CursorOrigin | null;
   pendingText: string;
-  phase: "results" | "typing";
+  phase: "open" | "results" | "typing";
+  resultIdentity: string | null;
   restoring: boolean;
 };
 
@@ -293,8 +296,25 @@ function sidebarIdentity(item: Element): string | null {
   return control instanceof HTMLAnchorElement ? `route:${control.href}` : null;
 }
 
+function searchResultIdentity(result: Element): string | null {
+  const message = result.matches("[data-msg-channel-id][data-msg-ts]")
+    ? result
+    : result.querySelector("[data-msg-channel-id][data-msg-ts]");
+  if (message) {
+    const identity = messageIdentity(message);
+    if (identity) return identity;
+  }
+  const timestamp = result.matches("a[data-ts][href]")
+    ? result
+    : result.querySelector("a[data-ts][href]");
+  if (!(timestamp instanceof HTMLAnchorElement)) return null;
+  return `timestamp:${timestamp.getAttribute("data-ts") || ""}:${timestamp.href}`;
+}
+
 function identityFor(element: Element, kind: CursorKind): string | null {
-  return kind === "message" ? messageIdentity(element) : sidebarIdentity(element);
+  if (kind === "message") return messageIdentity(element);
+  if (kind === "search") return searchResultIdentity(element);
+  return sidebarIdentity(element);
 }
 
 function clickEnabled(element: HTMLElement | null): boolean {
@@ -322,6 +342,12 @@ export default definePlugin({
     const composerInputSelector = klack.selectors.get("slack.composer.input");
     const flexpaneRootSelector = klack.selectors.get("slack.flexpane.root");
     const searchInputSelector = klack.selectors.get("slack.search.dialog-input");
+    const searchAutocompleteFooterSelector = klack.selectors.get(
+      "slack.search.autocomplete-footer",
+    );
+    const searchResultSelector = klack.selectors.get("slack.search.result");
+    const searchSuggestionSelector = klack.selectors.get("slack.search.suggestion");
+    const searchViewSelector = klack.selectors.get("slack.search.view");
     const sidebarChannelItemSelector = klack.selectors.get("slack.sidebar.channel-item");
     const sidebarItemSelector = klack.selectors.get("slack.sidebar.item");
     const sidebarFilterSelector = klack.selectors.get("slack.sidebar.conversation-filter");
@@ -433,7 +459,11 @@ export default definePlugin({
         selected.removeAttribute(SELECTED_ATTRIBUTE);
       });
       element.setAttribute(SELECTED_ATTRIBUTE, kind);
-      cursor = { element, identity: identityFor(element, kind), kind };
+      const identity = identityFor(element, kind);
+      cursor = { element, identity, kind };
+      if (kind === "search" && searchSession?.kind === "global") {
+        searchSession.resultIdentity = identity;
+      }
       if (scroll) element.scrollIntoView({ block: "nearest", inline: "nearest" });
     };
 
@@ -446,6 +476,7 @@ export default definePlugin({
 
     const surfaceForCursor = (candidate: Cursor): Surface => {
       if (candidate.kind === "sidebar") return "sidebar";
+      if (candidate.kind === "search") return searchSession?.origin?.surface || preferredSurface;
       if (candidate.element.closest(threadPaneSelector)) return "thread";
       if (candidate.element.closest(threadsViewSelector)) return "threads";
       return "main";
@@ -462,7 +493,12 @@ export default definePlugin({
       if (!origin) return false;
       preferredSurface = origin.surface;
       const root = rootForSurface(origin.surface);
-      const selector = origin.kind === "sidebar" ? sidebarItemSelector : messageRowSelector;
+      const selector =
+        origin.kind === "sidebar"
+          ? sidebarItemSelector
+          : origin.kind === "search"
+            ? searchResultSelector
+            : messageRowSelector;
       const replacement =
         root && origin.identity
           ? canonicalElements(root, selector).find(
@@ -859,7 +895,15 @@ export default definePlugin({
         : null;
       clearCursor();
       resetPrefixes();
-      searchSession = null;
+      if (
+        !(
+          searchSession?.kind === "global" &&
+          searchSession.phase === "open" &&
+          surface === "thread"
+        )
+      ) {
+        searchSession = null;
+      }
       insertSession = { origin, surface, target };
       target.focus({ preventScroll: true });
       const active = document.activeElement;
@@ -900,6 +944,8 @@ export default definePlugin({
     const globalSearchEditor = (): HTMLElement | null =>
       editorWithin(visibleElement(searchInputSelector));
 
+    const globalSearchView = (): HTMLElement | null => visibleElement(searchViewSelector);
+
     const sidebarSearchEditor = (): HTMLElement | null => {
       const container = document.querySelector<HTMLElement>(sidebarFilterSelector);
       if (!container) return null;
@@ -909,6 +955,50 @@ export default definePlugin({
 
     const searchEditor = (): HTMLElement | null =>
       searchSession?.kind === "sidebar" ? sidebarSearchEditor() : globalSearchEditor();
+
+    const syncGlobalSearchResults = (): boolean => {
+      const session = searchSession;
+      const view = globalSearchView();
+      const editor = globalSearchEditor();
+      if (
+        session &&
+        shouldEnterGlobalSearchResults({
+          awaitingResults: session.awaitingResults,
+          hasEditor: Boolean(editor),
+          hasView: Boolean(view),
+          kind: session.kind,
+          phase: session.phase,
+          restoring: session.restoring,
+        })
+      ) {
+        session.awaitingResults = false;
+        session.pendingText = "";
+        session.phase = "results";
+        editor?.blur();
+        cancelDeferredFocus();
+        resetPrefixes();
+      }
+      if (!session || session.kind !== "global" || session.phase !== "results" || !view) {
+        return false;
+      }
+      const results = canonicalElements(view, searchResultSelector);
+      if (results.length === 0) return true;
+      const connectedCurrent =
+        cursor?.kind === "search" &&
+        cursor.element.isConnected &&
+        view.contains(cursor.element)
+          ? cursor.element
+          : null;
+      if (connectedCurrent) return true;
+      const target =
+        (session.resultIdentity
+          ? results.find(
+              (result) => searchResultIdentity(result) === session.resultIdentity,
+            )
+          : null) || results[0];
+      select(target, "search");
+      return true;
+    };
 
     const searchText = (target: HTMLElement | null): string => {
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
@@ -974,7 +1064,20 @@ export default definePlugin({
       if (!cursorRestored) restoreCursorOrigin(origin);
     };
 
+    const stepBackFromGlobalSearch = (): void => {
+      const historyBack = visibleElement(
+        '[data-qa="history_back_button"]:not([aria-disabled="true"])',
+      );
+      if (clickEnabled(historyBack)) return;
+      const pane = threadPane();
+      const flexpane = pane?.closest<HTMLElement>(flexpaneRootSelector) || pane;
+      const close = flexpane?.querySelector<HTMLElement>('[data-qa="close_flexpane"]') || null;
+      if (clickEnabled(close)) return;
+      window.history.back();
+    };
+
     const scheduleSearchRestore = (origin: CursorOrigin | null, attempt = 0): void => {
+      if (cancelPendingSearchRestore) return;
       cancelPendingSearchRestore = klack.timers.animationFrame(() => {
         cancelPendingSearchRestore = null;
         if (!searchSession?.restoring || searchSession.origin !== origin) return;
@@ -986,12 +1089,46 @@ export default definePlugin({
           } else scheduleSearchRestore(origin, attempt + 1);
           return;
         }
-        if (globalSearchEditor()) {
-          if (attempt < 120) scheduleSearchRestore(origin, attempt + 1);
+        if (globalSearchEditor() || globalSearchView()) {
+          if (
+            attempt > 0 &&
+            attempt % 60 === 0 &&
+            globalSearchView() &&
+            !globalSearchEditor()
+          ) {
+            stepBackFromGlobalSearch();
+          }
+          if (attempt < 240) scheduleSearchRestore(origin, attempt + 1);
+          else if (searchSession?.kind === "global") {
+            searchSession.restoring = false;
+            if (globalSearchView() && !globalSearchEditor()) {
+              searchSession.phase = "results";
+              syncGlobalSearchResults();
+            } else focusSearchInput(globalSearchEditor());
+          }
           return;
         }
-        finishSearchRestore();
+        const restored = origin ? restoreCursorOrigin(origin) : true;
+        if (restored || attempt >= 240) {
+          if (!restored) clearCursor();
+          finishSearchRestore(true);
+        } else scheduleSearchRestore(origin, attempt + 1);
       });
+    };
+
+    const cancelGlobalSearchResults = (): boolean => {
+      if (searchSession?.kind !== "global" || searchSession.phase !== "results") return false;
+      const session = searchSession;
+      session.awaitingResults = false;
+      session.pendingText = "";
+      session.restoring = true;
+      resetPrefixes();
+      clearCursor();
+      cancelDeferredFocus();
+      cancelSearchRestore();
+      stepBackFromGlobalSearch();
+      scheduleSearchRestore(session.origin);
+      return true;
     };
 
     const replaceSearchText = (target: HTMLElement, text: string, focus = true): void => {
@@ -1091,11 +1228,13 @@ export default definePlugin({
       insertSession = null;
       document.documentElement.setAttribute(SIDEBAR_SEARCH_ATTRIBUTE, "");
       searchSession = {
+        awaitingResults: false,
         initialText,
         kind: "sidebar",
         origin,
         pendingText: "",
         phase: "typing",
+        resultIdentity: null,
         restoring: false,
       };
       if (!focusSearchInput(target)) scheduleSearchFocus();
@@ -1120,11 +1259,13 @@ export default definePlugin({
       resetPrefixes();
       insertSession = null;
       searchSession = {
+        awaitingResults: false,
         initialText: "",
         kind: "global",
         origin,
         pendingText: "",
         phase: "typing",
+        resultIdentity: null,
         restoring: false,
       };
       if (existingInput) return focusSearchInput(existingInput);
@@ -1294,6 +1435,12 @@ export default definePlugin({
       if (!root) return false;
       preferredSurface = "sidebar";
       return moveWithin(root, sidebarChannelItemSelector, "sidebar", direction, amount);
+    };
+
+    const moveGlobalSearchResults = (direction: Direction, amount = 1): boolean => {
+      const root = globalSearchView();
+      if (!root) return false;
+      return moveWithin(root, searchResultSelector, "search", direction, amount);
     };
 
     const moveMessages = (direction: Direction, amount = 1): boolean => {
@@ -1541,6 +1688,52 @@ export default definePlugin({
       return true;
     };
 
+    const beginGlobalSearchResultOpen = (
+      session: SearchSession,
+      result: HTMLElement,
+    ): void => {
+      const alreadyOpening = session.phase === "open";
+      session.resultIdentity = searchResultIdentity(result);
+      session.phase = "open";
+      resetPrefixes();
+      clearCursor();
+      if (alreadyOpening) return;
+      klack.timers.timeout(() => {
+        if (
+          searchSession === session &&
+          session.phase === "open" &&
+          !threadPane() &&
+          globalSearchView()
+        ) {
+          session.phase = "results";
+          syncGlobalSearchResults();
+        }
+      }, 3_000);
+    };
+
+    const activateGlobalSearchResult = (): boolean => {
+      if (searchSession?.kind !== "global" || searchSession.phase !== "results") return false;
+      const session = searchSession;
+      const root = globalSearchView();
+      const results = root ? canonicalElements(root, searchResultSelector) : [];
+      const identity = cursor?.kind === "search" ? cursor.identity : session.resultIdentity;
+      const current =
+        (identity
+          ? results.find((result) => searchResultIdentity(result) === identity)
+          : null) ||
+        (cursor?.kind === "search" && isRendered(cursor.element) && root?.contains(cursor.element)
+          ? cursor.element
+          : null);
+      if (!current) return false;
+      beginGlobalSearchResultOpen(session, current);
+      if (!clickEnabled(current)) {
+        session.phase = "results";
+        syncGlobalSearchResults();
+        return false;
+      }
+      return true;
+    };
+
     const openWithDeepLink = (message: HTMLElement): boolean => {
       const channel = message.getAttribute("data-msg-channel-id");
       const timestamp = message.getAttribute("data-msg-ts");
@@ -1629,6 +1822,14 @@ export default definePlugin({
       cursor?.kind === "sidebar" ? activateSidebar() : openThread();
 
     const navigateHistory = (direction: "back" | "forward"): boolean => {
+      if (
+        direction === "back" &&
+        searchSession?.kind === "global" &&
+        searchSession.phase === "open" &&
+        threadPane()
+      ) {
+        return closeThread();
+      }
       const target = visibleElement(
         `[data-qa="history_${direction}_button"]:not([aria-disabled="true"])`,
       );
@@ -1677,13 +1878,29 @@ export default definePlugin({
         !event.defaultPrevented &&
         !event.isComposing;
       const targetElement = elementFromTarget(event.target);
+      syncGlobalSearchResults();
       if (plainEscape && searchSession?.kind === "sidebar" && cancelSidebarSearch()) {
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
       }
-      if (plainEscape && searchSession?.kind === "global") {
+      if (
+        plainEscape &&
+        searchSession?.kind === "global" &&
+        searchSession.phase === "results" &&
+        cancelGlobalSearchResults()
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (
+        plainEscape &&
+        searchSession?.kind === "global" &&
+        searchSession.phase === "typing"
+      ) {
         const { origin } = searchSession;
+        searchSession.awaitingResults = false;
         searchSession.pendingText = "";
         searchSession.restoring = true;
         cancelDeferredFocus();
@@ -1696,6 +1913,15 @@ export default definePlugin({
           event.stopImmediatePropagation();
         }
         return;
+      }
+      if (
+        plainEnter &&
+        searchSession?.kind === "global" &&
+        searchSession.phase === "typing"
+      ) {
+        searchSession.awaitingResults = true;
+        searchSession.pendingText = "";
+        resetPrefixes();
       }
       if (
         plainEnter &&
@@ -1730,6 +1956,105 @@ export default definePlugin({
         } else if (!shouldSuppressNormalModeKey(event)) {
           return;
         }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (searchSession?.kind === "global" && searchSession.phase === "results") {
+        const searchCommand = keyCommand(event);
+        const hadCenterPrefix = centerPrefixPending;
+        const hadTopPrefix = topPrefixPending;
+        if (searchCommand === "count") {
+          centerPrefixPending = false;
+          topPrefixPending = false;
+          const nextPrefix = appendCountDigit(countPrefix, event.key);
+          if (nextPrefix) countPrefix = nextPrefix;
+        } else if (searchCommand === "center-prefix") {
+          resetCount();
+          topPrefixPending = false;
+          if (hadCenterPrefix) {
+            centerPrefixPending = false;
+            centerCursor();
+          } else centerPrefixPending = true;
+        } else if (searchCommand === "top-prefix") {
+          resetCount();
+          centerPrefixPending = false;
+          if (hadTopPrefix) {
+            topPrefixPending = false;
+            const root = globalSearchView();
+            if (root) boundaryWithin(root, searchResultSelector, "search", "previous");
+          } else topPrefixPending = true;
+        } else {
+          centerPrefixPending = false;
+          topPrefixPending = false;
+          const amount = takeCount();
+          const root = globalSearchView();
+          if (searchCommand === "next" || searchCommand === "previous") {
+            moveGlobalSearchResults(
+              searchCommand === "next" ? "next" : "previous",
+              amount,
+            );
+          } else if (searchCommand === "page-next" || searchCommand === "page-previous") {
+            if (root) {
+              pageWithin(
+                root,
+                searchResultSelector,
+                "search",
+                searchCommand === "page-next" ? "next" : "previous",
+                0.9,
+                amount,
+              );
+            }
+          } else if (searchCommand === "half-next" || searchCommand === "half-previous") {
+            if (root) {
+              pageWithin(
+                root,
+                searchResultSelector,
+                "search",
+                searchCommand === "half-next" ? "next" : "previous",
+                0.5,
+                amount,
+              );
+            }
+          } else if (searchCommand === "bottom") {
+            if (root) boundaryWithin(root, searchResultSelector, "search", "next");
+          } else if (searchCommand === "activate" && event.key === "Enter") {
+            activateGlobalSearchResult();
+          } else if (searchCommand === "history-back") {
+            cancelGlobalSearchResults();
+          } else if (!searchCommand && !shouldSuppressNormalModeKey(event)) {
+            return;
+          }
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (
+        searchSession?.kind === "global" &&
+        searchSession.phase === "open" &&
+        threadPane()
+      ) {
+        const pane = threadPane();
+        preferredSurface = "thread";
+        const active = document.activeElement;
+        const activeComposer = composerFromTarget(active);
+        if (
+          pane &&
+          active instanceof HTMLElement &&
+          pane.contains(active) &&
+          (Boolean(keyCommand(event)) || shouldSuppressNormalModeKey(event)) &&
+          (!activeComposer || !isInsertComposer(activeComposer))
+        ) {
+          active.blur();
+        }
+      }
+      if (
+        searchSession?.kind === "global" &&
+        searchSession.phase === "open" &&
+        !threadPane() &&
+        (Boolean(keyCommand(event)) || shouldSuppressNormalModeKey(event))
+      ) {
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
@@ -1964,11 +2289,54 @@ export default definePlugin({
       cancelDeferredFocus();
       clearLinkSession();
       clearVisualSession();
+      if (
+        searchSession?.kind === "global" &&
+        searchSession.phase === "typing" &&
+        !searchSession.restoring &&
+        event.target.closest('[data-qa="search_input_close"]')
+      ) {
+        const session = searchSession;
+        session.awaitingResults = false;
+        session.pendingText = "";
+        session.restoring = true;
+        cancelSearchRestore();
+        scheduleSearchRestore(session.origin);
+      }
+      if (
+        searchSession?.kind === "global" &&
+        searchSession.phase === "typing" &&
+        event.target.closest(searchAutocompleteFooterSelector)
+      ) {
+        searchSession.awaitingResults = true;
+        searchSession.pendingText = "";
+      }
+      const clickedGlobalResult = event.target.closest(searchResultSelector);
+      if (
+        clickedGlobalResult instanceof HTMLElement &&
+        searchSession?.kind === "global" &&
+        !searchSession.restoring
+      ) {
+        beginGlobalSearchResultOpen(searchSession, clickedGlobalResult);
+        return;
+      }
       const activeSearch = searchEditor();
       const clickedInsideSearch = Boolean(
-        activeSearch && (event.target === activeSearch || activeSearch.contains(event.target)),
+        (activeSearch &&
+          (event.target === activeSearch || activeSearch.contains(event.target))) ||
+          event.target.closest(searchInputSelector) ||
+          event.target.closest(searchAutocompleteFooterSelector) ||
+          event.target.closest(searchSuggestionSelector) ||
+          (searchSession?.kind === "global" &&
+            (event.target.closest(searchViewSelector) ||
+              (searchSession.phase === "open" &&
+                (event.target.closest(threadPaneSelector) ||
+                  event.target.closest(flexpaneRootSelector) ||
+                  event.target.closest(
+                    '[data-qa="close_flexpane"], [data-qa="history_back_button"]',
+                  ))))),
       );
-      if (searchSession && !clickedInsideSearch) {
+      if (searchSession && !clickedInsideSearch && !searchSession.restoring) {
+        if (cursor?.kind === "search") clearCursor();
         if (searchSession.kind === "sidebar") {
           const { initialText } = searchSession;
           const target = sidebarSearchEditor();
@@ -2035,6 +2403,12 @@ export default definePlugin({
           box-shadow: inset 4px 0 0 rgb(var(--sk_highlight, 18, 100, 163)) !important;
         }
 
+        [${SELECTED_ATTRIBUTE}="search"][${SELECTED_ATTRIBUTE}] {
+          background: rgba(var(--sk_highlight, 18, 100, 163), 0.16) !important;
+          box-shadow: inset 4px 0 0 rgb(var(--sk_highlight, 18, 100, 163)) !important;
+          border-radius: 6px !important;
+        }
+
         [${LINK_SELECTED_ATTRIBUTE}] {
           background: rgba(var(--sk_highlight, 18, 100, 163), 0.24) !important;
           border-radius: 3px !important;
@@ -2067,7 +2441,33 @@ export default definePlugin({
       return () => {
         cancelFrame();
         if (searchSession?.restoring) scheduleSearchRestore(searchSession.origin);
+        else klack.timers.animationFrame(syncGlobalSearchResults);
       };
+    });
+    klack.dom.watch(searchViewSelector, (view) => {
+      const syncResults = (): void => {
+        if (!isRendered(view)) return;
+        syncGlobalSearchResults();
+      };
+      syncResults();
+      const cancelFrame = klack.timers.animationFrame(syncResults);
+      return () => {
+        cancelFrame();
+        klack.timers.animationFrame(() => {
+          if (globalSearchView()) return;
+          if (searchSession?.kind !== "global") return;
+          if (searchSession.restoring) scheduleSearchRestore(searchSession.origin);
+          else if (searchSession.phase !== "typing") {
+            clearCursor();
+            searchSession = null;
+          }
+        });
+      };
+    });
+    klack.dom.watch(searchResultSelector, () => {
+      const cancelFrame = klack.timers.animationFrame(syncGlobalSearchResults);
+      syncGlobalSearchResults();
+      return cancelFrame;
     });
     klack.dom.watch(threadPaneSelector, (pane) => {
       const activateThreadSurface = (): void => {
@@ -2085,6 +2485,16 @@ export default definePlugin({
         cancelFrame();
         if (document.querySelector(threadPaneSelector) || cancelPendingThread) return;
         threadOrigin = null;
+        if (
+          searchSession?.kind === "global" &&
+          searchSession.phase === "open" &&
+          globalSearchView()
+        ) {
+          searchSession.phase = "results";
+          preferredSurface = searchSession.origin?.surface || "main";
+          syncGlobalSearchResults();
+          return;
+        }
         if (preferredSurface === "thread") preferredSurface = "main";
       };
     });

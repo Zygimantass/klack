@@ -7,6 +7,7 @@ import {
   keyCommand,
   movedIndex,
   movedVisualIndex,
+  shouldEnterGlobalSearchResults,
   shouldSuppressNormalModeKey,
   threadTimestampFromUrl,
   visualMotionCommand,
@@ -98,6 +99,24 @@ test("maps visual-mode character and word motions", () => {
   assert.equal(visualMotionCommand({ key: "o" }), "swap-ends");
   assert.equal(visualMotionCommand({ key: "o", repeat: true }), null);
   assert.equal(visualMotionCommand({ key: "l", metaKey: true }), null);
+});
+
+test("enters global result navigation only after submitted search replaces the editor", () => {
+  const base = {
+    awaitingResults: true,
+    hasEditor: false,
+    hasView: true,
+    kind: "global" as const,
+    phase: "typing" as const,
+    restoring: false,
+  };
+  assert.equal(shouldEnterGlobalSearchResults(base), true);
+  assert.equal(shouldEnterGlobalSearchResults({ ...base, awaitingResults: false }), false);
+  assert.equal(shouldEnterGlobalSearchResults({ ...base, hasEditor: true }), false);
+  assert.equal(shouldEnterGlobalSearchResults({ ...base, hasView: false }), false);
+  assert.equal(shouldEnterGlobalSearchResults({ ...base, kind: "sidebar" }), false);
+  assert.equal(shouldEnterGlobalSearchResults({ ...base, phase: "results" }), false);
+  assert.equal(shouldEnterGlobalSearchResults({ ...base, restoring: true }), false);
 });
 
 test("builds and reads multi-digit count prefixes", () => {

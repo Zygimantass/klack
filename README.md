@@ -276,8 +276,14 @@ Press `/` from the message transcript, Threads view, or an open thread to open
 global Slack search with its input focused immediately. Press `Escape` to close
 search and restore the Vim cursor to its previous surface and row. Search uses
 native typing immediately, so `i` is inserted into the query rather than acting
-as the insert-mode command. To constrain global search to one channel, use
-Slack's `in:channel-name search terms` syntax in that field.
+as the insert-mode command. Submit with `Enter`; when Slack shows the results,
+the first match receives the Vim cursor. Use counted `j`/`k`, `gg`/`G`, viewport
+motions, or `zz` to browse matches, then press `Enter` to open the selected
+result's thread. Thread navigation and `i` work normally; closing the thread
+returns to the same search result. `l` is consumed in result mode so it cannot
+leak into the channel underneath. Press `Escape` or `H` from the result list to
+leave search and restore the original cursor. To constrain global search to one
+channel, use Slack's `in:channel-name search terms` syntax in that field.
 
 VimNavigation is modal: it remains in normal mode even when Slack leaves the
 message composer focused. Normal-mode keys move the Vim cursor without changing

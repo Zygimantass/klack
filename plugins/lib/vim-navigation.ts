@@ -47,6 +47,28 @@ export type VimKeyContext = {
   nativeTarget?: boolean;
 };
 
+export type GlobalSearchTransitionInput = {
+  awaitingResults: boolean;
+  hasEditor: boolean;
+  hasView: boolean;
+  kind: "global" | "sidebar";
+  phase: "open" | "results" | "typing";
+  restoring: boolean;
+};
+
+export function shouldEnterGlobalSearchResults(
+  input: GlobalSearchTransitionInput,
+): boolean {
+  return (
+    input.kind === "global" &&
+    input.phase === "typing" &&
+    input.awaitingResults &&
+    !input.restoring &&
+    !input.hasEditor &&
+    input.hasView
+  );
+}
+
 export function keyCommand(
   event: VimKeyInput,
   context: VimKeyContext = {},
