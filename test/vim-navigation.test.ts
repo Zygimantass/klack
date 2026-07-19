@@ -29,6 +29,7 @@ test("maps unmodified Vim navigation keys", () => {
   assert.equal(key("Enter"), "activate");
   assert.equal(key("Escape"), "unwind");
   assert.equal(key("/"), "search");
+  assert.equal(key("G", { shiftKey: true }), "bottom");
   assert.equal(key("i"), "insert");
   assert.equal(key("}"), "page-next");
   assert.equal(key("}", { shiftKey: true }), "page-next");
@@ -72,7 +73,7 @@ test("allows key repeat only for movement commands", () => {
   assert.equal(key("k", { repeat: true }), "previous");
   assert.equal(key("}", { repeat: true, shiftKey: true }), "page-next");
   assert.equal(key("d", { ctrlKey: true, repeat: true }), "half-next");
-  for (const value of ["h", "i", "/", "l", "Enter", "Escape", "7"]) {
+  for (const value of ["h", "G", "i", "/", "l", "Enter", "Escape", "7"]) {
     assert.equal(key(value, { repeat: true }), null);
   }
 });

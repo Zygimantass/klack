@@ -31,7 +31,14 @@ type CursorOrigin = Cursor & {
 
 type InsertSession = {
   origin: CursorOrigin | null;
+  surface: Exclude<Surface, "sidebar">;
   target: HTMLElement;
+};
+
+type SearchSession = {
+  origin: CursorOrigin | null;
+  pendingText: string;
+  restoring: boolean;
 };
 
 type DeepLinkArgs = {
@@ -217,38 +224,28 @@ export default definePlugin({
     let threadOrigin: ThreadOrigin | null = null;
     let cancelBoundaryRetry: (() => void) | null = null;
     let cancelPendingFocus: (() => void) | null = null;
+    let cancelPendingSearchRestore: (() => void) | null = null;
     let cancelPendingThread: (() => void) | null = null;
     let countPrefix = "";
     let insertSession: InsertSession | null = null;
+    let searchSession: SearchSession | null = null;
 
     const composerFromTarget = (target: EventTarget | null): HTMLElement | null => {
       const element = elementFromTarget(target);
       const composer = element?.closest(composerInputSelector);
-      return composer instanceof HTMLElement && isRendered(composer) ? composer : null;
-    };
-
-    const isInsertComposer = (composer: HTMLElement): boolean =>
-      insertSession !== null &&
-      (insertSession.target === composer ||
-        insertSession.target.contains(composer) ||
-        composer.contains(insertSession.target));
-
-    const normalModeComposer = (target: EventTarget | null): HTMLElement | null => {
-      const composer = composerFromTarget(target) || composerFromTarget(document.activeElement);
-      return composer && !isInsertComposer(composer) ? composer : null;
-    };
-
-    const leaveNormalModeComposer = (composer: HTMLElement): void => {
-      const active = document.activeElement;
-      if (active instanceof HTMLElement && (active === composer || composer.contains(active))) {
-        active.blur();
-      } else {
-        composer.blur();
-      }
+      return composer instanceof HTMLElement &&
+        !composer.closest(searchInputSelector) &&
+        isRendered(composer)
+        ? composer
+        : null;
     };
 
     const resetCount = (): void => {
       countPrefix = "";
+    };
+
+    const resetPrefixes = (): void => {
+      resetCount();
     };
 
     const takeCount = (): number => {
@@ -260,6 +257,11 @@ export default definePlugin({
     const cancelDeferredFocus = (): void => {
       cancelPendingFocus?.();
       cancelPendingFocus = null;
+    };
+
+    const cancelSearchRestore = (): void => {
+      cancelPendingSearchRestore?.();
+      cancelPendingSearchRestore = null;
     };
 
     const cancelPendingMove = (): void => {
@@ -276,11 +278,18 @@ export default definePlugin({
       cursor = null;
     };
 
-    const select = (element: HTMLElement, kind: CursorKind): void => {
-      clearCursor();
+    const paintCursor = (element: HTMLElement, kind: CursorKind, scroll: boolean): void => {
+      document.querySelectorAll(`[${SELECTED_ATTRIBUTE}]`).forEach((selected) => {
+        selected.removeAttribute(SELECTED_ATTRIBUTE);
+      });
       element.setAttribute(SELECTED_ATTRIBUTE, kind);
       cursor = { element, identity: identityFor(element, kind), kind };
-      element.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (scroll) element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+
+    const select = (element: HTMLElement, kind: CursorKind): void => {
+      clearCursor();
+      paintCursor(element, kind, true);
     };
 
     const threadPane = (): HTMLElement | null => visibleElement(threadPaneSelector);
@@ -320,24 +329,27 @@ export default definePlugin({
       return visibleElement(FOCUSABLE_EDITOR_SELECTOR, root);
     };
 
-    const composerForActiveSurface = (): HTMLElement | null => {
-      const inputs = Array.from(document.querySelectorAll(composerInputSelector)).filter(isRendered);
+    const composerForSurface = (surface: Surface): HTMLElement | null => {
+      const inputs = Array.from(document.querySelectorAll(composerInputSelector))
+        .filter(isRendered)
+        .filter((input) => !input.closest(searchInputSelector));
       if (inputs.length === 0) return null;
-      const surface = cursor ? surfaceForCursor(cursor) : preferredSurface;
 
       if (surface === "thread") {
         const pane = threadPane();
         const flexpane = pane?.closest<HTMLElement>(flexpaneRootSelector) || pane;
-        const replyContainer = visibleElement(threadReplyContainerSelector);
+        const replyContainer = flexpane
+          ? visibleElement(threadReplyContainerSelector, flexpane)
+          : null;
         return (
           inputs.find((input) => replyContainer?.contains(input)) ||
-          inputs.find((input) => flexpane?.contains(input)) ||
+          inputs.find((input) => pane?.contains(input)) ||
           null
         );
       }
       if (surface === "threads") {
         const threads = visibleElement(threadsViewSelector);
-        const footer = visibleElement(threadsFooterSelector);
+        const footer = threads ? visibleElement(threadsFooterSelector, threads) : null;
         return (
           inputs.find((input) => footer?.contains(input)) ||
           inputs.find((input) => threads?.contains(input)) ||
@@ -351,22 +363,64 @@ export default definePlugin({
             !input.closest(threadPaneSelector) &&
             !input.closest(flexpaneRootSelector) &&
             !input.closest(threadsViewSelector),
-        ) || inputs[0]
+        ) || null
       );
     };
 
+    const insertSurface = (): Exclude<Surface, "sidebar"> => {
+      const surface = cursor ? surfaceForCursor(cursor) : preferredSurface;
+      return surface === "sidebar" ? "main" : surface;
+    };
+
+    const isInsertComposer = (composer: HTMLElement): boolean => {
+      if (!insertSession) return false;
+      if (
+        insertSession.target === composer ||
+        insertSession.target.contains(composer) ||
+        composer.contains(insertSession.target)
+      ) {
+        return true;
+      }
+      return composerForSurface(insertSession.surface) === composer;
+    };
+
+    const normalModeComposer = (target: EventTarget | null): HTMLElement | null => {
+      const composer = composerFromTarget(target) || composerFromTarget(document.activeElement);
+      return composer && !isInsertComposer(composer) ? composer : null;
+    };
+
+    const leaveNormalModeComposer = (composer: HTMLElement): void => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && (active === composer || composer.contains(active))) {
+        active.blur();
+      } else {
+        composer.blur();
+      }
+    };
+
     const focusComposer = (): boolean => {
-      const target = composerForActiveSurface();
+      const surface = insertSurface();
+      const target = composerForSurface(surface);
       if (!target) return false;
       const origin: CursorOrigin | null = cursor
         ? { ...cursor, surface: surfaceForCursor(cursor) }
         : null;
       clearCursor();
-      resetCount();
-      insertSession = { origin, target };
+      resetPrefixes();
+      searchSession = null;
+      insertSession = { origin, surface, target };
       target.focus({ preventScroll: true });
       const active = document.activeElement;
-      if (active === target || (active instanceof Node && target.contains(active))) return true;
+      const current = composerForSurface(surface);
+      if (
+        active === target ||
+        (active instanceof Node && target.contains(active)) ||
+        active === current ||
+        (active instanceof Node && current?.contains(active))
+      ) {
+        if (current) insertSession.target = current;
+        return true;
+      }
       insertSession = null;
       restoreCursorOrigin(origin);
       return false;
@@ -374,14 +428,19 @@ export default definePlugin({
 
     const exitInsertMode = (): boolean => {
       if (!insertSession) return false;
-      const { origin, target } = insertSession;
+      const { origin, surface, target } = insertSession;
       const active = document.activeElement;
-      if (active !== target && !(active instanceof Node && target.contains(active))) {
-        insertSession = null;
-        return false;
-      }
       insertSession = null;
-      target.blur();
+      const current = composerForSurface(surface);
+      if (
+        active instanceof HTMLElement &&
+        (active === target ||
+          target.contains(active) ||
+          active === current ||
+          current?.contains(active))
+      ) {
+        active.blur();
+      } else if (target.isConnected) target.blur();
       restoreCursorOrigin(origin);
       return true;
     };
@@ -389,17 +448,69 @@ export default definePlugin({
     const searchEditor = (): HTMLElement | null =>
       editorWithin(visibleElement(searchInputSelector));
 
+    const editSearchText = (
+      target: HTMLElement,
+      operation: "delete" | "insert",
+      text = "",
+    ): void => {
+      target.focus({ preventScroll: true });
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        const end = target.selectionEnd ?? target.value.length;
+        const start = target.selectionStart ?? end;
+        const rangeStart = operation === "delete" && start === end ? Math.max(0, start - 1) : start;
+        const replacement = operation === "insert" ? text : "";
+        target.setRangeText(replacement, rangeStart, end, "end");
+        target.dispatchEvent(
+          new InputEvent("input", {
+            bubbles: true,
+            data: operation === "insert" ? text : null,
+            inputType: operation === "insert" ? "insertText" : "deleteContentBackward",
+          }),
+        );
+        return;
+      }
+      if (operation === "insert") document.execCommand("insertText", false, text);
+      else document.execCommand("delete");
+    };
+
     const focusSearchInput = (target = searchEditor()): boolean => {
       if (!target) return false;
       target.focus({ preventScroll: true });
-      return document.activeElement === target || target.contains(document.activeElement);
+      const focused = document.activeElement === target || target.contains(document.activeElement);
+      if (focused && searchSession && !searchSession.restoring && searchSession.pendingText) {
+        const pendingText = searchSession.pendingText;
+        searchSession.pendingText = "";
+        editSearchText(target, "insert", pendingText);
+      }
+      return focused;
     };
 
     const scheduleSearchFocus = (attempt = 0): void => {
       cancelPendingFocus = klack.timers.animationFrame(() => {
         cancelPendingFocus = null;
-        if (focusSearchInput() || attempt >= 4) return;
+        if (!searchSession || searchSession.restoring || focusSearchInput() || attempt >= 60) return;
         scheduleSearchFocus(attempt + 1);
+      });
+    };
+
+    const finishSearchRestore = (): void => {
+      if (!searchSession?.restoring) return;
+      const { origin } = searchSession;
+      searchSession = null;
+      cancelDeferredFocus();
+      cancelSearchRestore();
+      restoreCursorOrigin(origin);
+    };
+
+    const scheduleSearchRestore = (origin: CursorOrigin | null, attempt = 0): void => {
+      cancelPendingSearchRestore = klack.timers.animationFrame(() => {
+        cancelPendingSearchRestore = null;
+        if (!searchSession?.restoring || searchSession.origin !== origin) return;
+        if (searchEditor()) {
+          if (attempt < 120) scheduleSearchRestore(origin, attempt + 1);
+          return;
+        }
+        finishSearchRestore();
       });
     };
 
@@ -413,9 +524,14 @@ export default definePlugin({
       if (!existingInput && !delegate?.startSearch && !trigger) return false;
 
       if (!existingInput && !delegate?.startSearch && !clickEnabled(trigger)) return false;
+      const origin: CursorOrigin | null = cursor
+        ? { ...cursor, surface: surfaceForCursor(cursor) }
+        : null;
+      cancelSearchRestore();
       clearCursor();
-      resetCount();
+      resetPrefixes();
       insertSession = null;
+      searchSession = { origin, pendingText: "", restoring: false };
       if (existingInput) return focusSearchInput(existingInput);
       if (delegate?.startSearch) delegate.startSearch();
       if (!focusSearchInput()) scheduleSearchFocus();
@@ -661,6 +777,103 @@ export default definePlugin({
       return pageWithin(surface.root, messageRowSelector, "message", direction, fraction, pages);
     };
 
+    const boundaryWithin = (
+      root: HTMLElement,
+      selector: string,
+      kind: CursorKind,
+    ): boolean => {
+      cancelPendingMove();
+      const elements = canonicalElements(root, selector);
+      if (elements.length === 0) return false;
+
+      const edge = elements[elements.length - 1];
+      let candidate: HTMLElement | null = edge.parentElement;
+      let scroller: HTMLElement | null = null;
+      let largestScrollRange = 1;
+      while (candidate && root.contains(candidate)) {
+        const scrollRange = candidate.scrollHeight - candidate.clientHeight;
+        const overflowY = window.getComputedStyle(candidate).overflowY;
+        if (/^(?:auto|scroll|overlay)$/.test(overflowY) && scrollRange > largestScrollRange) {
+          scroller = candidate;
+          largestScrollRange = scrollRange;
+        }
+        if (candidate === root) break;
+        candidate = candidate.parentElement;
+      }
+      if (!scroller) {
+        select(edge, kind);
+        return true;
+      }
+
+      const scrollToEdge = (): void => {
+        if (!scroller) return;
+        scroller.scrollTop = scroller.scrollHeight;
+      };
+      const startedAt = performance.now();
+      let stableSince = startedAt;
+      let lastEdge: HTMLElement | null = null;
+      let lastIdentity: string | null = null;
+      let lastScrollHeight = -1;
+      const quietWindow = 200;
+      const minimumSettle = 300;
+      const maximumSettle = 1_500;
+      const reconcile = (): void => {
+        cancelBoundaryRetry = klack.timers.timeout(() => {
+          cancelBoundaryRetry = null;
+          scrollToEdge();
+          const refreshed = canonicalElements(root, selector);
+          if (refreshed.length === 0) {
+            if (performance.now() - startedAt < maximumSettle) reconcile();
+            return;
+          }
+          const refreshedEdge = refreshed[refreshed.length - 1];
+          const refreshedIdentity = identityFor(refreshedEdge, kind);
+          const now = performance.now();
+          const atEdge = scroller
+            ? scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+            : true;
+          const sameEdge = refreshedIdentity
+            ? refreshedIdentity === lastIdentity
+            : refreshedEdge === lastEdge;
+          if (!atEdge || !sameEdge || scroller?.scrollHeight !== lastScrollHeight) {
+            stableSince = now;
+          }
+          lastEdge = refreshedEdge;
+          lastIdentity = refreshedIdentity;
+          lastScrollHeight = scroller?.scrollHeight ?? 0;
+          if (cursor?.element !== refreshedEdge || cursor.kind !== kind) {
+            paintCursor(refreshedEdge, kind, false);
+          }
+          const elapsed = now - startedAt;
+          if (
+            elapsed < minimumSettle ||
+            (now - stableSince < quietWindow && elapsed < maximumSettle)
+          ) {
+            reconcile();
+            return;
+          }
+          select(refreshedEdge, kind);
+        }, 50);
+      };
+
+      scrollToEdge();
+      reconcile();
+      return true;
+    };
+
+    const moveToBottom = (): boolean => {
+      if (preferredSurface === "sidebar" || cursor?.kind === "sidebar") {
+        const root = visibleElement(sidebarRootSelector);
+        if (!root) return false;
+        preferredSurface = "sidebar";
+        return boundaryWithin(root, sidebarItemSelector, "sidebar");
+      }
+      const surface = messageSurface();
+      if (!surface) return false;
+      preferredSurface = surface.id;
+      return boundaryWithin(surface.root, messageRowSelector, "message");
+    };
+
     const enterSidebar = (): boolean => {
       const root = visibleElement(sidebarRootSelector);
       if (!root) return false;
@@ -796,19 +1009,68 @@ export default definePlugin({
     };
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (
+      const plainEscape =
         event.key === "Escape" &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
         !event.shiftKey &&
         !event.defaultPrevented &&
-        !event.isComposing &&
+        !event.isComposing;
+      const targetElement = elementFromTarget(event.target);
+      if (plainEscape && searchSession) {
+        const { origin } = searchSession;
+        searchSession.pendingText = "";
+        searchSession.restoring = true;
+        cancelDeferredFocus();
+        cancelSearchRestore();
+        scheduleSearchRestore(origin);
+        resetPrefixes();
+        if (!targetElement?.closest(searchInputSelector) && !searchEditor()) {
+          finishSearchRestore();
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+        return;
+      }
+      if (
+        searchSession &&
+        !searchSession.restoring &&
+        !targetElement?.closest(searchInputSelector)
+      ) {
+        const target = searchEditor();
+        const focused = target ? focusSearchInput(target) : false;
+        const plainText =
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.isComposing &&
+          event.key.length === 1;
+        if (plainText) {
+          if (target && focused) editSearchText(target, "insert", event.key);
+          else searchSession.pendingText += event.key;
+        } else if (
+          event.key === "Backspace" &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey
+        ) {
+          if (target && focused) editSearchText(target, "delete");
+          else searchSession.pendingText = searchSession.pendingText.slice(0, -1);
+        }
+        if (!event.altKey && !event.ctrlKey && !event.metaKey) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+        return;
+      }
+      if (
+        plainEscape &&
         insertSession &&
         !hasBlockingSurface() &&
         exitInsertMode()
       ) {
-        resetCount();
+        resetPrefixes();
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
@@ -817,7 +1079,7 @@ export default definePlugin({
       const focusedNormalComposer = normalModeComposer(event.target);
       const command = keyCommand(event);
       if (!command) {
-        resetCount();
+        resetPrefixes();
         if (focusedNormalComposer && shouldSuppressNormalModeKey(event)) {
           leaveNormalModeComposer(focusedNormalComposer);
           event.preventDefault();
@@ -830,7 +1092,7 @@ export default definePlugin({
           (hasNativeKeyboardTarget(event.target) || hasNativeKeyboardTarget(document.activeElement))) ||
         hasBlockingSurface()
       ) {
-        resetCount();
+        resetPrefixes();
         return;
       }
 
@@ -861,7 +1123,8 @@ export default definePlugin({
         handled = movePage(command === "page-next" ? "next" : "previous", 0.9, amount);
       } else if (command === "half-next" || command === "half-previous") {
         handled = movePage(command === "half-next" ? "next" : "previous", 0.5, amount);
-      } else if (command === "left") handled = moveLeft();
+      } else if (command === "bottom") handled = moveToBottom();
+      else if (command === "left") handled = moveLeft();
       else if (command === "activate") handled = activate();
       else if (command === "insert") handled = focusComposer();
       else if (command === "search") handled = openSearch();
@@ -883,10 +1146,17 @@ export default definePlugin({
 
     const updateSurfaceFromClick = (event: MouseEvent): void => {
       if (!(event.target instanceof Element)) return;
-      resetCount();
+      resetPrefixes();
       cancelPendingMove();
       cancelDeferredFocus();
-      if (insertSession && !insertSession.target.contains(event.target)) insertSession = null;
+      if (searchSession && !event.target.closest(searchInputSelector)) {
+        searchSession = null;
+        cancelSearchRestore();
+      }
+      const clickedComposer = composerFromTarget(event.target);
+      if (insertSession && (!clickedComposer || !isInsertComposer(clickedComposer))) {
+        insertSession = null;
+      }
       const closeAction = event.target.closest(
         '[data-qa="close_flexpane"], [data-qa="history_back_button"]',
       );
@@ -942,10 +1212,22 @@ export default definePlugin({
     klack.events.on(document, "keydown", handleKeyDown, true);
     klack.events.on(document, "beforeinput", handleBeforeInput, true);
     klack.events.on(document, "click", updateSurfaceFromClick);
+    klack.dom.watch(searchInputSelector, (container) => {
+      const focusOpenedSearch = (): void => {
+        if (!searchSession || searchSession.restoring || !isRendered(container)) return;
+        focusSearchInput(editorWithin(container));
+      };
+      focusOpenedSearch();
+      const cancelFrame = klack.timers.animationFrame(focusOpenedSearch);
+      return () => {
+        cancelFrame();
+        if (searchSession?.restoring) scheduleSearchRestore(searchSession.origin);
+      };
+    });
     klack.dom.watch(threadPaneSelector, (pane) => {
       const activateThreadSurface = (): void => {
         if (!isRendered(pane)) return;
-        resetCount();
+        resetPrefixes();
         if (cursor?.kind === "message" && !cursor.element.closest(threadPaneSelector)) {
           threadOrigin = originFor(cursor.element, cursor.identity);
           clearCursor();
@@ -963,10 +1245,12 @@ export default definePlugin({
     });
     klack.cleanup(() => {
       cancelBoundaryRetry?.();
+      cancelPendingSearchRestore?.();
       cancelPendingThread?.();
       clearCursor();
-      resetCount();
+      resetPrefixes();
       insertSession = null;
+      searchSession = null;
       threadOrigin = null;
     });
   },

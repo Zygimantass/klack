@@ -228,17 +228,24 @@ the Klack plugin manager, then use:
 | Key | Action |
 | --- | --- |
 | `[count]j` / `[count]k` | Select the next or previous conversation or message; for example, `10j` moves ten rows. |
+| `G` | Select the last row in the active navigation surface. |
 | `h` | Move from messages to the sidebar, or close an open thread. |
 | `l` / `Enter` | Open the selected conversation or message thread. |
 | `{` / `}` | Move backward or forward by one viewport. |
 | `Ctrl+U` / `Ctrl+D` | Move backward or forward by half a viewport. |
-| `/` | Open Slack's workspace search. |
+| `/` | Open Slack's global search from any navigation surface and focus it immediately. |
 | `i` | Focus the composer for the active conversation or thread. |
-| `Escape` | Leave plugin-entered insert mode, close an open thread, or clear the Vim cursor. |
+| `Escape` | Leave plugin-entered insert mode, close search and restore the Vim cursor, close an open thread, or clear the cursor. |
 
 Counts also multiply viewport motions, so `2}` moves forward two viewports.
 After using `i`, the first `Escape` restores the previous Vim cursor; press it
 again to close the thread or clear the cursor.
+
+Press `/` from the sidebar, message transcript, Threads view, or an open thread
+to open global Slack search with its input focused immediately. Press `Escape`
+to close search and restore the Vim cursor to its previous surface and row.
+Search uses native typing immediately, so `i` is inserted into the query there
+rather than acting as the insert-mode command.
 
 VimNavigation is modal: it remains in normal mode even when Slack leaves the
 message composer focused. Normal-mode keys move the Vim cursor without changing
@@ -250,8 +257,10 @@ lists retain their native behavior. Other modified keys are left alone;
 For channel navigation, press `h` to move into the sidebar, use `j`/`k` to
 place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
 open it. To open a thread, use `j`/`k` in the message transcript to highlight
-its parent message, then press `l` or `Enter`; press `h` or `Escape` to close
-the thread and restore the parent-message cursor.
+its parent message, then press `l` or `Enter`. Once the thread opens, use
+`j`/`k` to navigate its messages and `i` to focus the thread reply composer.
+Press `Escape` to return to normal mode, then `h` to close the thread and
+restore the parent-message cursor.
 
 ## Themes
 
