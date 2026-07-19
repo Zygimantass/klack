@@ -228,7 +228,7 @@ the Klack plugin manager, then use:
 | Key | Action |
 | --- | --- |
 | `[count]j` / `[count]k` | Select the next or previous conversation or message; for example, `10j` moves ten rows. |
-| `gg` | Select the first channel in the sidebar or the first message in an open thread. |
+| `gg` | Select the first row in the sidebar or the first message in an open thread. |
 | `G` | Select the last row in the active navigation surface. |
 | `h` | Move from messages to the sidebar, or close an open thread. |
 | `l` / `Enter` | Open the selected conversation or message thread. |
@@ -258,7 +258,7 @@ lists retain their native behavior. Other modified keys are left alone;
 
 For channel navigation, press `h` to move into the sidebar, use `j`/`k` to
 place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
-open it. `gg` moves to the first sidebar channel; it also moves to the first
+open it. `gg` moves to the first sidebar row; it also moves to the first
 message in an open thread. Main-channel history is excluded because Slack
 loads older messages without a finite top. To open a thread, use `j`/`k` in
 the message transcript to highlight
