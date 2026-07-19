@@ -3,9 +3,12 @@ export type Direction = "next" | "previous";
 export type VimCommand =
   | "activate"
   | "bottom"
+  | "center-prefix"
   | "count"
   | "half-next"
   | "half-previous"
+  | "history-back"
+  | "history-forward"
   | "insert"
   | "left"
   | "next"
@@ -17,6 +20,16 @@ export type VimCommand =
   | "unwind"
   | "visual"
   | "yank";
+
+export type VisualMotion =
+  | "character-next"
+  | "character-previous"
+  | "line-end"
+  | "line-start"
+  | "swap-ends"
+  | "word-end"
+  | "word-next"
+  | "word-previous";
 
 export type VimKeyInput = {
   altKey?: boolean;
@@ -65,7 +78,9 @@ export function keyCommand(
     event.key !== "{" &&
     event.key !== "}" &&
     event.key !== "/" &&
-    event.key !== "G"
+    event.key !== "G" &&
+    event.key !== "H" &&
+    event.key !== "L"
   ) {
     return null;
   }
@@ -79,7 +94,10 @@ export function keyCommand(
   else if (event.key === "{") command = "page-previous";
   else if (event.key === "/") command = "search";
   else if (event.key === "g") command = "top-prefix";
+  else if (event.key === "z") command = "center-prefix";
   else if (event.key === "G") command = "bottom";
+  else if (event.key === "H") command = "history-back";
+  else if (event.key === "L") command = "history-forward";
   else if (event.key === "i") command = "insert";
   else if (event.key === "l" || event.key === "Enter") command = "activate";
   else if (event.key === "Escape") command = "unwind";
@@ -96,6 +114,29 @@ export function keyCommand(
     return null;
   }
   return command;
+}
+
+export function visualMotionCommand(event: VimKeyInput): VisualMotion | null {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
+    return null;
+  }
+  if (event.shiftKey && event.key !== "$") return null;
+
+  if (event.key === "h") return "character-previous";
+  if (event.key === "l") return "character-next";
+  if (event.key === "w") return "word-next";
+  if (event.key === "b") return "word-previous";
+  if (event.key === "e") return "word-end";
+  if (event.key === "0") return "line-start";
+  if (event.key === "$") return "line-end";
+  if (event.key === "o" && !event.repeat) return "swap-ends";
+  return null;
 }
 
 export function appendCountDigit(prefix: string, digit: string, maxDigits = 3): string | null {
@@ -144,6 +185,59 @@ export function wrappedIndex(
   const distance = Number.isFinite(amount) ? Math.max(1, Math.trunc(amount)) : 1;
   const delta = direction === "next" ? distance : -distance;
   return ((start + delta) % length + length) % length;
+}
+
+function isWordGrapheme(value: string): boolean {
+  return /[\p{L}\p{N}_]/u.test(value);
+}
+
+export function movedVisualIndex(
+  graphemes: readonly string[],
+  current: number,
+  motion: Exclude<VisualMotion, "swap-ends">,
+  amount = 1,
+): number {
+  if (graphemes.length === 0) return -1;
+  let index = Math.min(Math.max(current, 0), graphemes.length - 1);
+  const distance = Number.isFinite(amount) ? Math.max(1, Math.trunc(amount)) : 1;
+
+  if (motion === "character-next") return Math.min(index + distance, graphemes.length - 1);
+  if (motion === "character-previous") return Math.max(index - distance, 0);
+  if (motion === "line-start") {
+    while (index > 0 && graphemes[index - 1] !== "\n") index -= 1;
+    return index;
+  }
+  if (motion === "line-end") {
+    while (index < graphemes.length - 1 && graphemes[index + 1] !== "\n") index += 1;
+    return index;
+  }
+
+  for (let step = 0; step < distance; step += 1) {
+    if (motion === "word-previous") {
+      index = Math.max(0, index - 1);
+      while (index > 0 && !isWordGrapheme(graphemes[index])) index -= 1;
+      while (index > 0 && isWordGrapheme(graphemes[index - 1])) index -= 1;
+      continue;
+    }
+
+    if (motion === "word-next") {
+      if (isWordGrapheme(graphemes[index])) {
+        while (index < graphemes.length - 1 && isWordGrapheme(graphemes[index])) index += 1;
+      }
+      while (index < graphemes.length - 1 && !isWordGrapheme(graphemes[index])) index += 1;
+      continue;
+    }
+
+    const atWordEnd =
+      isWordGrapheme(graphemes[index]) &&
+      (index === graphemes.length - 1 || !isWordGrapheme(graphemes[index + 1]));
+    if (atWordEnd && index < graphemes.length - 1) index += 1;
+    if (!isWordGrapheme(graphemes[index])) {
+      while (index < graphemes.length - 1 && !isWordGrapheme(graphemes[index])) index += 1;
+    }
+    while (index < graphemes.length - 1 && isWordGrapheme(graphemes[index + 1])) index += 1;
+  }
+  return index;
 }
 
 export function threadTimestampFromUrl(value: string, fallback: string): string {

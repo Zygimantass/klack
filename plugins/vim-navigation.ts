@@ -5,10 +5,13 @@ import {
   countValue,
   keyCommand,
   movedIndex,
+  movedVisualIndex,
   shouldSuppressNormalModeKey,
   threadTimestampFromUrl,
+  visualMotionCommand,
   wrappedIndex,
   type Direction,
+  type VisualMotion,
 } from "./lib/vim-navigation";
 
 type CursorKind = "message" | "sidebar";
@@ -37,8 +40,11 @@ type InsertSession = {
 };
 
 type SearchSession = {
+  initialText: string;
+  kind: "global" | "sidebar";
   origin: CursorOrigin | null;
   pendingText: string;
+  phase: "results" | "typing";
   restoring: boolean;
 };
 
@@ -48,11 +54,23 @@ type LinkSession = {
 };
 
 type VisualSession = {
-  body: HTMLElement;
+  anchor: number;
+  head: number;
   origin: CursorOrigin;
-  range: Range;
+  renderedRange: Range | null;
   text: string;
   token: number;
+};
+
+type DomPoint = {
+  node: Node;
+  offset: number;
+};
+
+type VisualUnit = {
+  end: DomPoint;
+  start: DomPoint;
+  text: string;
 };
 
 type DeepLinkArgs = {
@@ -109,6 +127,7 @@ const TEXT_ENTRY_TARGET_SELECTOR = [
 ].join(", ");
 const LINK_SELECTED_ATTRIBUTE = "data-klack-vim-link-selected";
 const SELECTED_ATTRIBUTE = "data-klack-vim-selected";
+const SIDEBAR_SEARCH_ATTRIBUTE = "data-klack-vim-sidebar-search";
 const VISUAL_SELECTED_ATTRIBUTE = "data-klack-vim-visual-selected";
 const FOCUSABLE_EDITOR_SELECTOR =
   'input, textarea, [contenteditable="true"], [role="searchbox"], [role="textbox"]';
@@ -135,6 +154,72 @@ function isRendered(element: Element): element is HTMLElement {
   if (style.display === "none" || style.visibility === "hidden") return false;
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0;
+}
+
+function graphemeParts(value: string): Array<{ index: number; segment: string }> {
+  if (typeof Intl.Segmenter === "function") {
+    return Array.from(
+      new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value),
+      ({ index, segment }) => ({ index, segment }),
+    );
+  }
+  const parts: Array<{ index: number; segment: string }> = [];
+  let index = 0;
+  for (const segment of value) {
+    parts.push({ index, segment });
+    index += segment.length;
+  }
+  return parts;
+}
+
+function visualUnits(root: HTMLElement): VisualUnit[] {
+  const units: VisualUnit[] = [];
+  const visit = (node: Node): void => {
+    if (node instanceof Text) {
+      const parent = node.parentElement;
+      if (!parent || parent.closest('[hidden], [aria-hidden="true"]')) return;
+      const style = window.getComputedStyle(parent);
+      if (style.display === "none" || style.visibility === "hidden") return;
+      const parts = graphemeParts(node.data);
+      parts.forEach(({ index, segment }) => {
+        units.push({
+          end: { node, offset: index + segment.length },
+          start: { node, offset: index },
+          text: segment,
+        });
+      });
+      return;
+    }
+    if (!(node instanceof Element)) return;
+    if (node !== root) {
+      if (node.matches('[hidden], [aria-hidden="true"], script, style')) return;
+      const style = window.getComputedStyle(node);
+      if (style.display === "none" || style.visibility === "hidden") return;
+    }
+    if (node instanceof HTMLBRElement || node instanceof HTMLImageElement) {
+      const parent = node.parentNode;
+      if (!parent) return;
+      const offset = Array.prototype.indexOf.call(parent.childNodes, node) as number;
+      const text =
+        node instanceof HTMLBRElement
+          ? "\n"
+          : node.getAttribute("data-stringify-text") ||
+            node.getAttribute("alt") ||
+            node.getAttribute("aria-label") ||
+            "";
+      if (text) {
+        units.push({
+          end: { node: parent, offset: offset + 1 },
+          start: { node: parent, offset },
+          text,
+        });
+      }
+      return;
+    }
+    Array.from(node.childNodes).forEach(visit);
+  };
+  Array.from(root.childNodes).forEach(visit);
+  return units;
 }
 
 function hasBlockingSurface(): boolean {
@@ -237,7 +322,9 @@ export default definePlugin({
     const composerInputSelector = klack.selectors.get("slack.composer.input");
     const flexpaneRootSelector = klack.selectors.get("slack.flexpane.root");
     const searchInputSelector = klack.selectors.get("slack.search.dialog-input");
+    const sidebarChannelItemSelector = klack.selectors.get("slack.sidebar.channel-item");
     const sidebarItemSelector = klack.selectors.get("slack.sidebar.item");
+    const sidebarFilterSelector = klack.selectors.get("slack.sidebar.conversation-filter");
     const sidebarRootSelector = klack.selectors.get("slack.sidebar.root");
     const sidebarSelectedSelector = klack.selectors.get("slack.sidebar.item-selected");
     const threadPaneSelector = klack.selectors.get("slack.thread.pane");
@@ -253,6 +340,7 @@ export default definePlugin({
     let cancelPendingFocus: (() => void) | null = null;
     let cancelPendingSearchRestore: (() => void) | null = null;
     let cancelPendingThread: (() => void) | null = null;
+    let centerPrefixPending = false;
     let countPrefix = "";
     let insertSession: InsertSession | null = null;
     let linkSession: LinkSession | null = null;
@@ -277,6 +365,7 @@ export default definePlugin({
 
     const resetPrefixes = (): void => {
       resetCount();
+      centerPrefixPending = false;
       topPrefixPending = false;
     };
 
@@ -313,9 +402,9 @@ export default definePlugin({
         element.removeAttribute(VISUAL_SELECTED_ATTRIBUTE);
       });
       const selection = window.getSelection();
-      if (visualSession && selection?.rangeCount === 1) {
+      if (visualSession?.renderedRange && selection?.rangeCount === 1) {
         const current = selection.getRangeAt(0);
-        const owned = visualSession.range;
+        const owned = visualSession.renderedRange;
         if (
           current.startContainer === owned.startContainer &&
           current.startOffset === owned.startOffset &&
@@ -369,8 +458,8 @@ export default definePlugin({
       return visibleElement(messagePaneSelector);
     };
 
-    const restoreCursorOrigin = (origin: CursorOrigin | null): void => {
-      if (!origin) return;
+    const restoreCursorOrigin = (origin: CursorOrigin | null): boolean => {
+      if (!origin) return false;
       preferredSurface = origin.surface;
       const root = rootForSurface(origin.surface);
       const selector = origin.kind === "sidebar" ? sidebarItemSelector : messageRowSelector;
@@ -380,8 +469,13 @@ export default definePlugin({
               (element) => identityFor(element, origin.kind) === origin.identity,
             )
           : null;
-      const target = replacement || (origin.element.isConnected ? origin.element : null);
-      if (target) select(target, origin.kind);
+      const fallbackMatches =
+        !origin.identity || identityFor(origin.element, origin.kind) === origin.identity;
+      const target =
+        replacement || (fallbackMatches && isRendered(origin.element) ? origin.element : null);
+      if (!target) return false;
+      select(target, origin.kind);
+      return true;
     };
 
     const messageForOrigin = (origin: CursorOrigin): HTMLElement | null => {
@@ -392,7 +486,9 @@ export default definePlugin({
               (message) => messageIdentity(message) === origin.identity,
             )
           : null;
-      return replacement || (origin.element.isConnected ? origin.element : null);
+      const fallbackMatches =
+        !origin.identity || messageIdentity(origin.element) === origin.identity;
+      return replacement || (fallbackMatches && isRendered(origin.element) ? origin.element : null);
     };
 
     const messageBodyElements = (message: HTMLElement): HTMLElement[] => {
@@ -497,41 +593,95 @@ export default definePlugin({
       );
     };
 
-    const selectVisualBody = (session: VisualSession): boolean => {
-      if (!session.body.isConnected) return false;
+    const visualContext = (
+      origin: CursorOrigin,
+    ): { body: HTMLElement; units: VisualUnit[] } | null => {
+      const message = messageForOrigin(origin);
+      const body = message ? messageBodyForSelection(message) : null;
+      if (!body) return null;
+      const units = visualUnits(body);
+      return units.length > 0 ? { body, units } : null;
+    };
+
+    const paintVisualSelection = (session: VisualSession): boolean => {
+      const context = visualContext(session.origin);
+      if (!context) return false;
+      const { body, units } = context;
       const selection = window.getSelection();
       if (!selection) return false;
+      session.anchor = Math.min(Math.max(session.anchor, 0), units.length - 1);
+      session.head = Math.min(Math.max(session.head, 0), units.length - 1);
+      const start = Math.min(session.anchor, session.head);
+      const end = Math.max(session.anchor, session.head);
       const range = document.createRange();
-      range.selectNodeContents(session.body);
+      range.setStart(units[start].start.node, units[start].start.offset);
+      range.setEnd(units[end].end.node, units[end].end.offset);
+      document.querySelectorAll(`[${VISUAL_SELECTED_ATTRIBUTE}]`).forEach((element) => {
+        element.removeAttribute(VISUAL_SELECTED_ATTRIBUTE);
+      });
       selection.removeAllRanges();
       selection.addRange(range);
-      session.range = range;
-      return selection.rangeCount === 1 && selection.toString() === session.text;
+      body.setAttribute(VISUAL_SELECTED_ATTRIBUTE, "");
+      session.renderedRange = range;
+      session.text = units
+        .slice(start, end + 1)
+        .map((unit) => unit.text)
+        .join("");
+      const headNode = units[session.head].start.node;
+      const headElement = headNode instanceof Element ? headNode : headNode.parentElement;
+      headElement?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      return true;
     };
 
     const enterVisualMode = (): boolean => {
       if (cursor?.kind !== "message" || !cursor.element.isConnected) return false;
       const body = messageBodyForSelection(cursor.element);
       if (!body) return false;
-      const range = document.createRange();
-      range.selectNodeContents(body);
-      if (!range.toString().trim()) return false;
-      const selection = window.getSelection();
-      if (!selection) return false;
+      const units = visualUnits(body);
+      if (units.length === 0) return false;
+      const first = units.findIndex((unit) => unit.text.trim().length > 0);
+      if (first < 0) return false;
       const origin: CursorOrigin = { ...cursor, surface: surfaceForCursor(cursor) };
       clearLinkSession();
       clearVisualSession();
       resetPrefixes();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      const text = selection.toString();
-      if (!text.trim()) {
-        selection.removeAllRanges();
-        return false;
+      const session: VisualSession = {
+        anchor: first,
+        head: first,
+        origin,
+        renderedRange: null,
+        text: units[first].text,
+        token: ++visualSessionToken,
+      };
+      visualSession = session;
+      if (paintVisualSelection(session)) return true;
+      visualSession = null;
+      return false;
+    };
+
+    const moveVisualSelection = (motion: VisualMotion, amount: number): boolean => {
+      const session = visualSession;
+      if (!session) return false;
+      if (motion === "swap-ends") {
+        [session.anchor, session.head] = [session.head, session.anchor];
+        return paintVisualSelection(session);
       }
-      body.setAttribute(VISUAL_SELECTED_ATTRIBUTE, "");
-      visualSession = { body, origin, range, text, token: ++visualSessionToken };
-      return true;
+      const context = visualContext(session.origin);
+      if (!context) return false;
+      session.head = movedVisualIndex(
+        context.units.map((unit) => unit.text),
+        session.head,
+        motion,
+        amount,
+      );
+      return paintVisualSelection(session);
+    };
+
+    const reanchorVisualSelection = (): boolean => {
+      if (!visualSession) return false;
+      visualSession.anchor = visualSession.head;
+      resetPrefixes();
+      return paintVisualSelection(visualSession);
     };
 
     const exitVisualMode = (): boolean => {
@@ -577,20 +727,23 @@ export default definePlugin({
     const yankVisualSelection = (): boolean => {
       const session = visualSession;
       if (!session) return false;
-      if (copyTextWithTextarea(session.text)) return exitVisualMode();
+      resetPrefixes();
+      paintVisualSelection(session);
+      const text = session.text;
+      if (copyTextWithTextarea(text)) return exitVisualMode();
 
       const clipboard = navigator.clipboard;
       if (!clipboard || typeof clipboard.writeText !== "function") {
-        selectVisualBody(session);
+        paintVisualSelection(session);
         console.warn("[Klack] VimNavigation could not copy the selected message");
         return true;
       }
       const { token } = session;
       let pendingCopy: Promise<void>;
       try {
-        pendingCopy = clipboard.writeText(session.text);
+        pendingCopy = clipboard.writeText(text);
       } catch {
-        selectVisualBody(session);
+        paintVisualSelection(session);
         console.warn("[Klack] VimNavigation could not copy the selected message");
         return true;
       }
@@ -600,7 +753,7 @@ export default definePlugin({
         },
         () => {
           if (visualSession?.token !== token) return;
-          selectVisualBody(session);
+          paintVisualSelection(session);
           console.warn("[Klack] VimNavigation could not copy the selected message");
         },
       );
@@ -744,8 +897,25 @@ export default definePlugin({
       return true;
     };
 
-    const searchEditor = (): HTMLElement | null =>
+    const globalSearchEditor = (): HTMLElement | null =>
       editorWithin(visibleElement(searchInputSelector));
+
+    const sidebarSearchEditor = (): HTMLElement | null => {
+      const container = document.querySelector<HTMLElement>(sidebarFilterSelector);
+      if (!container) return null;
+      if (container.matches(FOCUSABLE_EDITOR_SELECTOR)) return container;
+      return container.querySelector<HTMLElement>(FOCUSABLE_EDITOR_SELECTOR);
+    };
+
+    const searchEditor = (): HTMLElement | null =>
+      searchSession?.kind === "sidebar" ? sidebarSearchEditor() : globalSearchEditor();
+
+    const searchText = (target: HTMLElement | null): string => {
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        return target.value;
+      }
+      return target?.textContent || "";
+    };
 
     const editSearchText = (
       target: HTMLElement,
@@ -792,20 +962,31 @@ export default definePlugin({
       });
     };
 
-    const finishSearchRestore = (): void => {
+    const finishSearchRestore = (cursorRestored = false): void => {
       if (!searchSession?.restoring) return;
-      const { origin } = searchSession;
+      const { kind, origin } = searchSession;
       searchSession = null;
+      if (kind === "sidebar") {
+        document.documentElement.removeAttribute(SIDEBAR_SEARCH_ATTRIBUTE);
+      }
       cancelDeferredFocus();
       cancelSearchRestore();
-      restoreCursorOrigin(origin);
+      if (!cursorRestored) restoreCursorOrigin(origin);
     };
 
     const scheduleSearchRestore = (origin: CursorOrigin | null, attempt = 0): void => {
       cancelPendingSearchRestore = klack.timers.animationFrame(() => {
         cancelPendingSearchRestore = null;
         if (!searchSession?.restoring || searchSession.origin !== origin) return;
-        if (searchEditor()) {
+        if (searchSession.kind === "sidebar") {
+          const restored = origin ? restoreCursorOrigin(origin) : true;
+          if (restored || attempt >= 60) {
+            if (!restored) clearCursor();
+            finishSearchRestore(true);
+          } else scheduleSearchRestore(origin, attempt + 1);
+          return;
+        }
+        if (globalSearchEditor()) {
           if (attempt < 120) scheduleSearchRestore(origin, attempt + 1);
           return;
         }
@@ -813,12 +994,120 @@ export default definePlugin({
       });
     };
 
-    const openSearch = (): boolean => {
+    const replaceSearchText = (target: HTMLElement, text: string, focus = true): void => {
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        if (focus) target.focus({ preventScroll: true });
+        target.setRangeText(text, 0, target.value.length, "end");
+        target.dispatchEvent(
+          new InputEvent("input", {
+            bubbles: true,
+            data: text,
+            inputType: "insertReplacementText",
+          }),
+        );
+        return;
+      }
+      if (focus) target.focus({ preventScroll: true });
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.execCommand("insertText", false, text);
+    };
+
+    const cancelSidebarSearch = (): boolean => {
+      if (searchSession?.kind !== "sidebar") return false;
+      const session = searchSession;
+      const target = sidebarSearchEditor();
+      resetPrefixes();
+      clearCursor();
+      if (target) {
+        replaceSearchText(target, session.initialText);
+        target.blur();
+      }
+      session.pendingText = "";
+      session.restoring = true;
+      document.documentElement.removeAttribute(SIDEBAR_SEARCH_ATTRIBUTE);
+      cancelDeferredFocus();
+      cancelSearchRestore();
+      scheduleSearchRestore(session.origin);
+      return true;
+    };
+
+    const enterSidebarSearchResults = (): boolean => {
+      if (searchSession?.kind !== "sidebar" || searchSession.phase !== "typing") return false;
+      const root = visibleElement(sidebarRootSelector);
+      const items = root ? canonicalElements(root, sidebarChannelItemSelector) : [];
+      if (items.length === 0) return false;
+      sidebarSearchEditor()?.blur();
+      searchSession.phase = "results";
+      preferredSurface = "sidebar";
+      select(items[0], "sidebar");
+      return true;
+    };
+
+    const activateSidebarSearchResult = (): boolean => {
+      if (searchSession?.kind !== "sidebar" || searchSession.phase !== "results") return false;
+      const session = searchSession;
+      resetPrefixes();
+      const editor = sidebarSearchEditor();
+      const root = visibleElement(sidebarRootSelector);
+      const identity = cursor?.kind === "sidebar" ? cursor.identity : null;
+      const current =
+        root && identity
+          ? canonicalElements(root, sidebarChannelItemSelector).find(
+              (item) => identityFor(item, "sidebar") === identity,
+            )
+          : cursor?.kind === "sidebar" && isRendered(cursor.element)
+            ? cursor.element
+            : null;
+      if (!current) return false;
+      if (cursor?.element !== current) select(current, "sidebar");
+      const activated = activateSidebar();
+      if (!activated) return false;
+      const currentEditor = sidebarSearchEditor() || editor;
+      if (currentEditor) {
+        replaceSearchText(currentEditor, session.initialText, false);
+        currentEditor.blur();
+      }
+      searchSession = null;
+      document.documentElement.removeAttribute(SIDEBAR_SEARCH_ATTRIBUTE);
+      cancelDeferredFocus();
+      cancelSearchRestore();
+      return activated;
+    };
+
+    const openSidebarSearch = (): boolean => {
+      const target = sidebarSearchEditor();
+      if (!target) return false;
+      const origin: CursorOrigin | null = cursor
+        ? { ...cursor, surface: surfaceForCursor(cursor) }
+        : null;
+      const initialText = searchText(target);
+      cancelSearchRestore();
+      clearCursor();
+      resetPrefixes();
+      insertSession = null;
+      document.documentElement.setAttribute(SIDEBAR_SEARCH_ATTRIBUTE, "");
+      searchSession = {
+        initialText,
+        kind: "sidebar",
+        origin,
+        pendingText: "",
+        phase: "typing",
+        restoring: false,
+      };
+      if (!focusSearchInput(target)) scheduleSearchFocus();
+      return true;
+    };
+
+    const openGlobalSearch = (): boolean => {
       const team = teamFromLocation();
       const slackWindow = window as SlackWindow;
       const teamDelegate = team ? slackWindow.desktopDelegates?.[team] : undefined;
       const delegate = teamDelegate?.startSearch ? teamDelegate : slackWindow.desktopDelegate;
-      const existingInput = searchEditor();
+      const existingInput = globalSearchEditor();
       const trigger = visibleElement(topNavSearchSelector);
       if (!existingInput && !delegate?.startSearch && !trigger) return false;
 
@@ -830,11 +1119,25 @@ export default definePlugin({
       clearCursor();
       resetPrefixes();
       insertSession = null;
-      searchSession = { origin, pendingText: "", restoring: false };
+      searchSession = {
+        initialText: "",
+        kind: "global",
+        origin,
+        pendingText: "",
+        phase: "typing",
+        restoring: false,
+      };
       if (existingInput) return focusSearchInput(existingInput);
       if (delegate?.startSearch) delegate.startSearch();
       if (!focusSearchInput()) scheduleSearchFocus();
       return true;
+    };
+
+    const openSearch = (): boolean => {
+      if (preferredSurface === "sidebar" || cursor?.kind === "sidebar") {
+        return openSidebarSearch() || openGlobalSearch();
+      }
+      return openGlobalSearch();
     };
 
     const originFor = (message: HTMLElement, identity: string | null): ThreadOrigin => ({
@@ -854,7 +1157,10 @@ export default definePlugin({
               (message) => messageIdentity(message) === origin.identity,
             )
           : null;
-      const target = replacement || (origin.element.isConnected ? origin.element : null);
+      const fallbackMatches =
+        !origin.identity || messageIdentity(origin.element) === origin.identity;
+      const target =
+        replacement || (fallbackMatches && isRendered(origin.element) ? origin.element : null);
       if (target) select(target, "message");
     };
 
@@ -981,6 +1287,13 @@ export default definePlugin({
       if (!root) return false;
       preferredSurface = "sidebar";
       return moveWithin(root, sidebarItemSelector, "sidebar", direction, amount);
+    };
+
+    const moveSidebarSearchResults = (direction: Direction, amount = 1): boolean => {
+      const root = visibleElement(sidebarRootSelector);
+      if (!root) return false;
+      preferredSurface = "sidebar";
+      return moveWithin(root, sidebarChannelItemSelector, "sidebar", direction, amount);
     };
 
     const moveMessages = (direction: Direction, amount = 1): boolean => {
@@ -1189,6 +1502,12 @@ export default definePlugin({
       return boundaryWithin(surface.root, messageRowSelector, "message", "previous");
     };
 
+    const centerCursor = (): boolean => {
+      if (!cursor?.element.isConnected) return false;
+      cursor.element.scrollIntoView({ block: "center", inline: "nearest" });
+      return true;
+    };
+
     const enterSidebar = (): boolean => {
       const root = visibleElement(sidebarRootSelector);
       if (!root) return false;
@@ -1309,6 +1628,23 @@ export default definePlugin({
     const activate = (): boolean =>
       cursor?.kind === "sidebar" ? activateSidebar() : openThread();
 
+    const navigateHistory = (direction: "back" | "forward"): boolean => {
+      const target = visibleElement(
+        `[data-qa="history_${direction}_button"]:not([aria-disabled="true"])`,
+      );
+      if (!target) return false;
+      cancelPendingThread?.();
+      cancelPendingThread = null;
+      clearCursor();
+      resetPrefixes();
+      insertSession = null;
+      searchSession = null;
+      document.documentElement.removeAttribute(SIDEBAR_SEARCH_ATTRIBUTE);
+      threadOrigin = null;
+      preferredSurface = "main";
+      return clickEnabled(target);
+    };
+
     const moveLeft = (): boolean => {
       const surface = messageSurface();
       if (surface?.id === "thread") return closeThread();
@@ -1332,8 +1668,21 @@ export default definePlugin({
         !event.shiftKey &&
         !event.defaultPrevented &&
         !event.isComposing;
+      const plainEnter =
+        event.key === "Enter" &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        !event.defaultPrevented &&
+        !event.isComposing;
       const targetElement = elementFromTarget(event.target);
-      if (plainEscape && searchSession) {
+      if (plainEscape && searchSession?.kind === "sidebar" && cancelSidebarSearch()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (plainEscape && searchSession?.kind === "global") {
         const { origin } = searchSession;
         searchSession.pendingText = "";
         searchSession.restoring = true;
@@ -1349,11 +1698,55 @@ export default definePlugin({
         return;
       }
       if (
-        searchSession &&
-        !searchSession.restoring &&
-        !targetElement?.closest(searchInputSelector)
+        plainEnter &&
+        searchSession?.kind === "sidebar" &&
+        searchSession.phase === "typing" &&
+        enterSidebarSearchResults()
       ) {
-        const target = searchEditor();
+        resetPrefixes();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (searchSession?.kind === "sidebar" && searchSession.phase === "results") {
+        const searchCommand = keyCommand(event);
+        if (searchCommand === "count") {
+          const nextPrefix = appendCountDigit(countPrefix, event.key);
+          if (nextPrefix) countPrefix = nextPrefix;
+        } else if (searchCommand === "next" || searchCommand === "previous") {
+          moveSidebarSearchResults(
+            searchCommand === "next" ? "next" : "previous",
+            takeCount(),
+          );
+        } else if (searchCommand === "activate" && event.key === "Enter") {
+          activateSidebarSearchResult();
+        } else if (searchCommand === "search") {
+          resetPrefixes();
+          clearCursor();
+          searchSession.phase = "typing";
+          focusSearchInput(sidebarSearchEditor());
+        } else if (searchCommand) {
+          resetPrefixes();
+        } else if (!shouldSuppressNormalModeKey(event)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      const activeSearchEditor = searchEditor();
+      const targetIsActiveSearch = Boolean(
+        activeSearchEditor &&
+          targetElement &&
+          (targetElement === activeSearchEditor || activeSearchEditor.contains(targetElement)),
+      );
+      if (
+        searchSession &&
+        searchSession.phase === "typing" &&
+        !searchSession.restoring &&
+        !targetIsActiveSearch
+      ) {
+        const target = activeSearchEditor;
         const focused = target ? focusSearchInput(target) : false;
         const plainText =
           !event.altKey &&
@@ -1392,10 +1785,19 @@ export default definePlugin({
       }
 
       const command = keyCommand(event);
+      const visualMotion = visualMotionCommand(event);
       const blocked = hasBlockingSurface();
-      if (visualSession && command && !blocked) {
-        if (command === "yank") yankVisualSelection();
-        else if (command === "visual" || command === "unwind") exitVisualMode();
+      if (visualSession && (command || visualMotion) && !blocked) {
+        if (command === "count" && !(event.key === "0" && countPrefix.length === 0)) {
+          const nextPrefix = appendCountDigit(countPrefix, event.key);
+          if (nextPrefix) countPrefix = nextPrefix;
+        } else if (visualMotion) {
+          const amount = visualMotion === "swap-ends" ? 1 : takeCount();
+          if (visualMotion === "swap-ends") resetCount();
+          moveVisualSelection(visualMotion, amount);
+        } else if (command === "yank") yankVisualSelection();
+        else if (command === "visual") reanchorVisualSelection();
+        else if (command === "unwind") exitVisualMode();
         else resetPrefixes();
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -1411,7 +1813,7 @@ export default definePlugin({
           if (!moveLink(command === "next" ? "next" : "previous", takeCount())) {
             exitLinkMode();
           }
-        } else if (command === "activate") activateLink();
+        } else if (command === "activate" && event.key === "Enter") activateLink();
         else if (command === "left" || command === "unwind") exitLinkMode();
         else if (command === "visual") {
           const { origin } = linkSession;
@@ -1465,6 +1867,7 @@ export default definePlugin({
       cancelPendingMove();
       cancelDeferredFocus();
       if (command === "count") {
+        centerPrefixPending = false;
         topPrefixPending = false;
         const nextPrefix = appendCountDigit(countPrefix, event.key);
         if (!nextPrefix) return;
@@ -1475,11 +1878,24 @@ export default definePlugin({
       }
 
       const hadCursor = cursor !== null;
+      const hadCenterPrefix = centerPrefixPending;
       const hadCount = countPrefix.length > 0;
       const hadTopPrefix = topPrefixPending;
       let handled = false;
-      if (command === "top-prefix") {
+      if (command === "center-prefix") {
         resetCount();
+        topPrefixPending = false;
+        if (!hadCenterPrefix) {
+          centerPrefixPending = true;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+        centerPrefixPending = false;
+        handled = centerCursor();
+      } else if (command === "top-prefix") {
+        resetCount();
+        centerPrefixPending = false;
         if (!hadTopPrefix) {
           topPrefixPending = true;
           event.preventDefault();
@@ -1489,6 +1905,7 @@ export default definePlugin({
         topPrefixPending = false;
         handled = moveToTop();
       } else {
+        centerPrefixPending = false;
         topPrefixPending = false;
         const amount = takeCount();
         if (command === "next" || command === "previous") {
@@ -1502,6 +1919,8 @@ export default definePlugin({
         } else if (command === "half-next" || command === "half-previous") {
           handled = movePage(command === "half-next" ? "next" : "previous", 0.5, amount);
         } else if (command === "bottom") handled = moveToBottom();
+        else if (command === "history-back") handled = navigateHistory("back");
+        else if (command === "history-forward") handled = navigateHistory("forward");
         else if (command === "left") handled = moveLeft();
         else if (command === "activate") {
           handled =
@@ -1515,7 +1934,16 @@ export default definePlugin({
         else if (command === "unwind") handled = unwind();
       }
 
-      if (!handled && !hadCursor && !hadCount && !hadTopPrefix && !leftNormalComposer) return;
+      if (
+        !handled &&
+        !hadCursor &&
+        !hadCenterPrefix &&
+        !hadCount &&
+        !hadTopPrefix &&
+        !leftNormalComposer
+      ) {
+        return;
+      }
       event.preventDefault();
       event.stopImmediatePropagation();
     };
@@ -1536,7 +1964,20 @@ export default definePlugin({
       cancelDeferredFocus();
       clearLinkSession();
       clearVisualSession();
-      if (searchSession && !event.target.closest(searchInputSelector)) {
+      const activeSearch = searchEditor();
+      const clickedInsideSearch = Boolean(
+        activeSearch && (event.target === activeSearch || activeSearch.contains(event.target)),
+      );
+      if (searchSession && !clickedInsideSearch) {
+        if (searchSession.kind === "sidebar") {
+          const { initialText } = searchSession;
+          const target = sidebarSearchEditor();
+          if (target) {
+            replaceSearchText(target, initialText, false);
+            target.blur();
+          }
+          document.documentElement.removeAttribute(SIDEBAR_SEARCH_ATTRIBUTE);
+        }
         searchSession = null;
         cancelSearchRestore();
       }
@@ -1545,7 +1986,7 @@ export default definePlugin({
         insertSession = null;
       }
       const closeAction = event.target.closest(
-        '[data-qa="close_flexpane"], [data-qa="history_back_button"]',
+        '[data-qa="close_flexpane"], [data-qa="history_back_button"], [data-qa="history_forward_button"]',
       );
       if (closeAction) {
         clearCursor();
@@ -1606,6 +2047,10 @@ export default definePlugin({
         [${VISUAL_SELECTED_ATTRIBUTE}] *::selection {
           background: rgb(var(--sk_highlight, 18, 100, 163)) !important;
         }
+
+        html[${SIDEBAR_SEARCH_ATTRIBUTE}] .p-sidebar_text_filter_input_header:has(${sidebarFilterSelector}) {
+          display: flex !important;
+        }
       `,
       { id: "vim-navigation" },
     );
@@ -1652,6 +2097,7 @@ export default definePlugin({
       insertSession = null;
       searchSession = null;
       threadOrigin = null;
+      document.documentElement.removeAttribute(SIDEBAR_SEARCH_ATTRIBUTE);
     });
   },
 });
