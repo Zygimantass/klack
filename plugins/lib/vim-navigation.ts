@@ -14,7 +14,9 @@ export type VimCommand =
   | "previous"
   | "search"
   | "top-prefix"
-  | "unwind";
+  | "unwind"
+  | "visual"
+  | "yank";
 
 export type VimKeyInput = {
   altKey?: boolean;
@@ -81,6 +83,8 @@ export function keyCommand(
   else if (event.key === "i") command = "insert";
   else if (event.key === "l" || event.key === "Enter") command = "activate";
   else if (event.key === "Escape") command = "unwind";
+  else if (event.key === "v") command = "visual";
+  else if (event.key === "y") command = "yank";
 
   if (
     event.repeat &&
@@ -127,6 +131,19 @@ export function movedIndex(
   return direction === "next"
     ? Math.min(current + distance, length - 1)
     : Math.max(current - distance, 0);
+}
+
+export function wrappedIndex(
+  length: number,
+  current: number,
+  direction: Direction,
+  amount = 1,
+): number {
+  if (length <= 0) return -1;
+  const start = Math.min(Math.max(current, 0), length - 1);
+  const distance = Number.isFinite(amount) ? Math.max(1, Math.trunc(amount)) : 1;
+  const delta = direction === "next" ? distance : -distance;
+  return ((start + delta) % length + length) % length;
 }
 
 export function threadTimestampFromUrl(value: string, fallback: string): string {

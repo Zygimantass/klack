@@ -7,6 +7,7 @@ import {
   movedIndex,
   shouldSuppressNormalModeKey,
   threadTimestampFromUrl,
+  wrappedIndex,
   type Direction,
 } from "./lib/vim-navigation";
 
@@ -39,6 +40,19 @@ type SearchSession = {
   origin: CursorOrigin | null;
   pendingText: string;
   restoring: boolean;
+};
+
+type LinkSession = {
+  index: number;
+  origin: CursorOrigin;
+};
+
+type VisualSession = {
+  body: HTMLElement;
+  origin: CursorOrigin;
+  range: Range;
+  text: string;
+  token: number;
 };
 
 type DeepLinkArgs = {
@@ -93,7 +107,9 @@ const TEXT_ENTRY_TARGET_SELECTOR = [
   '[role="searchbox"]',
   '[role="textbox"]',
 ].join(", ");
+const LINK_SELECTED_ATTRIBUTE = "data-klack-vim-link-selected";
 const SELECTED_ATTRIBUTE = "data-klack-vim-selected";
+const VISUAL_SELECTED_ATTRIBUTE = "data-klack-vim-visual-selected";
 const FOCUSABLE_EDITOR_SELECTOR =
   'input, textarea, [contenteditable="true"], [role="searchbox"], [role="textbox"]';
 const MAX_PAGE_COUNT = 20;
@@ -209,11 +225,13 @@ function teamFromLocation(): string | undefined {
 
 export default definePlugin({
   name: "VimNavigation",
-  description: "Adds Vim-style navigation, counts, search, and insert mode across Slack conversations and threads.",
+  description:
+    "Adds Vim-style navigation, counts, links, search, selection, and insert mode across Slack conversations and threads.",
   defaultEnabled: false,
   setup(klack) {
     const messagePaneSelector = klack.selectors.get("slack.message.pane");
     const messageRowSelector = klack.selectors.get("slack.message.row");
+    const messageBodySelector = klack.selectors.get("slack.message.body");
     const replyBarSelector = klack.selectors.get("slack.message.reply-bar");
     const timestampSelector = klack.selectors.get("slack.message.timestamp");
     const composerInputSelector = klack.selectors.get("slack.composer.input");
@@ -237,8 +255,11 @@ export default definePlugin({
     let cancelPendingThread: (() => void) | null = null;
     let countPrefix = "";
     let insertSession: InsertSession | null = null;
+    let linkSession: LinkSession | null = null;
     let searchSession: SearchSession | null = null;
     let topPrefixPending = false;
+    let visualSessionToken = 0;
+    let visualSession: VisualSession | null = null;
 
     const composerFromTarget = (target: EventTarget | null): HTMLElement | null => {
       const element = elementFromTarget(target);
@@ -280,9 +301,38 @@ export default definePlugin({
       cancelBoundaryRetry = null;
     };
 
+    const clearLinkSession = (): void => {
+      document.querySelectorAll(`[${LINK_SELECTED_ATTRIBUTE}]`).forEach((element) => {
+        element.removeAttribute(LINK_SELECTED_ATTRIBUTE);
+      });
+      linkSession = null;
+    };
+
+    const clearVisualSession = (): void => {
+      document.querySelectorAll(`[${VISUAL_SELECTED_ATTRIBUTE}]`).forEach((element) => {
+        element.removeAttribute(VISUAL_SELECTED_ATTRIBUTE);
+      });
+      const selection = window.getSelection();
+      if (visualSession && selection?.rangeCount === 1) {
+        const current = selection.getRangeAt(0);
+        const owned = visualSession.range;
+        if (
+          current.startContainer === owned.startContainer &&
+          current.startOffset === owned.startOffset &&
+          current.endContainer === owned.endContainer &&
+          current.endOffset === owned.endOffset
+        ) {
+          selection.removeAllRanges();
+        }
+      }
+      visualSession = null;
+    };
+
     const clearCursor = (): void => {
       cancelPendingMove();
       cancelDeferredFocus();
+      clearLinkSession();
+      clearVisualSession();
       document.querySelectorAll(`[${SELECTED_ATTRIBUTE}]`).forEach((element) => {
         element.removeAttribute(SELECTED_ATTRIBUTE);
       });
@@ -332,6 +382,244 @@ export default definePlugin({
           : null;
       const target = replacement || (origin.element.isConnected ? origin.element : null);
       if (target) select(target, origin.kind);
+    };
+
+    const messageForOrigin = (origin: CursorOrigin): HTMLElement | null => {
+      const root = rootForSurface(origin.surface);
+      const replacement =
+        root && origin.identity
+          ? canonicalElements(root, messageRowSelector).find(
+              (message) => messageIdentity(message) === origin.identity,
+            )
+          : null;
+      return replacement || (origin.element.isConnected ? origin.element : null);
+    };
+
+    const messageBodyElements = (message: HTMLElement): HTMLElement[] => {
+      const exactBodies = Array.from(
+        message.querySelectorAll<HTMLElement>('[data-qa="message-text"]'),
+      ).filter(isRendered);
+      if (exactBodies.length > 0) return exactBodies;
+      const bodies = Array.from(message.querySelectorAll(messageBodySelector)).filter(isRendered);
+      if (message.matches(messageBodySelector) && isRendered(message)) bodies.unshift(message);
+      return bodies;
+    };
+
+    const contentLinksForMessage = (message: HTMLElement): HTMLAnchorElement[] => {
+      const bodies = messageBodyElements(message);
+      const seen = new Set<HTMLAnchorElement>();
+      const links: HTMLAnchorElement[] = [];
+      for (const body of bodies) {
+        for (const link of Array.from(body.querySelectorAll<HTMLAnchorElement>("a[href]"))) {
+          if (seen.has(link) || !isRendered(link)) continue;
+          seen.add(link);
+          if (link.closest(messageRowSelector) !== message) continue;
+          if (link.closest(timestampSelector) || link.closest(replyBarSelector)) continue;
+          if (link.closest(THREAD_ACTION_SELECTOR)) continue;
+          if (
+            link.closest(
+              [
+                '[data-qa="message-actions"]',
+                '[data-qa="message_attachment_default"]',
+                '[data-qa="channel_link"]',
+                '[data-stringify-type="mention"]',
+                ".c-member_slug",
+                ".c-mrkdwn__user_group",
+                ".internal_channel_link",
+                ".c-message__actions",
+                ".c-message_kit__avatar",
+              ].join(", "),
+            )
+          ) {
+            continue;
+          }
+          const href = link.getAttribute("href")?.trim() || "";
+          if (!href || /^\s*(?:data|javascript):/i.test(href)) continue;
+          links.push(link);
+        }
+      }
+      return links;
+    };
+
+    const linksForSession = (): HTMLAnchorElement[] => {
+      if (!linkSession) return [];
+      const message = messageForOrigin(linkSession.origin);
+      return message ? contentLinksForMessage(message) : [];
+    };
+
+    const paintLink = (
+      element: HTMLAnchorElement,
+      index: number,
+      origin: CursorOrigin,
+    ): void => {
+      clearLinkSession();
+      element.setAttribute(LINK_SELECTED_ATTRIBUTE, "");
+      linkSession = { index, origin };
+      element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+
+    const enterLinkMode = (): boolean => {
+      if (cursor?.kind !== "message" || !cursor.element.isConnected) return false;
+      const links = contentLinksForMessage(cursor.element);
+      if (links.length === 0) return false;
+      const origin: CursorOrigin = { ...cursor, surface: surfaceForCursor(cursor) };
+      clearVisualSession();
+      resetPrefixes();
+      paintLink(links[0], 0, origin);
+      return true;
+    };
+
+    const moveLink = (direction: Direction, amount: number): boolean => {
+      if (!linkSession) return false;
+      const links = linksForSession();
+      if (links.length === 0) return false;
+      const current = Math.min(linkSession.index, links.length - 1);
+      const next = wrappedIndex(links.length, current, direction, amount);
+      paintLink(links[next], next, linkSession.origin);
+      return true;
+    };
+
+    const exitLinkMode = (): boolean => {
+      if (!linkSession) return false;
+      const { origin } = linkSession;
+      clearLinkSession();
+      resetPrefixes();
+      restoreCursorOrigin(origin);
+      return true;
+    };
+
+    const messageBodyForSelection = (message: HTMLElement): HTMLElement | null => {
+      const bodies = messageBodyElements(message);
+      return (
+        bodies.find(
+          (body) => !bodies.some((candidate) => candidate !== body && candidate.contains(body)),
+        ) || null
+      );
+    };
+
+    const selectVisualBody = (session: VisualSession): boolean => {
+      if (!session.body.isConnected) return false;
+      const selection = window.getSelection();
+      if (!selection) return false;
+      const range = document.createRange();
+      range.selectNodeContents(session.body);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      session.range = range;
+      return selection.rangeCount === 1 && selection.toString() === session.text;
+    };
+
+    const enterVisualMode = (): boolean => {
+      if (cursor?.kind !== "message" || !cursor.element.isConnected) return false;
+      const body = messageBodyForSelection(cursor.element);
+      if (!body) return false;
+      const range = document.createRange();
+      range.selectNodeContents(body);
+      if (!range.toString().trim()) return false;
+      const selection = window.getSelection();
+      if (!selection) return false;
+      const origin: CursorOrigin = { ...cursor, surface: surfaceForCursor(cursor) };
+      clearLinkSession();
+      clearVisualSession();
+      resetPrefixes();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const text = selection.toString();
+      if (!text.trim()) {
+        selection.removeAllRanges();
+        return false;
+      }
+      body.setAttribute(VISUAL_SELECTED_ATTRIBUTE, "");
+      visualSession = { body, origin, range, text, token: ++visualSessionToken };
+      return true;
+    };
+
+    const exitVisualMode = (): boolean => {
+      if (!visualSession) return false;
+      const { origin } = visualSession;
+      clearVisualSession();
+      resetPrefixes();
+      restoreCursorOrigin(origin);
+      return true;
+    };
+
+    const copyTextWithTextarea = (text: string): boolean => {
+      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const selection = window.getSelection();
+      const ranges = selection
+        ? Array.from({ length: selection.rangeCount }, (_, index) =>
+            selection.getRangeAt(index).cloneRange(),
+          )
+        : [];
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("aria-hidden", "true");
+      textarea.style.cssText =
+        "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none";
+      document.body.append(textarea);
+      textarea.focus({ preventScroll: true });
+      textarea.select();
+      let copied = false;
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      }
+      textarea.remove();
+      if (selection) {
+        selection.removeAllRanges();
+        ranges.forEach((range) => selection.addRange(range));
+      }
+      if (active?.isConnected) active.focus({ preventScroll: true });
+      return copied;
+    };
+
+    const yankVisualSelection = (): boolean => {
+      const session = visualSession;
+      if (!session) return false;
+      if (copyTextWithTextarea(session.text)) return exitVisualMode();
+
+      const clipboard = navigator.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== "function") {
+        selectVisualBody(session);
+        console.warn("[Klack] VimNavigation could not copy the selected message");
+        return true;
+      }
+      const { token } = session;
+      let pendingCopy: Promise<void>;
+      try {
+        pendingCopy = clipboard.writeText(session.text);
+      } catch {
+        selectVisualBody(session);
+        console.warn("[Klack] VimNavigation could not copy the selected message");
+        return true;
+      }
+      void pendingCopy.then(
+        () => {
+          if (visualSession?.token === token) exitVisualMode();
+        },
+        () => {
+          if (visualSession?.token !== token) return;
+          selectVisualBody(session);
+          console.warn("[Klack] VimNavigation could not copy the selected message");
+        },
+      );
+      return true;
+    };
+
+    const activateLink = (): boolean => {
+      if (!linkSession) return false;
+      const links = linksForSession();
+      const target = links[Math.min(linkSession.index, links.length - 1)];
+      const { origin } = linkSession;
+      clearLinkSession();
+      resetPrefixes();
+      if (!target || !clickEnabled(target)) {
+        restoreCursorOrigin(origin);
+        return false;
+      }
+      restoreCursorOrigin(origin);
+      return true;
     };
 
     const editorWithin = (root: HTMLElement | null): HTMLElement | null => {
@@ -1103,12 +1391,47 @@ export default definePlugin({
         return;
       }
 
-      const focusedNormalComposer = normalModeComposer(event.target);
       const command = keyCommand(event);
+      const blocked = hasBlockingSurface();
+      if (visualSession && command && !blocked) {
+        if (command === "yank") yankVisualSelection();
+        else if (command === "visual" || command === "unwind") exitVisualMode();
+        else resetPrefixes();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (linkSession && command && !blocked) {
+        if (command === "count") {
+          topPrefixPending = false;
+          const nextPrefix = appendCountDigit(countPrefix, event.key);
+          if (nextPrefix) countPrefix = nextPrefix;
+        } else if (command === "next" || command === "previous") {
+          topPrefixPending = false;
+          if (!moveLink(command === "next" ? "next" : "previous", takeCount())) {
+            exitLinkMode();
+          }
+        } else if (command === "activate") activateLink();
+        else if (command === "left" || command === "unwind") exitLinkMode();
+        else if (command === "visual") {
+          const { origin } = linkSession;
+          clearLinkSession();
+          restoreCursorOrigin(origin);
+          enterVisualMode();
+        } else resetPrefixes();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+
+      const focusedNormalComposer = normalModeComposer(event.target);
       if (!command) {
         resetPrefixes();
-        if (focusedNormalComposer && shouldSuppressNormalModeKey(event)) {
-          leaveNormalModeComposer(focusedNormalComposer);
+        if (
+          (focusedNormalComposer || ((linkSession || visualSession) && !blocked)) &&
+          shouldSuppressNormalModeKey(event)
+        ) {
+          if (focusedNormalComposer) leaveNormalModeComposer(focusedNormalComposer);
           event.preventDefault();
           event.stopImmediatePropagation();
         }
@@ -1131,7 +1454,7 @@ export default definePlugin({
         (!focusedNormalComposer &&
           !sidebarOwnsPassiveFocus &&
           (hasNativeKeyboardTarget(event.target) || hasNativeKeyboardTarget(document.activeElement))) ||
-        hasBlockingSurface()
+        blocked
       ) {
         resetPrefixes();
         return;
@@ -1180,10 +1503,16 @@ export default definePlugin({
           handled = movePage(command === "half-next" ? "next" : "previous", 0.5, amount);
         } else if (command === "bottom") handled = moveToBottom();
         else if (command === "left") handled = moveLeft();
-        else if (command === "activate") handled = activate();
+        else if (command === "activate") {
+          handled =
+            event.key === "Enter" && cursor?.kind === "message"
+              ? enterLinkMode() || activate()
+              : activate();
+        }
         else if (command === "insert") handled = focusComposer();
         else if (command === "search") handled = openSearch();
-        else handled = unwind();
+        else if (command === "visual") handled = enterVisualMode();
+        else if (command === "unwind") handled = unwind();
       }
 
       if (!handled && !hadCursor && !hadCount && !hadTopPrefix && !leftNormalComposer) return;
@@ -1205,6 +1534,8 @@ export default definePlugin({
       resetPrefixes();
       cancelPendingMove();
       cancelDeferredFocus();
+      clearLinkSession();
+      clearVisualSession();
       if (searchSession && !event.target.closest(searchInputSelector)) {
         searchSession = null;
         cancelSearchRestore();
@@ -1261,6 +1592,19 @@ export default definePlugin({
         [${SELECTED_ATTRIBUTE}="message"][${SELECTED_ATTRIBUTE}] {
           background: rgba(var(--sk_highlight, 18, 100, 163), 0.12) !important;
           box-shadow: inset 4px 0 0 rgb(var(--sk_highlight, 18, 100, 163)) !important;
+        }
+
+        [${LINK_SELECTED_ATTRIBUTE}] {
+          background: rgba(var(--sk_highlight, 18, 100, 163), 0.24) !important;
+          border-radius: 3px !important;
+          outline: 2px solid rgb(var(--sk_highlight, 18, 100, 163)) !important;
+          outline-offset: 2px;
+          scroll-margin-block: 48px;
+        }
+
+        [${VISUAL_SELECTED_ATTRIBUTE}]::selection,
+        [${VISUAL_SELECTED_ATTRIBUTE}] *::selection {
+          background: rgb(var(--sk_highlight, 18, 100, 163)) !important;
         }
       `,
       { id: "vim-navigation" },

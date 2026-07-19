@@ -227,20 +227,35 @@ the Klack plugin manager, then use:
 
 | Key | Action |
 | --- | --- |
-| `[count]j` / `[count]k` | Select the next or previous conversation or message; for example, `10j` moves ten rows. |
+| `[count]j` / `[count]k` | Select the next or previous conversation or message; in link mode, cycle through links. For example, `10j` moves ten rows. |
 | `gg` | Select the first row in the sidebar or the first message in an open thread. |
 | `G` | Select the last row in the active navigation surface. |
-| `h` | Move from messages to the sidebar, or close an open thread. |
-| `l` / `Enter` | Open the selected conversation or message thread. |
+| `h` | Leave link mode, move from messages to the sidebar, or close an open thread. |
+| `l` | Open the selected conversation or message thread; in link mode, open the highlighted link. |
+| `Enter` | Enter link mode when the selected message contains links, otherwise open its thread; in link mode, open the highlighted link. |
 | `{` / `}` | Move backward or forward by one viewport. |
 | `Ctrl+U` / `Ctrl+D` | Move backward or forward by half a viewport. |
 | `/` | Open Slack's global search from any navigation surface and focus it immediately. |
 | `i` | Focus the composer for the active conversation or thread. |
-| `Escape` | Leave plugin-entered insert mode, close search and restore the Vim cursor, close an open thread, or clear the cursor. |
+| `v` | Select the body of the current message in visual mode. |
+| `y` | Copy the visual-mode message selection as plain text and return to normal mode. |
+| `Escape` | Leave insert, link, or visual mode; close search and restore the Vim cursor; close an open thread; or clear the cursor. |
 
 Counts also multiply viewport motions, so `2}` moves forward two viewports.
 After using `i`, the first `Escape` restores the previous Vim cursor; press it
 again to close the thread or clear the cursor.
+
+On a selected message, press `Enter` to highlight its first content link. Use
+`j`/`k` (with optional counts) to cycle through the links, then `Enter` or `l`
+to open the highlighted link. Press `h` or `Escape` to return to the message
+without closing its thread. Messages without content links retain the normal
+`Enter` behavior of opening their thread, and `l` always opens a thread from
+normal mode.
+
+Press `v` on a selected message to select that message's text without including
+its author, timestamp, reactions, or attachments. Press `y` to copy the text and
+return to normal navigation, or `v`/`Escape` to cancel. Visual mode is scoped to
+one message; it does not extend across messages.
 
 Press `/` from the sidebar, message transcript, Threads view, or an open thread
 to open global Slack search with its input focused immediately. Press `Escape`
@@ -261,8 +276,9 @@ place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
 open it. `gg` moves to the first sidebar row; it also moves to the first
 message in an open thread. Main-channel history is excluded because Slack
 loads older messages without a finite top. To open a thread, use `j`/`k` in
-the message transcript to highlight
-its parent message, then press `l` or `Enter`. Once the thread opens, use
+the message transcript to highlight its parent message, then press `l`.
+`Enter` also opens the thread when that message has no eligible content link;
+otherwise it enters link mode. Once the thread opens, use
 `j`/`k` to navigate its messages and `i` to focus the thread reply composer.
 Press `Escape` to return to normal mode, then `h` to close the thread and
 restore the parent-message cursor.
