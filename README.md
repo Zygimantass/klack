@@ -219,6 +219,31 @@ It provides searchable, persistent enable/disable controls for built-in and
 user plugins and themes. The manager itself stays enabled so the controls
 remain accessible.
 
+### Vim navigation
+
+The opt-in **VimNavigation** plugin adds a visual keyboard cursor across the
+sidebar, message transcript, Threads view, and an open thread. Enable it from
+the Klack plugin manager, then use:
+
+| Key | Action |
+| --- | --- |
+| `[count]j` / `[count]k` | Select the next or previous conversation or message; for example, `10j` moves ten rows. |
+| `h` | Move from messages to the sidebar, or close an open thread. |
+| `l` / `Enter` | Open the selected conversation or message thread. |
+| `{` / `}` | Move backward or forward by one viewport. |
+| `Ctrl+U` / `Ctrl+D` | Move backward or forward by half a viewport. |
+| `/` | Open Slack's workspace search. |
+| `i` | Focus the composer for the active conversation or thread. |
+| `Escape` | Leave plugin-entered insert mode, close an open thread, or clear the Vim cursor. |
+
+Counts also multiply viewport motions, so `2}` moves forward two viewports.
+After using `i`, the first `Escape` restores the previous Vim cursor; press it
+again to close the thread or clear the cursor.
+
+The bindings do not run while focus is in an input, message composer, link,
+button, dialog, menu, or suggestion list. Other modified keys are left alone;
+`Ctrl+U` and `Ctrl+D` are captured only on a navigation surface.
+
 ## Themes
 
 Klack discovers `~/.klack/themes/**/*.theme.css` at startup. Themes have their
