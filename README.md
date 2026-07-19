@@ -240,8 +240,11 @@ Counts also multiply viewport motions, so `2}` moves forward two viewports.
 After using `i`, the first `Escape` restores the previous Vim cursor; press it
 again to close the thread or clear the cursor.
 
-The bindings do not run while focus is in an input, message composer, link,
-button, dialog, menu, or suggestion list. Other modified keys are left alone;
+VimNavigation is modal: it remains in normal mode even when Slack leaves the
+message composer focused. Normal-mode keys move the Vim cursor without changing
+the draft, and other text-editing keys are suppressed until `i` explicitly
+enters insert mode. Other inputs, links, buttons, dialogs, menus, and suggestion
+lists retain their native behavior. Other modified keys are left alone;
 `Ctrl+U` and `Ctrl+D` are captured only on a navigation surface.
 
 ## Themes

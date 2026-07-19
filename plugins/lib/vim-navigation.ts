@@ -92,6 +92,17 @@ export function countValue(prefix: string): number {
   return Number.isFinite(count) && count > 0 ? count : 1;
 }
 
+export function shouldSuppressNormalModeKey(event: VimKeyInput): boolean {
+  return (
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.defaultPrevented &&
+    !event.isComposing &&
+    !event.metaKey &&
+    (event.key.length === 1 || event.key === "Backspace" || event.key === "Delete")
+  );
+}
+
 export function movedIndex(
   length: number,
   current: number,

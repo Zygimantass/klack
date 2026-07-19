@@ -5,6 +5,7 @@ import {
   countValue,
   keyCommand,
   movedIndex,
+  shouldSuppressNormalModeKey,
   threadTimestampFromUrl,
   type Direction,
 } from "./lib/vim-navigation";
@@ -219,6 +220,32 @@ export default definePlugin({
     let cancelPendingThread: (() => void) | null = null;
     let countPrefix = "";
     let insertSession: InsertSession | null = null;
+
+    const composerFromTarget = (target: EventTarget | null): HTMLElement | null => {
+      const element = elementFromTarget(target);
+      const composer = element?.closest(composerInputSelector);
+      return composer instanceof HTMLElement && isRendered(composer) ? composer : null;
+    };
+
+    const isInsertComposer = (composer: HTMLElement): boolean =>
+      insertSession !== null &&
+      (insertSession.target === composer ||
+        insertSession.target.contains(composer) ||
+        composer.contains(insertSession.target));
+
+    const normalModeComposer = (target: EventTarget | null): HTMLElement | null => {
+      const composer = composerFromTarget(target) || composerFromTarget(document.activeElement);
+      return composer && !isInsertComposer(composer) ? composer : null;
+    };
+
+    const leaveNormalModeComposer = (composer: HTMLElement): void => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && (active === composer || composer.contains(active))) {
+        active.blur();
+      } else {
+        composer.blur();
+      }
+    };
 
     const resetCount = (): void => {
       countPrefix = "";
@@ -787,20 +814,28 @@ export default definePlugin({
         return;
       }
 
+      const focusedNormalComposer = normalModeComposer(event.target);
       const command = keyCommand(event);
       if (!command) {
         resetCount();
+        if (focusedNormalComposer && shouldSuppressNormalModeKey(event)) {
+          leaveNormalModeComposer(focusedNormalComposer);
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
         return;
       }
       if (
-        hasNativeKeyboardTarget(event.target) ||
-        hasNativeKeyboardTarget(document.activeElement) ||
+        (!focusedNormalComposer &&
+          (hasNativeKeyboardTarget(event.target) || hasNativeKeyboardTarget(document.activeElement))) ||
         hasBlockingSurface()
       ) {
         resetCount();
         return;
       }
 
+      const leftNormalComposer = focusedNormalComposer !== null;
+      if (focusedNormalComposer) leaveNormalModeComposer(focusedNormalComposer);
       cancelPendingMove();
       cancelDeferredFocus();
       if (command === "count") {
@@ -832,7 +867,16 @@ export default definePlugin({
       else if (command === "search") handled = openSearch();
       else handled = unwind();
 
-      if (!handled && !hadCursor && !hadCount) return;
+      if (!handled && !hadCursor && !hadCount && !leftNormalComposer) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    const handleBeforeInput = (event: InputEvent): void => {
+      if (event.defaultPrevented) return;
+      const composer = normalModeComposer(event.target);
+      if (!composer) return;
+      leaveNormalModeComposer(composer);
       event.preventDefault();
       event.stopImmediatePropagation();
     };
@@ -889,6 +933,7 @@ export default definePlugin({
       { id: "vim-navigation" },
     );
     klack.events.on(document, "keydown", handleKeyDown, true);
+    klack.events.on(document, "beforeinput", handleBeforeInput, true);
     klack.events.on(document, "click", updateSurfaceFromClick);
     klack.dom.watch(threadPaneSelector, (pane) => {
       const activateThreadSurface = (): void => {

@@ -6,6 +6,7 @@ import {
   countValue,
   keyCommand,
   movedIndex,
+  shouldSuppressNormalModeKey,
   threadTimestampFromUrl,
   type VimCommand,
   type VimKeyContext,
@@ -84,6 +85,22 @@ test("builds and reads multi-digit count prefixes", () => {
   assert.equal(appendCountDigit("1", "x"), null);
   assert.equal(countValue(""), 1);
   assert.equal(countValue("10"), 10);
+});
+
+test("suppresses composer editing keys until insert mode", () => {
+  for (const value of ["x", " ", "J", "Backspace", "Delete"]) {
+    assert.equal(shouldSuppressNormalModeKey({ key: value }), true);
+  }
+  for (const input of [
+    { key: "x", altKey: true },
+    { key: "x", ctrlKey: true },
+    { key: "x", metaKey: true },
+    { key: "x", defaultPrevented: true },
+    { key: "x", isComposing: true },
+    { key: "Tab" },
+  ]) {
+    assert.equal(shouldSuppressNormalModeKey(input), false);
+  }
 });
 
 test("moves within list boundaries without wrapping", () => {
