@@ -247,6 +247,12 @@ enters insert mode. Other inputs, links, buttons, dialogs, menus, and suggestion
 lists retain their native behavior. Other modified keys are left alone;
 `Ctrl+U` and `Ctrl+D` are captured only on a navigation surface.
 
+For channel navigation, press `h` to move into the sidebar, use `j`/`k` to
+place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
+open it. To open a thread, use `j`/`k` in the message transcript to highlight
+its parent message, then press `l` or `Enter`; press `h` or `Escape` to close
+the thread and restore the parent-message cursor.
+
 ## Themes
 
 Klack discovers `~/.klack/themes/**/*.theme.css` at startup. Themes have their

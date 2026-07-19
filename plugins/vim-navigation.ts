@@ -52,8 +52,8 @@ type SlackWindow = Window & {
   desktopDelegates?: Record<string, SlackDesktopDelegate>;
 };
 
-const BLOCKING_SURFACE_SELECTOR =
-  '[aria-modal="true"], [role="dialog"], [role="listbox"], [role="menu"]';
+// Slack's non-modal secondary thread pane has role="dialog", so only modal dialogs block Vim input.
+const BLOCKING_SURFACE_SELECTOR = '[aria-modal="true"], [role="listbox"], [role="menu"]';
 const NATIVE_KEYBOARD_TARGET_SELECTOR = [
   "input",
   "textarea",
@@ -921,13 +921,20 @@ export default definePlugin({
     klack.ui.addStyle(
       `
         [${SELECTED_ATTRIBUTE}] {
-          outline: 2px solid var(--sk_highlight, #1264a3) !important;
+          outline: 2px solid rgb(var(--sk_highlight, 18, 100, 163)) !important;
           outline-offset: -2px;
           scroll-margin-block: 48px;
         }
 
-        [${SELECTED_ATTRIBUTE}="message"] {
-          background: rgba(18, 100, 163, 0.08) !important;
+        [${SELECTED_ATTRIBUTE}="sidebar"][${SELECTED_ATTRIBUTE}] {
+          background: rgba(var(--sk_highlight, 18, 100, 163), 0.24) !important;
+          box-shadow: inset 4px 0 0 rgb(var(--sk_highlight, 18, 100, 163)) !important;
+          border-radius: 6px !important;
+        }
+
+        [${SELECTED_ATTRIBUTE}="message"][${SELECTED_ATTRIBUTE}] {
+          background: rgba(var(--sk_highlight, 18, 100, 163), 0.12) !important;
+          box-shadow: inset 4px 0 0 rgb(var(--sk_highlight, 18, 100, 163)) !important;
         }
       `,
       { id: "vim-navigation" },
