@@ -84,6 +84,15 @@ const NATIVE_KEYBOARD_TARGET_SELECTOR = [
   '[role="button"]',
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
+const TEXT_ENTRY_TARGET_SELECTOR = [
+  "input",
+  "textarea",
+  "select",
+  '[contenteditable]:not([contenteditable="false"])',
+  '[role="combobox"]',
+  '[role="searchbox"]',
+  '[role="textbox"]',
+].join(", ");
 const SELECTED_ATTRIBUTE = "data-klack-vim-selected";
 const FOCUSABLE_EDITOR_SELECTOR =
   'input, textarea, [contenteditable="true"], [role="searchbox"], [role="textbox"]';
@@ -229,6 +238,7 @@ export default definePlugin({
     let countPrefix = "";
     let insertSession: InsertSession | null = null;
     let searchSession: SearchSession | null = null;
+    let topPrefixPending = false;
 
     const composerFromTarget = (target: EventTarget | null): HTMLElement | null => {
       const element = elementFromTarget(target);
@@ -246,6 +256,7 @@ export default definePlugin({
 
     const resetPrefixes = (): void => {
       resetCount();
+      topPrefixPending = false;
     };
 
     const takeCount = (): number => {
@@ -781,12 +792,13 @@ export default definePlugin({
       root: HTMLElement,
       selector: string,
       kind: CursorKind,
+      direction: Direction,
     ): boolean => {
       cancelPendingMove();
       const elements = canonicalElements(root, selector);
       if (elements.length === 0) return false;
 
-      const edge = elements[elements.length - 1];
+      const edge = elements[direction === "next" ? elements.length - 1 : 0];
       let candidate: HTMLElement | null = edge.parentElement;
       let scroller: HTMLElement | null = null;
       let largestScrollRange = 1;
@@ -807,16 +819,16 @@ export default definePlugin({
 
       const scrollToEdge = (): void => {
         if (!scroller) return;
-        scroller.scrollTop = scroller.scrollHeight;
+        scroller.scrollTop = direction === "next" ? scroller.scrollHeight : 0;
       };
       const startedAt = performance.now();
       let stableSince = startedAt;
       let lastEdge: HTMLElement | null = null;
       let lastIdentity: string | null = null;
       let lastScrollHeight = -1;
-      const quietWindow = 200;
-      const minimumSettle = 300;
-      const maximumSettle = 1_500;
+      const quietWindow = direction === "previous" && kind === "message" ? 500 : 200;
+      const minimumSettle = direction === "previous" && kind === "message" ? 500 : 300;
+      const maximumSettle = direction === "previous" && kind === "message" ? 2_000 : 1_500;
       const reconcile = (): void => {
         cancelBoundaryRetry = klack.timers.timeout(() => {
           cancelBoundaryRetry = null;
@@ -826,11 +838,13 @@ export default definePlugin({
             if (performance.now() - startedAt < maximumSettle) reconcile();
             return;
           }
-          const refreshedEdge = refreshed[refreshed.length - 1];
+          const refreshedEdge = refreshed[direction === "next" ? refreshed.length - 1 : 0];
           const refreshedIdentity = identityFor(refreshedEdge, kind);
           const now = performance.now();
           const atEdge = scroller
-            ? scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+            ? direction === "next"
+              ? scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+              : scroller.scrollTop <= 1
             : true;
           const sameEdge = refreshedIdentity
             ? refreshedIdentity === lastIdentity
@@ -866,12 +880,25 @@ export default definePlugin({
         const root = visibleElement(sidebarRootSelector);
         if (!root) return false;
         preferredSurface = "sidebar";
-        return boundaryWithin(root, sidebarItemSelector, "sidebar");
+        return boundaryWithin(root, sidebarItemSelector, "sidebar", "next");
       }
       const surface = messageSurface();
       if (!surface) return false;
       preferredSurface = surface.id;
-      return boundaryWithin(surface.root, messageRowSelector, "message");
+      return boundaryWithin(surface.root, messageRowSelector, "message", "next");
+    };
+
+    const moveToTop = (): boolean => {
+      if (preferredSurface === "sidebar" || cursor?.kind === "sidebar") {
+        const root = visibleElement(sidebarRootSelector);
+        if (!root) return false;
+        preferredSurface = "sidebar";
+        return boundaryWithin(root, sidebarItemSelector, "sidebar", "previous");
+      }
+      const surface = messageSurface();
+      if (surface?.id !== "thread") return false;
+      preferredSurface = "thread";
+      return boundaryWithin(surface.root, messageRowSelector, "message", "previous");
     };
 
     const enterSidebar = (): boolean => {
@@ -1087,8 +1114,22 @@ export default definePlugin({
         }
         return;
       }
+      const sidebarOwnsPassiveFocus = Boolean(
+        targetElement?.closest(sidebarRootSelector) &&
+          !targetElement.closest(TEXT_ENTRY_TARGET_SELECTOR),
+      );
+      if (sidebarOwnsPassiveFocus) {
+        preferredSurface = "sidebar";
+        if (cursor?.kind !== "sidebar") {
+          const focusedItem = targetElement?.closest(sidebarItemSelector);
+          if (focusedItem instanceof HTMLElement && isRendered(focusedItem)) {
+            select(focusedItem, "sidebar");
+          }
+        }
+      }
       if (
         (!focusedNormalComposer &&
+          !sidebarOwnsPassiveFocus &&
           (hasNativeKeyboardTarget(event.target) || hasNativeKeyboardTarget(document.activeElement))) ||
         hasBlockingSurface()
       ) {
@@ -1101,6 +1142,7 @@ export default definePlugin({
       cancelPendingMove();
       cancelDeferredFocus();
       if (command === "count") {
+        topPrefixPending = false;
         const nextPrefix = appendCountDigit(countPrefix, event.key);
         if (!nextPrefix) return;
         countPrefix = nextPrefix;
@@ -1111,26 +1153,40 @@ export default definePlugin({
 
       const hadCursor = cursor !== null;
       const hadCount = countPrefix.length > 0;
-      const amount = takeCount();
+      const hadTopPrefix = topPrefixPending;
       let handled = false;
-      if (command === "next" || command === "previous") {
-        const direction = command === "next" ? "next" : "previous";
-        handled =
-          preferredSurface === "sidebar" || cursor?.kind === "sidebar"
-            ? moveSidebar(direction, amount)
-            : moveMessages(direction, amount);
-      } else if (command === "page-next" || command === "page-previous") {
-        handled = movePage(command === "page-next" ? "next" : "previous", 0.9, amount);
-      } else if (command === "half-next" || command === "half-previous") {
-        handled = movePage(command === "half-next" ? "next" : "previous", 0.5, amount);
-      } else if (command === "bottom") handled = moveToBottom();
-      else if (command === "left") handled = moveLeft();
-      else if (command === "activate") handled = activate();
-      else if (command === "insert") handled = focusComposer();
-      else if (command === "search") handled = openSearch();
-      else handled = unwind();
+      if (command === "top-prefix") {
+        resetCount();
+        if (!hadTopPrefix) {
+          topPrefixPending = true;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+        topPrefixPending = false;
+        handled = moveToTop();
+      } else {
+        topPrefixPending = false;
+        const amount = takeCount();
+        if (command === "next" || command === "previous") {
+          const direction = command === "next" ? "next" : "previous";
+          handled =
+            preferredSurface === "sidebar" || cursor?.kind === "sidebar"
+              ? moveSidebar(direction, amount)
+              : moveMessages(direction, amount);
+        } else if (command === "page-next" || command === "page-previous") {
+          handled = movePage(command === "page-next" ? "next" : "previous", 0.9, amount);
+        } else if (command === "half-next" || command === "half-previous") {
+          handled = movePage(command === "half-next" ? "next" : "previous", 0.5, amount);
+        } else if (command === "bottom") handled = moveToBottom();
+        else if (command === "left") handled = moveLeft();
+        else if (command === "activate") handled = activate();
+        else if (command === "insert") handled = focusComposer();
+        else if (command === "search") handled = openSearch();
+        else handled = unwind();
+      }
 
-      if (!handled && !hadCursor && !hadCount && !leftNormalComposer) return;
+      if (!handled && !hadCursor && !hadCount && !hadTopPrefix && !leftNormalComposer) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     };

@@ -228,6 +228,7 @@ the Klack plugin manager, then use:
 | Key | Action |
 | --- | --- |
 | `[count]j` / `[count]k` | Select the next or previous conversation or message; for example, `10j` moves ten rows. |
+| `gg` | Select the first channel in the sidebar or the first message in an open thread. |
 | `G` | Select the last row in the active navigation surface. |
 | `h` | Move from messages to the sidebar, or close an open thread. |
 | `l` / `Enter` | Open the selected conversation or message thread. |
@@ -245,7 +246,8 @@ Press `/` from the sidebar, message transcript, Threads view, or an open thread
 to open global Slack search with its input focused immediately. Press `Escape`
 to close search and restore the Vim cursor to its previous surface and row.
 Search uses native typing immediately, so `i` is inserted into the query there
-rather than acting as the insert-mode command.
+rather than acting as the insert-mode command. To search within one channel,
+use Slack's `in:channel-name search terms` syntax in that field.
 
 VimNavigation is modal: it remains in normal mode even when Slack leaves the
 message composer focused. Normal-mode keys move the Vim cursor without changing
@@ -256,7 +258,10 @@ lists retain their native behavior. Other modified keys are left alone;
 
 For channel navigation, press `h` to move into the sidebar, use `j`/`k` to
 place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
-open it. To open a thread, use `j`/`k` in the message transcript to highlight
+open it. `gg` moves to the first sidebar channel; it also moves to the first
+message in an open thread. Main-channel history is excluded because Slack
+loads older messages without a finite top. To open a thread, use `j`/`k` in
+the message transcript to highlight
 its parent message, then press `l` or `Enter`. Once the thread opens, use
 `j`/`k` to navigate its messages and `i` to focus the thread reply composer.
 Press `Escape` to return to normal mode, then `h` to close the thread and

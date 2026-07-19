@@ -13,6 +13,7 @@ export type VimCommand =
   | "page-previous"
   | "previous"
   | "search"
+  | "top-prefix"
   | "unwind";
 
 export type VimKeyInput = {
@@ -57,7 +58,15 @@ export function keyCommand(
     return command;
   }
 
-  if (event.shiftKey && event.key !== "{" && event.key !== "}" && event.key !== "G") return null;
+  if (
+    event.shiftKey &&
+    event.key !== "{" &&
+    event.key !== "}" &&
+    event.key !== "/" &&
+    event.key !== "G"
+  ) {
+    return null;
+  }
 
   let command: VimCommand | null = null;
   if (/^\d$/.test(event.key)) command = "count";
@@ -67,6 +76,7 @@ export function keyCommand(
   else if (event.key === "}") command = "page-next";
   else if (event.key === "{") command = "page-previous";
   else if (event.key === "/") command = "search";
+  else if (event.key === "g") command = "top-prefix";
   else if (event.key === "G") command = "bottom";
   else if (event.key === "i") command = "insert";
   else if (event.key === "l" || event.key === "Enter") command = "activate";
