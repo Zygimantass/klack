@@ -8,6 +8,7 @@ BIN_DIR=${KLACK_BIN_DIR:-${HOME}/.local/bin}
 RELEASE_BASE_URL=${KLACK_RELEASE_BASE_URL:-https://github.com/${REPOSITORY}/releases/download}
 LATEST_URL=${KLACK_LATEST_URL:-https://github.com/${REPOSITORY}/releases/latest}
 VERSION=${KLACK_VERSION:-}
+PR_NUMBER=${KLACK_PR:-}
 INSTALL_SLACK=false
 APP_PATH=
 NO_RESIGN=false
@@ -26,11 +27,12 @@ usage() {
 Install the latest Klack release for macOS.
 
 Usage:
-  install.sh [--install] [--version vX.Y.Z] [--app /Applications/Slack.app] [--no-resign]
+  install.sh [--install] [--version vX.Y.Z | --pr NUMBER] [--app /Applications/Slack.app] [--no-resign]
 
 Options:
   --install         Run `klack install` after installing the Klack runtime.
   --version VERSION Install a specific release tag instead of the latest.
+  --pr NUMBER       Install the successful CI build for a pull request.
   --app PATH        Forward a custom Slack app path to `klack install`.
   --no-resign       Forward `--no-resign` to `klack install`.
   -h, --help        Show this help.
@@ -49,6 +51,11 @@ while [ "$#" -gt 0 ]; do
     --version)
       [ "$#" -ge 2 ] || fail "--version requires a release tag"
       VERSION=$2
+      shift
+      ;;
+    --pr)
+      [ "$#" -ge 2 ] || fail "--pr requires a pull request number"
+      PR_NUMBER=$2
       shift
       ;;
     --app)
@@ -112,45 +119,106 @@ download() {
   esac
 }
 
-if [ -z "$VERSION" ]; then
-  VERSION=$(download "$LATEST_URL" -o /dev/null -w '%{url_effective}')
-  VERSION=${VERSION%/}
-  VERSION=${VERSION##*/}
-fi
-
-case "$VERSION" in
-  v[0-9]*) ;;
-  *) fail "invalid release tag: $VERSION" ;;
-esac
-case "$VERSION" in
-  *[!A-Za-z0-9._-]*) fail "invalid release tag: $VERSION" ;;
-esac
-
-ARCHIVE=klack-${VERSION}-darwin-${ARCH}.tar.gz
-RELEASE_URL=${RELEASE_BASE_URL}/${VERSION}
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/klack-install.XXXXXX")
 RELEASE_STAGE=
 INSTALL_LOCK=
 trap 'rm -rf "$TEMP_DIR"; [ -z "$RELEASE_STAGE" ] || rm -rf "$RELEASE_STAGE"; [ -z "$INSTALL_LOCK" ] || rmdir "$INSTALL_LOCK" 2>/dev/null || true' EXIT HUP INT TERM
 
-say "Downloading Klack ${VERSION} for darwin-${ARCH}..."
-download "${RELEASE_URL}/${ARCHIVE}" -o "${TEMP_DIR}/${ARCHIVE}"
-download "${RELEASE_URL}/checksums.txt" -o "${TEMP_DIR}/checksums.txt"
+if [ -n "$PR_NUMBER" ] && [ -n "$VERSION" ]; then
+  fail "--pr and --version cannot be used together"
+fi
 
-EXPECTED_CHECKSUM=$(awk -v archive="$ARCHIVE" '$2 == archive || $2 == "*" archive { print $1; exit }' "${TEMP_DIR}/checksums.txt")
+if [ -n "$PR_NUMBER" ]; then
+  case "$PR_NUMBER" in
+    *[!0-9]*|'') fail "invalid pull request number: $PR_NUMBER" ;;
+  esac
+  [ "$PR_NUMBER" -gt 0 ] 2>/dev/null || fail "invalid pull request number: $PR_NUMBER"
+  command -v gh >/dev/null 2>&1 || fail "GitHub CLI is required for PR builds: https://cli.github.com/"
+  gh auth status >/dev/null 2>&1 || fail "authenticate GitHub CLI before installing a PR build: gh auth login"
+
+  PR_SHA=$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid') ||
+    fail "could not resolve pull request #${PR_NUMBER}"
+  case "$PR_SHA" in
+    *[!0-9a-f]*|'') fail "pull request #${PR_NUMBER} returned an invalid head commit" ;;
+  esac
+  [ "${#PR_SHA}" -eq 40 ] || fail "pull request #${PR_NUMBER} returned an invalid head commit"
+
+  RUN_ID=$(gh run list \
+    --repo "$REPOSITORY" \
+    --workflow CI \
+    --event pull_request \
+    --commit "$PR_SHA" \
+    --status success \
+    --limit 1 \
+    --json databaseId \
+    --jq '.[0].databaseId // empty') || fail "could not query CI for pull request #${PR_NUMBER}"
+  case "$RUN_ID" in
+    *[!0-9]*|'')
+      fail "pull request #${PR_NUMBER} has no successful CI build for ${PR_SHA}; wait for CI or approve the workflow first"
+      ;;
+  esac
+
+  ARTIFACT=klack-pr-${PR_NUMBER}-darwin-${ARCH}
+  ARTIFACT_DIR=${TEMP_DIR}/artifact
+  mkdir -p "$ARTIFACT_DIR"
+  say "WARNING: PR builds are unreviewed code. Only continue with pull requests you trust."
+  say "Downloading Klack PR #${PR_NUMBER} (${PR_SHA}) for darwin-${ARCH}..."
+  gh run download "$RUN_ID" --repo "$REPOSITORY" --name "$ARTIFACT" --dir "$ARTIFACT_DIR" ||
+    fail "could not download ${ARTIFACT} from CI run ${RUN_ID}"
+
+  ARCHIVE_PATH=
+  for CANDIDATE in "${ARTIFACT_DIR}"/klack-v*-darwin-${ARCH}.tar.gz; do
+    [ -f "$CANDIDATE" ] || continue
+    [ -z "$ARCHIVE_PATH" ] || fail "PR artifact contains multiple darwin-${ARCH} archives"
+    ARCHIVE_PATH=$CANDIDATE
+  done
+  [ -n "$ARCHIVE_PATH" ] || fail "PR artifact does not contain a darwin-${ARCH} archive"
+  ARCHIVE=${ARCHIVE_PATH##*/}
+  CHECKSUM_FILE=${ARCHIVE_PATH}.sha256
+  [ -f "$CHECKSUM_FILE" ] || fail "PR artifact does not contain a checksum for ${ARCHIVE}"
+  SHORT_SHA=$(printf '%s' "$PR_SHA" | cut -c1-12)
+  INSTALL_VERSION=pr-${PR_NUMBER}-${SHORT_SHA}-${RUN_ID}
+  DISPLAY_VERSION="PR #${PR_NUMBER} at ${SHORT_SHA}"
+else
+  if [ -z "$VERSION" ]; then
+    VERSION=$(download "$LATEST_URL" -o /dev/null -w '%{url_effective}')
+    VERSION=${VERSION%/}
+    VERSION=${VERSION##*/}
+  fi
+
+  case "$VERSION" in
+    v[0-9]*) ;;
+    *) fail "invalid release tag: $VERSION" ;;
+  esac
+  case "$VERSION" in
+    *[!A-Za-z0-9._-]*) fail "invalid release tag: $VERSION" ;;
+  esac
+
+  ARCHIVE=klack-${VERSION}-darwin-${ARCH}.tar.gz
+  ARCHIVE_PATH=${TEMP_DIR}/${ARCHIVE}
+  RELEASE_URL=${RELEASE_BASE_URL}/${VERSION}
+  CHECKSUM_FILE=${TEMP_DIR}/checksums.txt
+  INSTALL_VERSION=$VERSION
+  DISPLAY_VERSION=$VERSION
+  say "Downloading Klack ${VERSION} for darwin-${ARCH}..."
+  download "${RELEASE_URL}/${ARCHIVE}" -o "$ARCHIVE_PATH"
+  download "${RELEASE_URL}/checksums.txt" -o "$CHECKSUM_FILE"
+fi
+
+EXPECTED_CHECKSUM=$(awk -v archive="$ARCHIVE" '$2 == archive || $2 == "*" archive { print $1; exit }' "$CHECKSUM_FILE")
 [ -n "$EXPECTED_CHECKSUM" ] || fail "checksums.txt has no entry for ${ARCHIVE}"
 
 if command -v shasum >/dev/null 2>&1; then
-  ACTUAL_CHECKSUM=$(shasum -a 256 "${TEMP_DIR}/${ARCHIVE}" | awk '{ print $1 }')
+  ACTUAL_CHECKSUM=$(shasum -a 256 "$ARCHIVE_PATH" | awk '{ print $1 }')
 elif command -v sha256sum >/dev/null 2>&1; then
-  ACTUAL_CHECKSUM=$(sha256sum "${TEMP_DIR}/${ARCHIVE}" | awk '{ print $1 }')
+  ACTUAL_CHECKSUM=$(sha256sum "$ARCHIVE_PATH" | awk '{ print $1 }')
 else
   fail "shasum or sha256sum is required to verify the release"
 fi
 [ "$ACTUAL_CHECKSUM" = "$EXPECTED_CHECKSUM" ] || fail "checksum verification failed for ${ARCHIVE}"
 
 mkdir -p "${TEMP_DIR}/extracted"
-tar -xzf "${TEMP_DIR}/${ARCHIVE}" -C "${TEMP_DIR}/extracted"
+tar -xzf "$ARCHIVE_PATH" -C "${TEMP_DIR}/extracted"
 PACKAGE_ROOT=${TEMP_DIR}/extracted/klack
 [ -f "${PACKAGE_ROOT}/dist/cli.cjs" ] || fail "release archive does not contain dist/cli.cjs"
 [ -f "${PACKAGE_ROOT}/dist/main.cjs" ] || fail "release archive does not contain dist/main.cjs"
@@ -160,7 +228,7 @@ PACKAGE_ROOT=${TEMP_DIR}/extracted/klack
 [ -d "${PACKAGE_ROOT}/node_modules" ] || fail "release archive does not contain production dependencies"
 
 RELEASES_DIR=${INSTALL_ROOT}/releases
-RELEASE_DIR=${RELEASES_DIR}/${VERSION}
+RELEASE_DIR=${RELEASES_DIR}/${INSTALL_VERSION}
 mkdir -p "$RELEASES_DIR" "$BIN_DIR"
 LOCK_PATH=${INSTALL_ROOT}/.install-lock
 mkdir "$LOCK_PATH" 2>/dev/null || fail "another Klack installation is already running"
@@ -175,7 +243,7 @@ if [ -e "$RELEASE_DIR" ]; then
     [ ! -d "${RELEASE_DIR}/node_modules" ]; then
     fail "existing release is incomplete; remove ${RELEASE_DIR} and re-run the installer"
   fi
-  say "Klack ${VERSION} is already downloaded."
+  say "Klack ${DISPLAY_VERSION} is already downloaded."
 else
   RELEASE_STAGE=$(mktemp -d "${RELEASES_DIR}/.staging.XXXXXX")
   chmod +x "${PACKAGE_ROOT}/dist/cli.cjs"
@@ -192,10 +260,10 @@ if [ -e "$LAUNCHER" ] || [ -L "$LAUNCHER" ]; then
     fail "refusing to replace existing launcher: ${LAUNCHER}"
 fi
 
-ln -sfn "releases/${VERSION}" "${INSTALL_ROOT}/current"
+ln -sfn "releases/${INSTALL_VERSION}" "${INSTALL_ROOT}/current"
 ln -sfn "${INSTALL_ROOT}/current/dist/cli.cjs" "$LAUNCHER"
 
-say "Klack ${VERSION} installed in ${RELEASE_DIR}"
+say "Klack ${DISPLAY_VERSION} installed in ${RELEASE_DIR}"
 say "Launcher: ${LAUNCHER}"
 
 case ":${PATH}:" in

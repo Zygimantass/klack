@@ -1,4 +1,4 @@
-export const KLACK_VERSION = "0.2.0";
+export const KLACK_VERSION = "0.2.1";
 export const BOOTSTRAP_PACKAGE_NAME = "klack-bootstrap";
 export const ORIGINAL_ASAR_NAME = "_app.asar";
 export const PLUGIN_CHANNEL = "KLACK_GET_PLUGINS";

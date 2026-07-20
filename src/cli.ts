@@ -12,6 +12,7 @@ function usage(): string {
 Usage:
   klack status [--app /Applications/Slack.app]
   klack install [--app /Applications/Slack.app] [--no-resign]
+  klack install '#123' [--app /Applications/Slack.app] [--no-resign]
   klack update [--app /Applications/Slack.app] [--no-resign]
   klack uninstall [--app /Applications/Slack.app] [--no-resign]
 
@@ -20,9 +21,26 @@ Slack's app.asar and replaces the outer app's vendor signature with an ad-hoc
 signature. --no-resign leaves the modified app unable to launch until signed.`;
 }
 
-function parseArguments(argv: string[]): { appPath: string; command: string; resign: boolean } {
+function parsePullRequest(value: string): number {
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error(`Invalid pull request number: ${value}`);
+  }
+  const pullRequest = Number(value);
+  if (!Number.isSafeInteger(pullRequest)) {
+    throw new Error(`Invalid pull request number: ${value}`);
+  }
+  return pullRequest;
+}
+
+function parseArguments(argv: string[]): {
+  appPath: string;
+  command: string;
+  pullRequest?: number;
+  resign: boolean;
+} {
   let appPath = DEFAULT_SLACK_APP;
   let command = "help";
+  let pullRequest: number | undefined;
   let resign = true;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -32,18 +50,30 @@ function parseArguments(argv: string[]): { appPath: string; command: string; res
       if (!value) throw new Error("--app requires a path");
       appPath = value;
       index += 1;
+    } else if (argument === "--pr") {
+      const value = argv[index + 1];
+      if (!value) throw new Error("--pr requires a pull request number");
+      if (pullRequest !== undefined) throw new Error("Only one pull request can be installed at a time");
+      pullRequest = parsePullRequest(value);
+      index += 1;
     } else if (argument === "--no-resign") {
       resign = false;
     } else if (argument === "--help" || argument === "-h") {
       command = "help";
     } else if (!argument.startsWith("-") && command === "help") {
       command = argument;
+    } else if (argument.startsWith("#") && command === "install" && pullRequest === undefined) {
+      pullRequest = parsePullRequest(argument.slice(1));
     } else {
       throw new Error(`Unknown argument: ${argument}`);
     }
   }
 
-  return { appPath: path.resolve(appPath), command, resign };
+  if (pullRequest !== undefined && command !== "install") {
+    throw new Error("A pull request can only be selected with `klack install`");
+  }
+
+  return { appPath: path.resolve(appPath), command, pullRequest, resign };
 }
 
 function slackIsRunning(): boolean {
@@ -144,19 +174,21 @@ function uninstallApp(appPath: string, resign: boolean) {
   return getStatus(appPath);
 }
 
-function updateKlack(appPath: string, klackRoot: string, resign: boolean): void {
-  const updateScript = path.join(klackRoot, "install.sh");
-  if (!fs.existsSync(updateScript)) {
-    throw new Error(`This Klack installation cannot update itself because ${updateScript} is missing`);
+function runReleaseInstaller(appPath: string, klackRoot: string, resign: boolean, pullRequest?: number): void {
+  const installScript = path.join(klackRoot, "install.sh");
+  if (!fs.existsSync(installScript)) {
+    throw new Error(`This Klack installation cannot download builds because ${installScript} is missing`);
   }
 
-  const args = [updateScript, "--install", "--app", appPath];
+  const args = [installScript];
+  if (pullRequest !== undefined) args.push("--pr", String(pullRequest));
+  args.push("--install", "--app", appPath);
   if (!resign) args.push("--no-resign");
   execFileSync("/bin/sh", args, { stdio: "inherit" });
 }
 
 async function main(): Promise<void> {
-  const { appPath, command, resign } = parseArguments(process.argv.slice(2));
+  const { appPath, command, pullRequest, resign } = parseArguments(process.argv.slice(2));
   // Release installs use a `current` symlink for the CLI. Resolve it before
   // writing the runtime path into Slack's bootstrap so an update cannot move
   // an existing Slack installation to a version it has not installed yet.
@@ -178,7 +210,12 @@ async function main(): Promise<void> {
   }
 
   if (command === "update") {
-    updateKlack(appPath, klackRoot, resign);
+    runReleaseInstaller(appPath, klackRoot, resign);
+    return;
+  }
+
+  if (command === "install" && pullRequest !== undefined) {
+    runReleaseInstaller(appPath, klackRoot, resign, pullRequest);
     return;
   }
 

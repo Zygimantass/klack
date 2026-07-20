@@ -62,6 +62,17 @@ klack update
 klack uninstall
 ```
 
+To test the latest successful CI build for a pull request, authenticate the
+GitHub CLI and pass the quoted PR number:
+
+```sh
+gh auth login
+klack install '#123'
+```
+
+`klack install --pr 123` is equivalent. PR builds are unreviewed code with the
+same access as Klack and its plugins; only install pull requests you trust.
+
 When running from a source checkout, use the equivalent pnpm commands:
 
 ```sh

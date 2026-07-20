@@ -61,6 +61,17 @@ klack update
 
 Use the same `--app` or `--no-resign` options accepted by `klack install` when needed. Klack keeps previously downloaded releases and only switches Slack to the new runtime after the verified download succeeds.
 
+## Test a pull request build
+
+After the pull request’s CI succeeds, authenticate the GitHub CLI and install its current build:
+
+```sh
+gh auth login
+klack install '#123'
+```
+
+The quotes keep `#123` from becoming a shell comment. PR artifacts are retained temporarily and pinned locally by PR number, commit, and CI run. Pull request code is unreviewed and receives the same access as Klack and its plugins, so only install builds you trust.
+
 To download Klack and patch Slack in one command, add `--install` to the installer:
 
 ```sh

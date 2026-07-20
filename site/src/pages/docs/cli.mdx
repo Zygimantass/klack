@@ -15,6 +15,7 @@ Use `klack` after a release installation. From a source checkout, prefix the sam
 | --- | --- |
 | `klack status` | Print the app path, Klack state, and detected Slack version. |
 | `klack install` | Install or refresh the bootstrap and generated preload. |
+| `klack install '#123'` | Install the latest successful CI build for pull request #123. |
 | `klack update` | Download and verify the latest Klack release, then refresh Slack with it. |
 | `klack uninstall` | Remove Klack and restore Slack’s original application resources. |
 
@@ -23,8 +24,24 @@ Use `klack` after a release installation. From a source checkout, prefix the sam
 | Option | Description |
 | --- | --- |
 | `--app <path>` | Operate on a Slack app other than `/Applications/Slack.app`. |
+| `--pr <number>` | Install a pull request build; equivalent to the quoted `'#123'` selector. |
 | `--no-resign` | Skip macOS ad-hoc signing. The changed app will not launch until it is signed. |
 | `-h`, `--help` | Print command usage. |
+
+## Test a pull request
+
+PR installation requires an authenticated [GitHub CLI](https://cli.github.com/) and a successful Klack CI run for the PR’s current head commit:
+
+```sh
+gh auth login
+klack install '#123'
+```
+
+Keep the `#123` selector quoted because some shells treat an unquoted `#` as a comment. Klack downloads the CI artifact for your Mac, verifies its checksum, stores it under a PR- and commit-specific version directory, and refreshes Slack with that runtime.
+
+:::warning
+Pull request builds are unreviewed code and run with the same access as Klack and its plugins. Only install a PR you trust.
+:::
 
 ## Launch without injection
 

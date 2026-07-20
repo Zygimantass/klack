@@ -13,6 +13,7 @@ Klack is unofficial, unsupported, and intended for local experimentation. Its pl
 
 - **Plugins are trusted code.** They can inspect or modify anything visible to Slack’s renderer. Never install a plugin you have not reviewed.
 - **Plugins are not isolated from one another.** Plugin ownership provides lifecycle cleanup, not a security boundary.
+- **Pull request builds are unreviewed code.** Installing `'#123'` runs that PR’s Klack runtime and bundled plugins inside Slack. Only install PRs you trust.
 - **Installation changes Slack’s bundle.** This invalidates Slack’s vendor signature and may violate Slack or workspace policies.
 - **Ad-hoc signing has consequences.** Keychain, notifications, updates, and device permissions can behave differently.
 - **Managed devices may block changes.** Get explicit authorization before using Klack on workplace hardware.
