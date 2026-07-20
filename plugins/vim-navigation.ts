@@ -3490,7 +3490,9 @@ export default definePlugin({
       `,
       { id: "vim-navigation" },
     );
-    klack.events.on(document, "keydown", handleKeyDown, true);
+    // Slack handles Escape on document capture; listen one level earlier so
+    // Vim-owned inline editors can reliably cancel before Slack consumes it.
+    klack.events.on(window, "keydown", handleKeyDown, true);
     klack.events.on(document, "beforeinput", handleBeforeInput, true);
     klack.events.on(document, "click", updateSurfaceFromClick);
     klack.dom.watch(searchInputSelector, (container) => {
