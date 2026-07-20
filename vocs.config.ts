@@ -76,6 +76,15 @@ export default defineConfig({
         key: 'homepage-refresh-scroll',
         textContent: `if (location.pathname === '/' && location.hash && performance.getEntriesByType('navigation')[0]?.type === 'reload') history.replaceState(history.state, '', location.pathname + location.search)`,
       },
+      {
+        key: 'vercel-analytics',
+        textContent: `window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };`,
+      },
+      {
+        key: 'vercel-analytics-script',
+        src: '/_vercel/insights/script.js',
+        defer: true,
+      },
     ],
   },
 })
