@@ -5,6 +5,9 @@ import {
   classifySlackMention,
   isRelevantSlackMention,
   relevantUserGroupIds,
+  retryAfterMilliseconds,
+  userGroupMemberships,
+  userGroupUsersMembership,
 } from "../plugins/lib/minimal-irc-compatibility";
 
 test("classifies actual Slack user and user-group mentions", () => {
@@ -55,17 +58,25 @@ test("does not mistake channels or linked-message preview slugs for mentions", (
 });
 
 test("marks only the current user and groups containing that user as relevant", () => {
-  const groups = relevantUserGroupIds(
-    [
-      { id: "S_MEMBER", users: ["U_SELF", "U_OTHER"] },
-      { id: "S_OTHER", users: ["U_OTHER"] },
-      { id: "S_DISABLED", is_usergroup_disabled: true, users: ["U_SELF"] },
-      { date_delete: 1780000000, id: "S_DELETED", users: ["U_SELF"] },
-      { id: "S_MALFORMED", users: "U_SELF" },
-    ],
-    "U_SELF",
-  );
+  const payload = [
+    { id: "S_MEMBER", users: ["U_SELF", "U_OTHER"] },
+    { id: "S_OTHER", users: ["U_OTHER"] },
+    { id: "S_DISABLED", is_usergroup_disabled: true, users: ["U_SELF"] },
+    { date_delete: 1780000000, id: "S_DELETED", users: ["U_SELF"] },
+    { id: "S_MALFORMED", users: "U_SELF" },
+  ];
+  const memberships = userGroupMemberships(payload, "U_SELF");
+  const groups = relevantUserGroupIds(payload, "U_SELF");
 
+  assert.deepEqual(
+    [...memberships],
+    [
+      ["S_MEMBER", true],
+      ["S_OTHER", false],
+      ["S_DISABLED", false],
+      ["S_DELETED", false],
+    ],
+  );
   assert.deepEqual([...groups], ["S_MEMBER"]);
   assert.equal(isRelevantSlackMention({ id: "U_SELF", kind: "user" }, "U_SELF", groups), true);
   assert.equal(isRelevantSlackMention({ id: "U_OTHER", kind: "user" }, "U_SELF", groups), false);
@@ -77,4 +88,30 @@ test("marks only the current user and groups containing that user as relevant", 
     isRelevantSlackMention({ id: "S_OTHER", kind: "user-group" }, "U_SELF", groups),
     false,
   );
+});
+
+test("resolves a rendered group from its direct membership response", () => {
+  const bulk = userGroupMemberships(
+    [{ id: "S_ONCALL", users: ["U_SELF"] }],
+    "U_SELF",
+  );
+  assert.equal(bulk.has("S_INFRA"), false);
+  assert.equal(
+    userGroupUsersMembership({ ok: true, users: ["U_OTHER", "U_SELF"] }, "U_SELF"),
+    true,
+  );
+  assert.equal(userGroupUsersMembership({ ok: true, users: ["U_OTHER"] }, "U_SELF"), false);
+  assert.equal(userGroupUsersMembership({ ok: false, users: ["U_SELF"] }, "U_SELF"), null);
+  assert.equal(userGroupUsersMembership({ ok: true, users: "U_SELF" }, "U_SELF"), null);
+});
+
+test("parses Slack Retry-After values without shortening the requested delay", () => {
+  const now = Date.parse("2026-07-20T10:00:00Z");
+  assert.equal(retryAfterMilliseconds("12", now), 12_000);
+  assert.equal(
+    retryAfterMilliseconds("Mon, 20 Jul 2026 10:00:30 GMT", now),
+    30_000,
+  );
+  assert.equal(retryAfterMilliseconds("invalid", now), null);
+  assert.equal(retryAfterMilliseconds(null, now), null);
 });

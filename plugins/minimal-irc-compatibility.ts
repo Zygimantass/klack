@@ -3,9 +3,15 @@ import { definePlugin, type Cleanup } from "klack/sdk";
 import {
   classifySlackMention,
   isRelevantSlackMention,
-  relevantUserGroupIds,
+  retryAfterMilliseconds,
   type SlackMention,
+  userGroupMemberships,
+  userGroupUsersMembership,
 } from "./lib/minimal-irc-compatibility";
+
+const GROUP_LOOKUP_CONCURRENCY = 2;
+const GROUP_MEMBERSHIP_TTL_MS = 5 * 60 * 1_000;
+const SLACK_API_TIMEOUT_MS = 15_000;
 
 type ThemeManager = {
   isThemeEnabled(id: string): boolean;
@@ -88,6 +94,7 @@ export default definePlugin({
       const mentions = new Set<Element>();
       const sendersBySurface = new WeakMap<Element, Map<string, string>>();
       let active = true;
+      let currentToken = "";
       let currentUserId = "";
       let identityContext: string | null = null;
       let identityGeneration = 0;
@@ -95,8 +102,16 @@ export default definePlugin({
       let identityReady = false;
       let identityRetryCount = 0;
       let cancelIdentityRetry: Cleanup | null = null;
+      let cancelMembershipTimeout: Cleanup | null = null;
       let membershipAbort: AbortController | null = null;
       let relevantGroupIds = new Set<string>();
+      let resolvedGroupExpirations = new Map<string, number>();
+      const groupLookupAborts = new Map<string, AbortController>();
+      const groupLookupQueue = new Set<string>();
+      const groupLookupRefreshCancels = new Map<string, Cleanup>();
+      const groupLookupRetries = new Map<string, number>();
+      const groupLookupRetryCancels = new Map<string, Cleanup>();
+      const groupLookupTimeoutCancels = new Map<string, Cleanup>();
 
       const decorateMention = (mention: Element): void => {
         if (
@@ -110,21 +125,225 @@ export default definePlugin({
 
       const refreshMentions = (): void => mentions.forEach(decorateMention);
 
+      const refreshGroupMentions = (groupId: string): void => {
+        mentions.forEach((mention) => {
+          const candidate = mentionFromElement(mention);
+          if (candidate?.kind === "user-group" && candidate.id === groupId) {
+            decorateMention(mention);
+          }
+        });
+      };
+
+      const hasGroupMention = (groupId: string): boolean =>
+        Array.from(mentions).some((mention) => {
+          const candidate = mentionFromElement(mention);
+          return candidate?.kind === "user-group" && candidate.id === groupId;
+        });
+
+      const cancelGroupMembershipWork = (): void => {
+        groupLookupRetryCancels.forEach((cancel) => cancel());
+        groupLookupRetryCancels.clear();
+        groupLookupRefreshCancels.forEach((cancel) => cancel());
+        groupLookupRefreshCancels.clear();
+        groupLookupAborts.forEach((abort) => abort.abort());
+        groupLookupAborts.clear();
+        groupLookupTimeoutCancels.forEach((cancel) => cancel());
+        groupLookupTimeoutCancels.clear();
+        groupLookupQueue.clear();
+        groupLookupRetries.clear();
+      };
+
+      const scheduleGroupMembershipRetry = (
+        groupId: string,
+        generation: number,
+        retryAfterMs = 0,
+      ): void => {
+        const attempt = groupLookupRetries.get(groupId) || 0;
+        const delays = [250, 1_000, 3_000, 30_000] as const;
+        const delay = Math.max(delays[Math.min(attempt, delays.length - 1)], retryAfterMs);
+        groupLookupRetries.set(groupId, Math.min(attempt + 1, delays.length - 1));
+        groupLookupRetryCancels.set(
+          groupId,
+          klack.timers.timeout(() => {
+            groupLookupRetryCancels.delete(groupId);
+            if (
+              active &&
+              generation === identityGeneration &&
+              hasGroupMention(groupId)
+            ) {
+              ensureGroupMembership(groupId);
+            } else {
+              groupLookupRetries.delete(groupId);
+            }
+          }, delay),
+        );
+      };
+
+      const scheduleGroupMembershipRefresh = (
+        groupId: string,
+        generation: number,
+        delay = GROUP_MEMBERSHIP_TTL_MS,
+      ): void => {
+        groupLookupRefreshCancels.get(groupId)?.();
+        groupLookupRefreshCancels.set(
+          groupId,
+          klack.timers.timeout(() => {
+            groupLookupRefreshCancels.delete(groupId);
+            resolvedGroupExpirations.delete(groupId);
+            if (
+              active &&
+              generation === identityGeneration &&
+              hasGroupMention(groupId)
+            ) {
+              ensureGroupMembership(groupId);
+            }
+          }, delay),
+        );
+      };
+
+      const loadGroupMembership = async (
+        groupId: string,
+        generation: number,
+        abort: AbortController,
+      ): Promise<
+        { membership: boolean } | { retryAfterMs: number } | "stale"
+      > => {
+        const response = await fetch("/api/usergroups.users.list", {
+          body: new URLSearchParams({ token: currentToken, usergroup: groupId }),
+          credentials: "same-origin",
+          method: "POST",
+          signal: abort.signal,
+        });
+        if (!active || generation !== identityGeneration) return "stale";
+        if (!response.ok) {
+          return {
+            retryAfterMs:
+              response.status === 429
+                ? retryAfterMilliseconds(response.headers.get("Retry-After")) || 0
+                : 0,
+          };
+        }
+        const membership = userGroupUsersMembership(await response.json(), currentUserId);
+        if (!active || generation !== identityGeneration) return "stale";
+        return membership === null ? { retryAfterMs: 0 } : { membership };
+      };
+
+      const pumpGroupMembershipQueue = (): void => {
+        while (
+          active &&
+          groupLookupAborts.size < GROUP_LOOKUP_CONCURRENCY &&
+          groupLookupQueue.size
+        ) {
+          const groupId = groupLookupQueue.values().next().value as string;
+          groupLookupQueue.delete(groupId);
+          const generation = identityGeneration;
+          const abort = new AbortController();
+          let timedOut = false;
+          groupLookupAborts.set(groupId, abort);
+          let cancelRequestTimeout: Cleanup;
+          cancelRequestTimeout = klack.timers.timeout(() => {
+            if (groupLookupTimeoutCancels.get(groupId) === cancelRequestTimeout) {
+              timedOut = true;
+              groupLookupTimeoutCancels.delete(groupId);
+              abort.abort();
+            }
+          }, SLACK_API_TIMEOUT_MS);
+          groupLookupTimeoutCancels.set(groupId, cancelRequestTimeout);
+          const releaseLookup = (): void => {
+            if (groupLookupAborts.get(groupId) === abort) {
+              groupLookupAborts.delete(groupId);
+            }
+            if (groupLookupTimeoutCancels.get(groupId) === cancelRequestTimeout) {
+              cancelRequestTimeout();
+              groupLookupTimeoutCancels.delete(groupId);
+            }
+          };
+          void loadGroupMembership(groupId, generation, abort)
+            .then((result) => {
+              releaseLookup();
+              if (!active || generation !== identityGeneration || result === "stale") return;
+              if ("retryAfterMs" in result) {
+                scheduleGroupMembershipRetry(groupId, generation, result.retryAfterMs);
+              } else {
+                groupLookupRetries.delete(groupId);
+                resolvedGroupExpirations.set(
+                  groupId,
+                  Date.now() + GROUP_MEMBERSHIP_TTL_MS,
+                );
+                if (result.membership) relevantGroupIds.add(groupId);
+                else relevantGroupIds.delete(groupId);
+                refreshGroupMentions(groupId);
+                scheduleGroupMembershipRefresh(groupId, generation);
+              }
+              pumpGroupMembershipQueue();
+            })
+            .catch((error: unknown) => {
+              releaseLookup();
+              if (!active || generation !== identityGeneration) return;
+              const aborted = error instanceof DOMException && error.name === "AbortError";
+              if (timedOut || !aborted) {
+                klack.logger.warn(
+                  "[Klack] MinimalIRCCompatibility could not load a user-group membership",
+                );
+                scheduleGroupMembershipRetry(groupId, generation);
+              }
+              pumpGroupMembershipQueue();
+            });
+        }
+      };
+
+      function ensureGroupMembership(groupId: string): void {
+        const now = Date.now();
+        const resolvedUntil = resolvedGroupExpirations.get(groupId) || 0;
+        if (resolvedUntil && resolvedUntil <= now) {
+          resolvedGroupExpirations.delete(groupId);
+        }
+        if (
+          !active ||
+          !identityReady ||
+          !currentToken ||
+          !currentUserId ||
+          !/^S[A-Z0-9]+$/.test(groupId) ||
+          groupLookupQueue.has(groupId) ||
+          groupLookupAborts.has(groupId) ||
+          groupLookupRetryCancels.has(groupId)
+        ) {
+          return;
+        }
+        if (resolvedUntil > now && resolvedGroupExpirations.has(groupId)) {
+          if (!groupLookupRefreshCancels.has(groupId)) {
+            scheduleGroupMembershipRefresh(groupId, identityGeneration, resolvedUntil - now);
+          }
+          return;
+        }
+        groupLookupQueue.add(groupId);
+        pumpGroupMembershipQueue();
+      }
+
+      function ensureMentionGroupMemberships(): void {
+        mentions.forEach((mention) => {
+          const candidate = mentionFromElement(mention);
+          if (candidate?.kind === "user-group") ensureGroupMembership(candidate.id);
+        });
+      }
+
       const loadMentionIdentity = async (
         generation: number,
         abort: AbortController,
       ): Promise<"complete" | "retry" | "stale"> => {
         const delegate = activeSlackDelegate();
         const userId = await delegate?.getCurrentUserId?.();
-        if (!active || generation !== identityGeneration) return "stale";
+        if (abort.signal.aborted || !active || generation !== identityGeneration) return "stale";
         if (typeof userId !== "string" || !userId) return "retry";
         currentUserId = userId;
         refreshMentions();
 
         const token = await delegate?.getTokenForCurrentTeam?.();
-        if (!active || generation !== identityGeneration) return "stale";
+        if (abort.signal.aborted || !active || generation !== identityGeneration) return "stale";
         if (typeof token !== "string" || !token) return "retry";
+        currentToken = token;
         const body = new URLSearchParams({
+          include_disabled: "true",
           include_users: "true",
           token,
         });
@@ -136,9 +355,18 @@ export default definePlugin({
         });
         if (!response.ok) return "retry";
         const result = (await response.json()) as { ok?: unknown; usergroups?: unknown };
-        if (!active || generation !== identityGeneration) return "stale";
+        if (abort.signal.aborted || !active || generation !== identityGeneration) return "stale";
         if (result.ok !== true) return "retry";
-        relevantGroupIds = relevantUserGroupIds(result.usergroups, currentUserId);
+        const memberships = userGroupMemberships(result.usergroups, currentUserId);
+        const expiresAt = Date.now() + GROUP_MEMBERSHIP_TTL_MS;
+        resolvedGroupExpirations = new Map(
+          Array.from(memberships.keys()).map((id) => [id, expiresAt]),
+        );
+        relevantGroupIds = new Set(
+          Array.from(memberships)
+            .filter(([, member]) => member)
+            .map(([id]) => id),
+        );
         refreshMentions();
         return "complete";
       };
@@ -147,6 +375,7 @@ export default definePlugin({
         identityLoading = false;
         if (identityRetryCount >= 3) {
           identityReady = true;
+          ensureMentionGroupMemberships();
           return;
         }
         const delays = [250, 1_000, 3_000] as const;
@@ -167,10 +396,15 @@ export default definePlugin({
           identityLoading = false;
           identityReady = false;
           identityRetryCount = 0;
+          currentToken = "";
           currentUserId = "";
           relevantGroupIds = new Set();
+          resolvedGroupExpirations = new Map();
+          cancelGroupMembershipWork();
           cancelIdentityRetry?.();
           cancelIdentityRetry = null;
+          cancelMembershipTimeout?.();
+          cancelMembershipTimeout = null;
           membershipAbort?.abort();
           membershipAbort = null;
           refreshMentions();
@@ -180,18 +414,48 @@ export default definePlugin({
         identityLoading = true;
         const generation = identityGeneration;
         const abort = new AbortController();
+        let timedOut = false;
         membershipAbort = abort;
-        void loadMentionIdentity(generation, abort)
+        let cancelRequestTimeout: Cleanup;
+        const request = new Promise<"complete" | "retry" | "stale">((resolve, reject) => {
+          cancelRequestTimeout = klack.timers.timeout(() => {
+            if (cancelMembershipTimeout === cancelRequestTimeout) {
+              timedOut = true;
+              cancelMembershipTimeout = null;
+              abort.abort();
+              reject(new DOMException("Slack API request timed out", "AbortError"));
+            }
+          }, SLACK_API_TIMEOUT_MS);
+          cancelMembershipTimeout = cancelRequestTimeout;
+          void loadMentionIdentity(generation, abort).then(resolve, reject);
+        });
+        const releaseRequest = (): void => {
+          if (membershipAbort === abort) membershipAbort = null;
+          if (cancelMembershipTimeout === cancelRequestTimeout) {
+            cancelRequestTimeout();
+            cancelMembershipTimeout = null;
+          }
+        };
+        void request
           .then((outcome) => {
+            releaseRequest();
             if (!active || generation !== identityGeneration || outcome === "stale") return;
             if (outcome === "complete") {
               identityLoading = false;
               identityReady = true;
+              ensureMentionGroupMemberships();
             } else scheduleIdentityRetry(generation);
           })
           .catch((error: unknown) => {
+            releaseRequest();
             if (!active || generation !== identityGeneration) return;
-            if (error instanceof DOMException && error.name === "AbortError") return;
+            if (
+              !timedOut &&
+              error instanceof DOMException &&
+              error.name === "AbortError"
+            ) {
+              return;
+            }
             klack.logger.warn(
               "[Klack] MinimalIRCCompatibility could not load user-group membership",
             );
@@ -310,11 +574,15 @@ export default definePlugin({
             ensureMentionIdentity();
             mentions.add(mention);
             decorateMention(mention);
+            const candidate = mentionFromElement(mention);
+            if (candidate?.kind === "user-group") ensureGroupMembership(candidate.id);
             const stopObserving = klack.dom.observe(
               mention,
               () => {
                 ensureMentionIdentity();
                 decorateMention(mention);
+                const updated = mentionFromElement(mention);
+                if (updated?.kind === "user-group") ensureGroupMembership(updated.id);
               },
               {
                 attributeFilter: [
@@ -360,8 +628,11 @@ export default definePlugin({
       return () => {
         active = false;
         identityGeneration += 1;
+        currentToken = "";
         cancelIdentityRetry?.();
+        cancelMembershipTimeout?.();
         membershipAbort?.abort();
+        cancelGroupMembershipWork();
         [...cleanups].reverse().forEach((cleanup) => cleanup());
         [...decorations.keys()].forEach(removeDecoration);
       };
