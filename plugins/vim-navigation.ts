@@ -8,6 +8,7 @@ import {
   movedVisualIndex,
   shouldEnterGlobalSearchResults,
   shouldSuppressNormalModeKey,
+  shouldTreatComposerAsNormalMode,
   threadTimestampFromUrl,
   visualMotionCommand,
   wrappedIndex,
@@ -646,6 +647,41 @@ export default definePlugin({
       );
     };
 
+    const editorInputForRoot = (editorRoot: HTMLElement): HTMLElement | null =>
+      Array.from(editorRoot.querySelectorAll<HTMLElement>(composerInputSelector))
+        .filter(isRendered)
+        .find((editor) => editor.closest(messageEditorSelector) === editorRoot) || null;
+
+    const editorRootForSession = (session: EditSession): HTMLElement | null => {
+      const boundRoot = session.editor?.closest<HTMLElement>(messageEditorSelector);
+      if (boundRoot && isRendered(boundRoot)) return boundRoot;
+      return editEditorForMessage(messageForOrigin(session.origin))?.closest<HTMLElement>(
+        messageEditorSelector,
+      ) || null;
+    };
+
+    const visibleMessageEditorRoot = (target: EventTarget | null): HTMLElement | null => {
+      const targetElement = elementFromTarget(target);
+      const activeElement = document.activeElement;
+      for (const candidate of [targetElement, activeElement]) {
+        const root = candidate?.closest<HTMLElement>(messageEditorSelector);
+        if (root && isRendered(root)) return root;
+      }
+      if (hasBlockingSurface() || visibleElement(emojiPickerRootSelector)) return null;
+      return editSession ? editorRootForSession(editSession) : null;
+    };
+
+    const originForEditedMessage = (message: HTMLElement): CursorOrigin => ({
+      element: message,
+      identity: messageIdentity(message),
+      kind: "message",
+      surface: message.closest(threadPaneSelector)
+        ? "thread"
+        : message.closest(threadsViewSelector)
+          ? "threads"
+          : "main",
+    });
+
     const scheduleEditRestore = (origin: CursorOrigin, attempt = 0): void => {
       cancelPendingEditRestore = null;
       if (restoreCursorOrigin(origin)) return;
@@ -702,12 +738,20 @@ export default definePlugin({
         editor.focus({ preventScroll: true });
       }
 
+      let missingEditorFrames = 0;
       const verifyEditor = (): void => {
         cancelPendingEdit = null;
         if (editSession !== session) return;
-        const current = editEditorForMessage(messageForOrigin(session.origin));
+        const root = editorRootForSession(session);
+        const current = root ? editorInputForRoot(root) : null;
         if (current) {
           session.editor = current;
+          missingEditorFrames = 0;
+          return;
+        }
+        if (missingEditorFrames < 2) {
+          missingEditorFrames += 1;
+          cancelPendingEdit = klack.timers.animationFrame(verifyEditor);
           return;
         }
         finishEditSession(session);
@@ -723,9 +767,7 @@ export default definePlugin({
       );
     };
 
-    const cancelActiveMessageEdit = (session: EditSession): boolean => {
-      const message = messageForOrigin(session.origin);
-      const editorRoot = message ? visibleElement(messageEditorSelector, message) : null;
+    const cancelEditorRoot = (editorRoot: HTMLElement): boolean => {
       const cancel = editorRoot ? visibleElement(editCancelSelector, editorRoot) : null;
       if (!cancel) return false;
       activatingEditAction = true;
@@ -736,14 +778,29 @@ export default definePlugin({
       }
     };
 
-    const requestEditCancellation = (session: EditSession, attempt = 0): void => {
+    const cancelActiveMessageEdit = (
+      session: EditSession,
+      editorRoot = editorRootForSession(session),
+    ): boolean => Boolean(editorRoot && cancelEditorRoot(editorRoot));
+
+    const requestEditCancellation = (
+      session: EditSession,
+      attempt = 0,
+      editorRoot?: HTMLElement,
+    ): void => {
       cancelPendingEditCancel = null;
       if (editSession !== session || !session.cancelRequested) return;
-      const clicked = cancelActiveMessageEdit(session);
+      const currentRoot = editorRoot || editorRootForSession(session);
+      if (!currentRoot && session.phase === "editing" && attempt > 0) {
+        finishEditSession(session);
+        return;
+      }
+      const clicked = Boolean(currentRoot && cancelActiveMessageEdit(session, currentRoot));
       if (attempt >= 30) {
         if (!clicked) {
           console.warn("[Klack] VimNavigation could not cancel the active message edit");
         }
+        finishEditSession(session, { restore: false });
         return;
       }
       cancelPendingEditCancel = klack.timers.timeout(
@@ -1574,7 +1631,14 @@ export default definePlugin({
 
     const normalModeComposer = (target: EventTarget | null): HTMLElement | null => {
       const composer = composerFromTarget(target) || composerFromTarget(document.activeElement);
-      return composer && !isInsertComposer(composer) && !isEditEditor(composer) ? composer : null;
+      return composer &&
+        shouldTreatComposerAsNormalMode({
+          insideMessageEditor: Boolean(composer.closest(messageEditorSelector)),
+          ownedByEditSession: isEditEditor(composer),
+          ownedByInsertSession: isInsertComposer(composer),
+        })
+        ? composer
+        : null;
     };
 
     const leaveNormalModeComposer = (composer: HTMLElement): void => {
@@ -2609,14 +2673,14 @@ export default definePlugin({
     };
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      const plainEscape =
+      const unmodifiedEscape =
         event.key === "Escape" &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
         !event.shiftKey &&
-        !event.defaultPrevented &&
         !event.isComposing;
+      const plainEscape = unmodifiedEscape && !event.defaultPrevented;
       const plainEnter =
         event.key === "Enter" &&
         !event.altKey &&
@@ -2631,6 +2695,47 @@ export default definePlugin({
         (keyCommand(event) || shouldSuppressNormalModeKey(event))
       ) {
         cancelEditRestore();
+      }
+      const activeEditorRoot = unmodifiedEscape
+        ? visibleMessageEditorRoot(event.target)
+        : null;
+      if (activeEditorRoot) {
+        const message = activeEditorRoot.closest<HTMLElement>(messageRowSelector);
+        const editor = editorInputForRoot(activeEditorRoot);
+        const origin = message ? originForEditedMessage(message) : null;
+        let session = editSession;
+        if (!session && origin) {
+          session = {
+            cancelRequested: false,
+            editor: null,
+            menu: null,
+            menuTrigger: null,
+            origin,
+            phase: "editing",
+          };
+          editSession = session;
+        } else if (session && origin) {
+          session.origin = origin;
+        }
+        if (
+          session &&
+          editor &&
+          (session.phase !== "editing" || session.editor !== editor)
+        ) {
+          cancelPendingEditObserver?.();
+          cancelPendingEditObserver = null;
+          bindEditEditor(session, editor);
+        }
+        resetPrefixes();
+        if (session) {
+          session.cancelRequested = true;
+          requestEditCancellation(session, 0, activeEditorRoot);
+        } else {
+          cancelEditorRoot(activeEditorRoot);
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
       }
       if (plainEscape && editSession) {
         const session = editSession;

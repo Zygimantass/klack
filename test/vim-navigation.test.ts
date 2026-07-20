@@ -9,6 +9,7 @@ import {
   movedVisualIndex,
   shouldEnterGlobalSearchResults,
   shouldSuppressNormalModeKey,
+  shouldTreatComposerAsNormalMode,
   threadTimestampFromUrl,
   visualMotionCommand,
   wrappedIndex,
@@ -151,6 +152,33 @@ test("suppresses composer editing keys until insert mode", () => {
   ]) {
     assert.equal(shouldSuppressNormalModeKey(input), false);
   }
+});
+
+test("never treats an inline message editor as a normal-mode composer", () => {
+  assert.equal(
+    shouldTreatComposerAsNormalMode({
+      insideMessageEditor: true,
+      ownedByEditSession: false,
+      ownedByInsertSession: false,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldTreatComposerAsNormalMode({
+      insideMessageEditor: false,
+      ownedByEditSession: false,
+      ownedByInsertSession: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldTreatComposerAsNormalMode({
+      insideMessageEditor: false,
+      ownedByEditSession: true,
+      ownedByInsertSession: false,
+    }),
+    false,
+  );
 });
 
 test("moves within list boundaries without wrapping", () => {

@@ -60,6 +60,12 @@ export type GlobalSearchTransitionInput = {
   restoring: boolean;
 };
 
+export type NormalModeComposerContext = {
+  insideMessageEditor: boolean;
+  ownedByEditSession: boolean;
+  ownedByInsertSession: boolean;
+};
+
 export function shouldEnterGlobalSearchResults(
   input: GlobalSearchTransitionInput,
 ): boolean {
@@ -70,6 +76,16 @@ export function shouldEnterGlobalSearchResults(
     !input.restoring &&
     !input.hasEditor &&
     input.hasView
+  );
+}
+
+export function shouldTreatComposerAsNormalMode(
+  context: NormalModeComposerContext,
+): boolean {
+  return (
+    !context.insideMessageEditor &&
+    !context.ownedByEditSession &&
+    !context.ownedByInsertSession
   );
 }
 
