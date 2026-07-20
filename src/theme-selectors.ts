@@ -318,6 +318,15 @@ export const THEME_SELECTORS = {
     surface: "channel-header",
   }),
 
+  "slack.channel.preview-action": selector(
+    "A non-member channel preview action.",
+    [
+      qa("message-pane-input-preview-join-channel"),
+      qa("message-pane-input-preview-channel-details"),
+    ],
+    { cardinality: "zero-or-one", surface: "message" },
+  ),
+
   "slack.message.pane": selector("Primary message transcript pane.", [qa("message_pane"), slackClass(".p-message_pane")], {
     cardinality: "exactly-one",
     required: true,

@@ -322,7 +322,9 @@ lists retain their native behavior. Other modified keys are left alone;
 
 For channel navigation, press `h` to move into the sidebar, use `j`/`k` to
 place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
-open it. `gg` moves to the first sidebar row; it also moves to the first
+open it. In a non-member channel preview, Vim navigation still owns its normal
+keys while Slack's **Join channel** action keeps native `Enter` behavior. `gg`
+moves to the first sidebar row; it also moves to the first
 message in an open thread. Main-channel history is excluded because Slack
 loads older messages without a finite top. To open a thread, use `j`/`k` in
 the message transcript to highlight its parent message, then press `l`.
@@ -332,8 +334,10 @@ otherwise it enters content mode. Once the thread opens, use
 Press `Escape` to return to normal mode, then `h` to close the thread and
 restore the parent-message cursor.
 
-In Slack's Threads view, `i` resolves the reply composer inside the selected
-thread card, so it does not jump to the first thread's composer at the top.
+In Slack's Threads view, `k` expands a crossed **Show more replies** boundary
+before continuing to the newly revealed replies. `i` resolves the reply
+composer inside the selected thread card, so it does not jump to the first
+thread's composer at the top.
 
 ## Themes
 

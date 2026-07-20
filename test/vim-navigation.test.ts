@@ -3,13 +3,17 @@ import test from "node:test";
 
 import {
   appendCountDigit,
+  channelIdFromPath,
   countValue,
   keyCommand,
   messagePermalinkFromUrl,
   movedIndex,
   movedVisualIndex,
   normalYankTransition,
+  previousMovementCrossesGap,
   shouldEnterGlobalSearchResults,
+  shouldOwnChannelPreviewFocus,
+  shouldReplayExpandedReplies,
   shouldSuppressNormalModeKey,
   shouldTreatComposerAsNormalMode,
   threadTimestampFromUrl,
@@ -83,6 +87,67 @@ test("leaves modified, composing, prevented, and native-surface keys alone", () 
   assert.equal(key("d", { ctrlKey: true }, { nativeTarget: true }), null);
   assert.equal(key("u", { ctrlKey: true }, { blocked: true }), null);
   assert.equal(key("C", { shiftKey: true }), null);
+});
+
+test("takes Vim commands back from passive channel-preview focus except native Enter", () => {
+  for (const [command, value] of [
+    ["next", "j"],
+    ["previous", "k"],
+    ["activate", "l"],
+    ["search", "/"],
+    ["unwind", "Escape"],
+  ] as const) {
+    assert.equal(shouldOwnChannelPreviewFocus(command, value), true);
+  }
+
+  assert.equal(shouldOwnChannelPreviewFocus("activate", "Enter"), false);
+  assert.equal(shouldOwnChannelPreviewFocus(null, "j"), false);
+  assert.equal(shouldOwnChannelPreviewFocus(null, "Enter"), false);
+});
+
+test("extracts Slack channel ids only from client channel routes", () => {
+  assert.equal(channelIdFromPath("/client/E098H03GGE6/C09KGTZ4S01"), "C09KGTZ4S01");
+  assert.equal(channelIdFromPath("/client/E098H03GGE6/D09KGTZ4S01/thread/C09/123"), "D09KGTZ4S01");
+  assert.equal(channelIdFromPath("/client/T12345678/G12345678/"), "G12345678");
+
+  for (const pathname of [
+    "/client/E098H03GGE6",
+    "/client/E098H03GGE6/threads",
+    "/client/E098H03GGE6/X09KGTZ4S01",
+    "/client/E098H03GGE6/C123",
+    "/archives/C09KGTZ4S01/p1784297632066769",
+    "/client//C09KGTZ4S01",
+  ]) {
+    assert.equal(channelIdFromPath(pathname), null);
+  }
+});
+
+test("detects previous motions that cross a collapsed-replies gap", () => {
+  assert.equal(previousMovementCrossesGap(1, 0, 1), true);
+  assert.equal(previousMovementCrossesGap(5, 0, 1), true);
+  assert.equal(previousMovementCrossesGap(5, 1, 3), true);
+
+  assert.equal(previousMovementCrossesGap(2, 1, 1), false);
+  assert.equal(previousMovementCrossesGap(5, 3, 3), false);
+  assert.equal(previousMovementCrossesGap(0, 0, 1), false);
+  assert.equal(previousMovementCrossesGap(-1, 0, 1), false);
+  assert.equal(previousMovementCrossesGap(1, -1, 1), false);
+  assert.equal(previousMovementCrossesGap(1.5, 0, 1), false);
+  assert.equal(previousMovementCrossesGap(1, 0, Number.NaN), false);
+});
+
+test("waits for a stable newly rendered reply before replaying movement", () => {
+  const baseline = ["C1:parent", "C1:oldest"];
+  assert.equal(shouldReplayExpandedReplies(baseline, baseline, 500), false);
+  assert.equal(
+    shouldReplayExpandedReplies(baseline, [...baseline, "C1:revealed"], 99),
+    false,
+  );
+  assert.equal(
+    shouldReplayExpandedReplies(baseline, [...baseline, "C1:revealed"], 100),
+    true,
+  );
+  assert.equal(shouldReplayExpandedReplies(baseline, [...baseline, "C1:revealed"], NaN), false);
 });
 
 test("allows key repeat only for movement commands", () => {

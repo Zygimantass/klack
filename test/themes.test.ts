@@ -116,4 +116,8 @@ test("theme selector registry exposes ordered, composable candidates", () => {
   assert.match(selectorFor("slack.message.edit-action"), /data-qa="edit_message"/);
   assert.match(selectorFor("slack.message.editor"), /data-qa="message_editor"/);
   assert.match(selectorFor("slack.message.edit-cancel"), /c-button--outline/);
+  assert.equal(
+    selectorFor("slack.channel.preview-action"),
+    ':is([data-qa="message-pane-input-preview-join-channel"], [data-qa="message-pane-input-preview-channel-details"])',
+  );
 });

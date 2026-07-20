@@ -2,13 +2,17 @@ import { definePlugin } from "klack/sdk";
 
 import {
   appendCountDigit,
+  channelIdFromPath,
   countValue,
   keyCommand,
   messagePermalinkFromUrl,
   movedIndex,
   movedVisualIndex,
   normalYankTransition,
+  previousMovementCrossesGap,
   shouldEnterGlobalSearchResults,
+  shouldOwnChannelPreviewFocus,
+  shouldReplayExpandedReplies,
   shouldSuppressNormalModeKey,
   shouldTreatComposerAsNormalMode,
   threadTimestampFromUrl,
@@ -105,6 +109,28 @@ type DeepLinkArgs = {
   message: string;
   team?: string;
   thread_ts: string;
+};
+
+type PendingMovement = {
+  amount: number;
+  direction: Direction;
+};
+
+type MainTransition = {
+  expectedChannelId: string;
+  movements: PendingMovement[];
+  startedAt: number;
+};
+
+type OlderRepliesExpansion = {
+  anchorIdentity: string;
+  baselineIdentities: string[];
+  lastIdentitySignature: string;
+  loader: HTMLElement;
+  movements: PendingMovement[];
+  stableSince: number;
+  startedAt: number;
+  threadKey: string;
 };
 
 type SlackDesktopDelegate = {
@@ -398,11 +424,13 @@ export default definePlugin({
     const sidebarFilterSelector = klack.selectors.get("slack.sidebar.conversation-filter");
     const sidebarRootSelector = klack.selectors.get("slack.sidebar.root");
     const sidebarSelectedSelector = klack.selectors.get("slack.sidebar.item-selected");
+    const channelPreviewActionSelector = klack.selectors.get("slack.channel.preview-action");
     const threadPaneSelector = klack.selectors.get("slack.thread.pane");
     const threadReplyContainerSelector = klack.selectors.get("slack.thread.reply-container");
     const threadsCardSelector = klack.selectors.get("slack.threads.card");
     const threadsFooterSelector = klack.selectors.get("slack.threads.footer");
     const threadsItemSelector = klack.selectors.get("slack.threads.item");
+    const threadsLoadOlderSelector = klack.selectors.get("slack.threads.load-older");
     const threadsViewSelector = klack.selectors.get("slack.threads.view");
     const topNavSearchSelector = klack.selectors.get("slack.top-nav.search-trigger");
 
@@ -416,6 +444,8 @@ export default definePlugin({
     let cancelPendingEditObserver: (() => void) | null = null;
     let cancelPendingEditRestore: (() => void) | null = null;
     let cancelPendingMediaNavigation: (() => void) | null = null;
+    let cancelPendingMainTransition: (() => void) | null = null;
+    let cancelPendingOlderReplies: (() => void) | null = null;
     let cancelPendingReaction: (() => void) | null = null;
     let cancelPendingReactionRestore: (() => void) | null = null;
     let cancelPendingSearchRestore: (() => void) | null = null;
@@ -428,9 +458,12 @@ export default definePlugin({
     let editSession: EditSession | null = null;
     let activatingEditAction = false;
     let activatingContentTarget = false;
+    let activatingOlderReplies = false;
     let activatingReactionAction = false;
     let drainPendingThreadMovement: (() => void) | null = null;
-    const pendingThreadMovements: Array<{ amount: number; direction: Direction }> = [];
+    const pendingThreadMovements: PendingMovement[] = [];
+    let mainTransition: MainTransition | null = null;
+    let olderRepliesExpansion: OlderRepliesExpansion | null = null;
     let threadMovementInFlight = false;
     let reactionSession: ReactionSession | null = null;
     let searchSession: SearchSession | null = null;
@@ -467,6 +500,16 @@ export default definePlugin({
       const count = countValue(countPrefix);
       resetCount();
       return count;
+    };
+
+    const appendMovement = (
+      movements: PendingMovement[],
+      direction: Direction,
+      amount: number,
+    ): void => {
+      const last = movements[movements.length - 1];
+      if (last?.direction === direction) last.amount += amount;
+      else movements.push({ amount, direction });
     };
 
     const queueThreadMovement = (direction: Direction, amount: number): void => {
@@ -509,6 +552,18 @@ export default definePlugin({
     const cancelSearchRestore = (): void => {
       cancelPendingSearchRestore?.();
       cancelPendingSearchRestore = null;
+    };
+
+    const cancelMainTransition = (): void => {
+      cancelPendingMainTransition?.();
+      cancelPendingMainTransition = null;
+      mainTransition = null;
+    };
+
+    const cancelOlderRepliesExpansion = (): void => {
+      cancelPendingOlderReplies?.();
+      cancelPendingOlderReplies = null;
+      olderRepliesExpansion = null;
     };
 
     const cancelPendingMove = (): void => {
@@ -2261,11 +2316,285 @@ export default definePlugin({
       return moveWithin(root, searchResultSelector, "search", direction, amount);
     };
 
+    const restoreOlderRepliesAnchor = (
+      session: OlderRepliesExpansion,
+      root: HTMLElement | null = visibleElement(threadsViewSelector),
+    ): HTMLElement | null => {
+      const replacement = root
+        ? canonicalElements(root, messageRowSelector).find(
+            (message) => messageIdentity(message) === session.anchorIdentity,
+          ) || null
+        : null;
+      if (replacement) {
+        preferredSurface = "threads";
+        paintCursor(replacement, "message", false);
+      }
+      return replacement;
+    };
+
+    const finishOlderRepliesExpansion = (
+      session: OlderRepliesExpansion,
+      loaded: boolean,
+    ): void => {
+      if (olderRepliesExpansion !== session) return;
+      const movements = [...session.movements];
+      const root = visibleElement(threadsViewSelector);
+      cancelOlderRepliesExpansion();
+      restoreOlderRepliesAnchor(session, root);
+
+      for (let index = 0; index < movements.length; index += 1) {
+        const movement = movements[index];
+        if (olderRepliesExpansion) {
+          const nextExpansion = olderRepliesExpansion;
+          movements.slice(index).forEach((pending) => {
+            appendMovement(nextExpansion.movements, pending.direction, pending.amount);
+          });
+          break;
+        }
+        if (loaded) moveMessages(movement.direction, movement.amount);
+        else if (root) {
+          moveWithin(root, messageRowSelector, "message", movement.direction, movement.amount);
+        }
+      }
+    };
+
+    const reconcileOlderRepliesExpansion = (session: OlderRepliesExpansion): void => {
+      cancelPendingOlderReplies?.();
+      cancelPendingOlderReplies = klack.timers.timeout(() => {
+        cancelPendingOlderReplies = null;
+        if (olderRepliesExpansion !== session) return;
+        const root = visibleElement(threadsViewSelector);
+        const anchor = root
+          ? canonicalElements(root, messageRowSelector).find(
+              (message) => messageIdentity(message) === session.anchorIdentity,
+            ) || null
+          : null;
+        const identities = root
+          ? canonicalElements(root, messageRowSelector)
+              .filter(
+                (message) =>
+                  message.closest<HTMLElement>(threadsCardSelector)?.getAttribute(
+                    "data-droppable-thread",
+                  ) === session.threadKey,
+              )
+              .flatMap((message) => {
+                const identity = messageIdentity(message);
+                return identity ? [identity] : [];
+              })
+          : [];
+        const identitySignature = identities.join("|");
+        const now = performance.now();
+        if (identitySignature !== session.lastIdentitySignature) {
+          session.lastIdentitySignature = identitySignature;
+          session.stableSince = now;
+        }
+        const loaderGone = !session.loader.isConnected || !isRendered(session.loader);
+        if (
+          root &&
+          anchor &&
+          loaderGone &&
+          shouldReplayExpandedReplies(
+            session.baselineIdentities,
+            identities,
+            now - session.stableSince,
+          )
+        ) {
+          finishOlderRepliesExpansion(session, true);
+          return;
+        }
+        if (now - session.startedAt >= 3_000) {
+          finishOlderRepliesExpansion(session, false);
+          return;
+        }
+        reconcileOlderRepliesExpansion(session);
+      }, 50);
+    };
+
+    const crossedOlderRepliesLoader = (
+      root: HTMLElement,
+      direction: Direction,
+      amount: number,
+    ): { anchorIdentity: string; loader: HTMLElement; threadKey: string } | null => {
+      if (direction !== "previous" || cursor?.kind !== "message") return null;
+      const messages = canonicalElements(root, messageRowSelector);
+      let currentIndex = messages.indexOf(cursor.element);
+      if (currentIndex < 0 && cursor.identity) {
+        currentIndex = messages.findIndex(
+          (message) => messageIdentity(message) === cursor?.identity,
+        );
+      }
+      if (currentIndex < 0) return null;
+      const current = messages[currentIndex];
+      const anchorIdentity = messageIdentity(current);
+      const threadKey = current
+        .closest<HTMLElement>(threadsCardSelector)
+        ?.getAttribute("data-droppable-thread");
+      if (!anchorIdentity || !threadKey) return null;
+
+      const targetIndex = movedIndex(messages.length, currentIndex, direction, amount);
+      const loaders = canonicalElements(root, threadsLoadOlderSelector)
+        .filter(
+          (loader) =>
+            loader.closest<HTMLElement>(threadsCardSelector)?.getAttribute(
+              "data-droppable-thread",
+            ) === threadKey,
+        )
+        .map((loader) => ({
+          gapIndex: messages.filter(
+            (message) =>
+              Boolean(message.compareDocumentPosition(loader) & Node.DOCUMENT_POSITION_FOLLOWING),
+          ).length,
+          loader,
+        }))
+        .filter(({ gapIndex }) =>
+          previousMovementCrossesGap(currentIndex, targetIndex, gapIndex),
+        )
+        .sort((left, right) => right.gapIndex - left.gapIndex);
+      const crossed = loaders[0];
+      return crossed ? { anchorIdentity, loader: crossed.loader, threadKey } : null;
+    };
+
+    const beginOlderRepliesExpansion = (
+      root: HTMLElement,
+      direction: Direction,
+      amount: number,
+    ): boolean => {
+      const crossed = crossedOlderRepliesLoader(root, direction, amount);
+      if (!crossed) return false;
+      const baselineIdentities = canonicalElements(root, messageRowSelector)
+        .filter(
+          (message) =>
+            message.closest<HTMLElement>(threadsCardSelector)?.getAttribute(
+              "data-droppable-thread",
+            ) === crossed.threadKey,
+        )
+        .flatMap((message) => {
+          const identity = messageIdentity(message);
+          return identity ? [identity] : [];
+        });
+      const startedAt = performance.now();
+      const session: OlderRepliesExpansion = {
+        ...crossed,
+        baselineIdentities,
+        lastIdentitySignature: baselineIdentities.join("|"),
+        movements: [{ amount, direction }],
+        stableSince: startedAt,
+        startedAt,
+      };
+      olderRepliesExpansion = session;
+      activatingOlderReplies = true;
+      let clicked = false;
+      try {
+        clicked = clickEnabled(crossed.loader);
+      } finally {
+        activatingOlderReplies = false;
+      }
+      if (!clicked) {
+        cancelOlderRepliesExpansion();
+        return false;
+      }
+      reconcileOlderRepliesExpansion(session);
+      return true;
+    };
+
     const moveMessages = (direction: Direction, amount = 1): boolean => {
       const surface = messageSurface();
       if (!surface) return false;
       preferredSurface = surface.id;
+      if (
+        surface.id === "threads" &&
+        beginOlderRepliesExpansion(surface.root, direction, amount)
+      ) {
+        return true;
+      }
       return moveWithin(surface.root, messageRowSelector, "message", direction, amount);
+    };
+
+    const mainTransitionReady = (session: MainTransition): HTMLElement | null => {
+      if (channelIdFromPath(location.pathname) !== session.expectedChannelId) return null;
+      const root = visibleElement(messagePaneSelector);
+      if (!root) return null;
+      const messages = canonicalElements(root, messageRowSelector);
+      if (
+        messages.length === 0 ||
+        messages.some(
+          (message) => message.getAttribute("data-msg-channel-id") !== session.expectedChannelId,
+        )
+      ) {
+        return null;
+      }
+      return root;
+    };
+
+    const drainMainTransition = (session: MainTransition): void => {
+      cancelPendingMainTransition?.();
+      cancelPendingMainTransition = null;
+      if (mainTransition !== session) return;
+      const root = mainTransitionReady(session);
+      if (!root) {
+        if (performance.now() - session.startedAt >= 3_000) {
+          cancelMainTransition();
+          return;
+        }
+        cancelPendingMainTransition = klack.timers.timeout(
+          () => drainMainTransition(session),
+          50,
+        );
+        return;
+      }
+      preferredSurface = "main";
+      const previewAction = document.activeElement?.closest(channelPreviewActionSelector);
+      if (session.movements.length > 0 && previewAction instanceof HTMLElement) {
+        previewAction.blur();
+      }
+      const focusedSidebar = document.activeElement;
+      if (
+        focusedSidebar instanceof HTMLElement &&
+        focusedSidebar.closest(sidebarRootSelector)
+      ) {
+        focusedSidebar.blur();
+      }
+      if (cancelBoundaryRetry) {
+        cancelPendingMainTransition = klack.timers.timeout(
+          () => drainMainTransition(session),
+          50,
+        );
+        return;
+      }
+      const movement = session.movements.shift();
+      if (movement) {
+        moveWithin(root, messageRowSelector, "message", movement.direction, movement.amount);
+        cancelPendingMainTransition = klack.timers.timeout(
+          () => drainMainTransition(session),
+          50,
+        );
+        return;
+      }
+      cancelMainTransition();
+    };
+
+    const beginMainTransition = (expectedChannelId: string): void => {
+      cancelMainTransition();
+      const session: MainTransition = {
+        expectedChannelId,
+        movements: [],
+        startedAt: performance.now(),
+      };
+      mainTransition = session;
+      cancelPendingMainTransition = klack.timers.timeout(
+        () => drainMainTransition(session),
+        50,
+      );
+    };
+
+    const queueMainTransitionMovement = (
+      direction: Direction,
+      amount: number,
+    ): boolean => {
+      if (!mainTransition) return false;
+      appendMovement(mainTransition.movements, direction, amount);
+      drainMainTransition(mainTransition);
+      return true;
     };
 
     const pageWithin = (
@@ -2500,9 +2829,16 @@ export default definePlugin({
         : item.querySelector<HTMLElement>(
             '[data-qa="channel-sidebar-channel"], a[href], button, [role="treeitem"]',
           ) || item;
+      const identity = sidebarIdentity(item);
+      const expectedChannelId = identity?.startsWith("channel:")
+        ? identity.slice("channel:".length)
+        : target instanceof HTMLAnchorElement
+          ? channelIdFromPath(new URL(target.href, location.href).pathname)
+          : null;
       if (!clickEnabled(target)) return false;
       clearCursor();
       preferredSurface = "main";
+      if (expectedChannelId) beginMainTransition(expectedChannelId);
       return true;
     };
 
@@ -3107,6 +3443,62 @@ export default definePlugin({
       const activeElement = document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
+      const focusedChannelPreviewAction =
+        targetElement?.closest(channelPreviewActionSelector) ||
+        activeElement?.closest(channelPreviewActionSelector);
+      const channelPreviewOwnsPassiveFocus = Boolean(
+        !blocked &&
+          focusedChannelPreviewAction instanceof HTMLElement &&
+          shouldOwnChannelPreviewFocus(command, event.key),
+      );
+      if (channelPreviewOwnsPassiveFocus) {
+        preferredSurface = "main";
+        if (focusedChannelPreviewAction instanceof HTMLElement) {
+          focusedChannelPreviewAction.blur();
+        }
+      }
+      if (mainTransition && !blocked) {
+        let queued = false;
+        if (command === "count") {
+          const nextPrefix = appendCountDigit(countPrefix, event.key);
+          if (nextPrefix) countPrefix = nextPrefix;
+          queued = true;
+        } else if (command === "next" || command === "previous") {
+          queued = queueMainTransitionMovement(
+            command === "next" ? "next" : "previous",
+            takeCount(),
+          );
+        } else if (command) cancelMainTransition();
+        if (queued) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+      }
+      if (olderRepliesExpansion && !blocked) {
+        let queued = false;
+        if (command === "count") {
+          const nextPrefix = appendCountDigit(countPrefix, event.key);
+          if (nextPrefix) countPrefix = nextPrefix;
+          queued = true;
+        } else if (command === "next" || command === "previous") {
+          appendMovement(
+            olderRepliesExpansion.movements,
+            command === "next" ? "next" : "previous",
+            takeCount(),
+          );
+          queued = true;
+        } else if (command) {
+          const session = olderRepliesExpansion;
+          cancelOlderRepliesExpansion();
+          restoreOlderRepliesAnchor(session);
+        }
+        if (queued) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+      }
       const activeThreadComposer =
         composerFromTarget(event.target) || composerFromTarget(activeElement);
       const threadRowsPending = Boolean(
@@ -3240,6 +3632,7 @@ export default definePlugin({
         (!focusedNormalComposer &&
           !sidebarOwnsPassiveFocus &&
           !threadOwnsPassiveFocus &&
+          !channelPreviewOwnsPassiveFocus &&
           (hasNativeKeyboardTarget(event.target) || hasNativeKeyboardTarget(document.activeElement))) ||
         blocked
       ) {
@@ -3364,7 +3757,8 @@ export default definePlugin({
         !hadCount &&
         !hadTopPrefix &&
         !hadYankPrefix &&
-        !leftNormalComposer
+        !leftNormalComposer &&
+        !channelPreviewOwnsPassiveFocus
       ) {
         return;
       }
@@ -3383,6 +3777,8 @@ export default definePlugin({
 
     const updateSurfaceFromClick = (event: MouseEvent): void => {
       if (!(event.target instanceof Element)) return;
+      cancelMainTransition();
+      if (!activatingOlderReplies) cancelOlderRepliesExpansion();
       resetPrefixes();
       cancelPendingMove();
       cancelDeferredFocus();
@@ -3395,6 +3791,7 @@ export default definePlugin({
       if (
         activatingContentTarget ||
         activatingEditAction ||
+        activatingOlderReplies ||
         activatingReactionAction ||
         clickedMediaViewer ||
         event.target.closest(emojiPickerRootSelector)
@@ -3747,6 +4144,8 @@ export default definePlugin({
     });
     klack.cleanup(() => {
       cancelBoundaryRetry?.();
+      cancelPendingMainTransition?.();
+      cancelPendingOlderReplies?.();
       cancelPendingEdit?.();
       cancelPendingEditCancel?.();
       cancelPendingEditObserver?.();
@@ -3761,6 +4160,8 @@ export default definePlugin({
       resetPrefixes();
       editSession = null;
       insertSession = null;
+      mainTransition = null;
+      olderRepliesExpansion = null;
       pendingThreadMovements.length = 0;
       threadMovementInFlight = false;
       reactionSession = null;

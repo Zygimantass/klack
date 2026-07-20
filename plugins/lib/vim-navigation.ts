@@ -91,6 +91,42 @@ export function shouldTreatComposerAsNormalMode(
   );
 }
 
+export function shouldOwnChannelPreviewFocus(
+  command: VimCommand | null,
+  key: string,
+): boolean {
+  return command !== null && !(command === "activate" && key === "Enter");
+}
+
+export function channelIdFromPath(pathname: string): string | null {
+  return pathname.match(/^\/client\/[^/]+\/([CDG][A-Z0-9]{8,})(?:\/|$)/)?.[1] || null;
+}
+
+export function previousMovementCrossesGap(
+  currentIndex: number,
+  targetIndex: number,
+  gapIndex: number,
+): boolean {
+  return (
+    Number.isInteger(currentIndex) &&
+    Number.isInteger(targetIndex) &&
+    Number.isInteger(gapIndex) &&
+    currentIndex >= gapIndex &&
+    targetIndex >= 0 &&
+    targetIndex < gapIndex
+  );
+}
+
+export function shouldReplayExpandedReplies(
+  baselineIdentities: readonly string[],
+  currentIdentities: readonly string[],
+  stableForMs: number,
+): boolean {
+  if (!Number.isFinite(stableForMs) || stableForMs < 100) return false;
+  const baseline = new Set(baselineIdentities);
+  return currentIdentities.some((identity) => !baseline.has(identity));
+}
+
 export function normalYankTransition(
   pending: boolean,
   command: VimCommand | null,
