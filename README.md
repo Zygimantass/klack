@@ -240,6 +240,7 @@ the Klack plugin manager, then use:
 | `/` | Search conversation names from the sidebar, or open Slack's global search from a message surface. |
 | `:` | Open Slack's emoji-reaction picker for the selected message. |
 | `i` | Focus the composer for the active conversation or the selected thread. |
+| `c` | Edit the selected message when Slack permits editing it. |
 | `v` | Start visual selection at the current message's first character; press it again after moving to re-anchor the selection there. |
 | `[count]h` / `[count]l` | Move the visual selection endpoint by characters. |
 | `[count]w` / `[count]b` / `[count]e` | Move the visual selection endpoint by words. |
@@ -271,6 +272,12 @@ Press `:` on a selected message to open Slack's emoji-reaction picker. The
 picker's search field and controls remain native, so type to search, use Slack's
 usual arrow/Enter controls to choose, or press `Escape` to cancel and resume
 from the same message.
+
+Press `c` on one of your editable messages to enter Slack's inline message
+editor. Type normally, then use Slack's native save command or controls;
+`Escape` cancels the edit and restores the Vim cursor. If Slack does not offer
+its **Edit message** action for that row, VimNavigation leaves the message
+unchanged and restores the cursor.
 
 Press `v` on a selected message to start at its first text character without
 including its author, timestamp, reactions, or attachments. Move with `h`/`l`,

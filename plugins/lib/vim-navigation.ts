@@ -5,6 +5,7 @@ export type VimCommand =
   | "bottom"
   | "center-prefix"
   | "count"
+  | "edit"
   | "half-next"
   | "half-previous"
   | "history-back"
@@ -126,6 +127,7 @@ export function keyCommand(
   else if (event.key === "H") command = "history-back";
   else if (event.key === "L") command = "history-forward";
   else if (event.key === "i") command = "insert";
+  else if (event.key === "c") command = "edit";
   else if (event.key === "l" || event.key === "Enter") command = "activate";
   else if (event.key === "Escape") command = "unwind";
   else if (event.key === "v") command = "visual";

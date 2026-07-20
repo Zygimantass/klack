@@ -403,6 +403,22 @@ export const THEME_SELECTORS = {
   "slack.message.add-reaction-action": selector("Add-reaction message action.", [qa("add_reaction")], {
     surface: "message",
   }),
+  "slack.message.more-actions": selector("More message actions control.", [qa("more_message_actions")], {
+    surface: "message",
+  }),
+  "slack.message.edit-action": selector("Edit-message menu action.", [qa("edit_message")], {
+    cardinality: "zero-or-one",
+    surface: "menu",
+  }),
+  "slack.message.editor": selector("Inline message editor.", [qa("message_editor")], {
+    cardinality: "zero-or-one",
+    surface: "message",
+  }),
+  "slack.message.edit-cancel": selector(
+    "Cancel control in the inline message editor.",
+    [slackClass(".c-wysiwyg_container__suffix__confirmation-buttons .c-button--outline")],
+    { cardinality: "zero-or-one", surface: "message" },
+  ),
   "slack.message.day-divider": selector("Transcript day divider.", [slackClass(".c-message_list__day_divider")], {
     surface: "message",
   }),

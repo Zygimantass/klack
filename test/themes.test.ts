@@ -112,4 +112,8 @@ test("theme selector registry exposes ordered, composable candidates", () => {
   );
   assert.equal(THEME_SELECTORS["klack.plugin-manager.dialog"].candidates[0].stability, "owned");
   assert.equal(THEME_SELECTORS["slack.message.row"].required, true);
+  assert.match(selectorFor("slack.message.more-actions"), /data-qa="more_message_actions"/);
+  assert.match(selectorFor("slack.message.edit-action"), /data-qa="edit_message"/);
+  assert.match(selectorFor("slack.message.editor"), /data-qa="message_editor"/);
+  assert.match(selectorFor("slack.message.edit-cancel"), /c-button--outline/);
 });

@@ -41,6 +41,7 @@ test("maps unmodified Vim navigation keys", () => {
   assert.equal(key("H", { shiftKey: true }), "history-back");
   assert.equal(key("L", { shiftKey: true }), "history-forward");
   assert.equal(key("i"), "insert");
+  assert.equal(key("c"), "edit");
   assert.equal(key("v"), "visual");
   assert.equal(key("y"), "yank");
   assert.equal(key("}"), "page-next");
@@ -62,7 +63,7 @@ test("maps unmodified Vim navigation keys", () => {
 });
 
 test("leaves modified, composing, prevented, and native-surface keys alone", () => {
-  for (const value of ["h", "j", "k", "l", "Enter", "Escape"]) {
+  for (const value of ["h", "j", "k", "l", "c", "Enter", "Escape"]) {
     for (const overrides of [
       { altKey: true },
       { ctrlKey: true },
@@ -78,6 +79,7 @@ test("leaves modified, composing, prevented, and native-surface keys alone", () 
   }
   assert.equal(key("d", { ctrlKey: true }, { nativeTarget: true }), null);
   assert.equal(key("u", { ctrlKey: true }, { blocked: true }), null);
+  assert.equal(key("C", { shiftKey: true }), null);
 });
 
 test("allows key repeat only for movement commands", () => {
@@ -85,7 +87,7 @@ test("allows key repeat only for movement commands", () => {
   assert.equal(key("k", { repeat: true }), "previous");
   assert.equal(key("}", { repeat: true, shiftKey: true }), "page-next");
   assert.equal(key("d", { ctrlKey: true, repeat: true }), "half-next");
-  for (const value of ["h", "g", "z", "G", "H", "L", "i", "v", "y", "/", ":", "l", "Enter", "Escape", "7"]) {
+  for (const value of ["h", "g", "z", "G", "H", "L", "i", "c", "v", "y", "/", ":", "l", "Enter", "Escape", "7"]) {
     assert.equal(key(value, { repeat: true }), null);
   }
 });

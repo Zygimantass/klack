@@ -55,6 +55,15 @@ type ReactionSession = {
   phase: "open" | "opening";
 };
 
+type EditSession = {
+  cancelRequested: boolean;
+  editor: HTMLElement | null;
+  menu: HTMLElement | null;
+  menuTrigger: HTMLElement | null;
+  origin: CursorOrigin;
+  phase: "editing" | "opening-editor" | "opening-menu";
+};
+
 type ContentSession = {
   index: number;
   origin: CursorOrigin;
@@ -349,12 +358,16 @@ function teamFromLocation(): string | undefined {
 export default definePlugin({
   name: "VimNavigation",
   description:
-    "Adds Vim-style navigation, content browsing, reactions, search, selection, and insert mode across Slack conversations and threads.",
+    "Adds Vim-style navigation, message editing, content browsing, reactions, search, selection, and insert mode across Slack conversations and threads.",
   defaultEnabled: false,
   setup(klack) {
     const messagePaneSelector = klack.selectors.get("slack.message.pane");
     const messageRowSelector = klack.selectors.get("slack.message.row");
     const messageBodySelector = klack.selectors.get("slack.message.body");
+    const editCancelSelector = klack.selectors.get("slack.message.edit-cancel");
+    const editMessageActionSelector = klack.selectors.get("slack.message.edit-action");
+    const messageEditorSelector = klack.selectors.get("slack.message.editor");
+    const moreMessageActionsSelector = klack.selectors.get("slack.message.more-actions");
     const replyBarSelector = klack.selectors.get("slack.message.reply-bar");
     const reactionActionSelector = klack.selectors.get("slack.message.add-reaction-action");
     const timestampSelector = klack.selectors.get("slack.message.timestamp");
@@ -369,6 +382,7 @@ export default definePlugin({
     const mediaViewerNextSelector = klack.selectors.get("slack.media-viewer.next");
     const mediaViewerPreviousSelector = klack.selectors.get("slack.media-viewer.previous");
     const mediaViewerRootSelector = klack.selectors.get("slack.media-viewer.root");
+    const menuRootSelector = klack.selectors.get("slack.menu.root");
     const searchInputSelector = klack.selectors.get("slack.search.dialog-input");
     const searchAutocompleteFooterSelector = klack.selectors.get(
       "slack.search.autocomplete-footer",
@@ -394,6 +408,10 @@ export default definePlugin({
     let threadOrigin: ThreadOrigin | null = null;
     let cancelBoundaryRetry: (() => void) | null = null;
     let cancelPendingFocus: (() => void) | null = null;
+    let cancelPendingEdit: (() => void) | null = null;
+    let cancelPendingEditCancel: (() => void) | null = null;
+    let cancelPendingEditObserver: (() => void) | null = null;
+    let cancelPendingEditRestore: (() => void) | null = null;
     let cancelPendingMediaNavigation: (() => void) | null = null;
     let cancelPendingReaction: (() => void) | null = null;
     let cancelPendingReactionRestore: (() => void) | null = null;
@@ -404,6 +422,8 @@ export default definePlugin({
     let countPrefix = "";
     let insertSession: InsertSession | null = null;
     let contentSession: ContentSession | null = null;
+    let editSession: EditSession | null = null;
+    let activatingEditAction = false;
     let activatingContentTarget = false;
     let activatingReactionAction = false;
     let drainPendingThreadMovement: (() => void) | null = null;
@@ -460,6 +480,20 @@ export default definePlugin({
     const cancelMediaNavigation = (): void => {
       cancelPendingMediaNavigation?.();
       cancelPendingMediaNavigation = null;
+    };
+
+    const cancelEditRestore = (): void => {
+      cancelPendingEditRestore?.();
+      cancelPendingEditRestore = null;
+    };
+
+    const cancelEditWork = (): void => {
+      cancelPendingEdit?.();
+      cancelPendingEdit = null;
+      cancelPendingEditCancel?.();
+      cancelPendingEditCancel = null;
+      cancelPendingEditObserver?.();
+      cancelPendingEditObserver = null;
     };
 
     const cancelReactionRestore = (): void => {
@@ -599,6 +633,265 @@ export default definePlugin({
       const fallbackMatches =
         !origin.identity || messageIdentity(origin.element) === origin.identity;
       return replacement || (fallbackMatches && isRendered(origin.element) ? origin.element : null);
+    };
+
+    const editEditorForMessage = (message: HTMLElement | null): HTMLElement | null => {
+      if (!message) return null;
+      const editorRoot = visibleElement(messageEditorSelector, message);
+      if (!editorRoot || editorRoot.closest(messageRowSelector) !== message) return null;
+      return (
+        Array.from(editorRoot.querySelectorAll<HTMLElement>(composerInputSelector))
+          .filter(isRendered)
+          .find((editor) => editor.closest(messageRowSelector) === message) || null
+      );
+    };
+
+    const scheduleEditRestore = (origin: CursorOrigin, attempt = 0): void => {
+      cancelPendingEditRestore = null;
+      if (restoreCursorOrigin(origin)) return;
+      if (attempt >= 30) return;
+      cancelPendingEditRestore = klack.timers.timeout(
+        () => scheduleEditRestore(origin, attempt + 1),
+        50,
+      );
+    };
+
+    const closeEditMenu = (session: EditSession): void => {
+      if (!session.menu || !isRendered(session.menu)) return;
+      activatingEditAction = true;
+      try {
+        if (session.menuTrigger?.isConnected && clickEnabled(session.menuTrigger)) return;
+        const active = document.activeElement;
+        const target = active instanceof HTMLElement && session.menu.contains(active)
+          ? active
+          : session.menu;
+        target.dispatchEvent(
+          new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" }),
+        );
+        target.dispatchEvent(
+          new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "Escape" }),
+        );
+      } finally {
+        activatingEditAction = false;
+      }
+    };
+
+    const finishEditSession = (
+      session: EditSession,
+      options: { closeMenu?: boolean; restore?: boolean } = {},
+    ): void => {
+      if (editSession !== session) return;
+      cancelEditWork();
+      cancelEditRestore();
+      editSession = null;
+      if (options.closeMenu) closeEditMenu(session);
+      resetPrefixes();
+      if (options.restore !== false) scheduleEditRestore(session.origin);
+    };
+
+    const bindEditEditor = (session: EditSession, editor: HTMLElement): void => {
+      if (editSession !== session) return;
+      cancelPendingEdit?.();
+      cancelPendingEdit = null;
+      session.editor = editor;
+      session.phase = "editing";
+      if (
+        document.activeElement !== editor &&
+        !(document.activeElement instanceof Node && editor.contains(document.activeElement))
+      ) {
+        editor.focus({ preventScroll: true });
+      }
+
+      const verifyEditor = (): void => {
+        cancelPendingEdit = null;
+        if (editSession !== session) return;
+        const current = editEditorForMessage(messageForOrigin(session.origin));
+        if (current) {
+          session.editor = current;
+          return;
+        }
+        finishEditSession(session);
+      };
+      const scheduleVerification = (): void => {
+        cancelPendingEdit?.();
+        cancelPendingEdit = klack.timers.animationFrame(verifyEditor);
+      };
+      cancelPendingEditObserver = klack.dom.observe(
+        document.documentElement,
+        scheduleVerification,
+        { childList: true, subtree: true },
+      );
+    };
+
+    const cancelActiveMessageEdit = (session: EditSession): boolean => {
+      const message = messageForOrigin(session.origin);
+      const editorRoot = message ? visibleElement(messageEditorSelector, message) : null;
+      const cancel = editorRoot ? visibleElement(editCancelSelector, editorRoot) : null;
+      if (!cancel) return false;
+      activatingEditAction = true;
+      try {
+        return clickEnabled(cancel);
+      } finally {
+        activatingEditAction = false;
+      }
+    };
+
+    const requestEditCancellation = (session: EditSession, attempt = 0): void => {
+      cancelPendingEditCancel = null;
+      if (editSession !== session || !session.cancelRequested) return;
+      const clicked = cancelActiveMessageEdit(session);
+      if (attempt >= 30) {
+        if (!clicked) {
+          console.warn("[Klack] VimNavigation could not cancel the active message edit");
+        }
+        return;
+      }
+      cancelPendingEditCancel = klack.timers.timeout(
+        () => requestEditCancellation(session, attempt + 1),
+        clicked ? 100 : 50,
+      );
+    };
+
+    const openMessageEditor = (): boolean => {
+      if (cursor?.kind !== "message") return false;
+      const origin: CursorOrigin = { ...cursor, surface: surfaceForCursor(cursor) };
+      if (!messageForOrigin(origin)) return false;
+
+      if (editSession) finishEditSession(editSession, { closeMenu: true, restore: false });
+      cancelEditRestore();
+      clearContentSession();
+      clearVisualSession();
+      resetPrefixes();
+      const session: EditSession = {
+        cancelRequested: false,
+        editor: null,
+        menu: null,
+        menuTrigger: null,
+        origin,
+        phase: "opening-menu",
+      };
+      clearCursor();
+      editSession = session;
+      let focusedRow: HTMLElement | null = null;
+      let menusBeforeOpen = new Set<HTMLElement>();
+
+      const scheduleAttempt = (callback: () => void, attempt: number): void => {
+        cancelPendingEdit =
+          attempt < 8
+            ? klack.timers.animationFrame(callback)
+            : klack.timers.timeout(callback, 50);
+      };
+
+      const attemptEditor = (attempt: number): void => {
+        cancelPendingEdit = null;
+        if (editSession !== session || session.phase !== "opening-editor") return;
+        const editor = editEditorForMessage(messageForOrigin(origin));
+        if (editor) {
+          bindEditEditor(session, editor);
+          if (session.cancelRequested) requestEditCancellation(session);
+          return;
+        }
+        if (attempt < 40) {
+          scheduleAttempt(() => attemptEditor(attempt + 1), attempt);
+        } else finishEditSession(session);
+      };
+
+      const attemptEditAction = (attempt: number): void => {
+        cancelPendingEdit = null;
+        if (editSession !== session || session.phase !== "opening-menu") return;
+        const visibleMenus = Array.from(
+          document.querySelectorAll<HTMLElement>(menuRootSelector),
+        ).filter(isRendered);
+        if (!session.menu) {
+          const appearedMenus = visibleMenus.filter((menu) => !menusBeforeOpen.has(menu));
+          const activeMenu = document.activeElement?.closest<HTMLElement>(menuRootSelector);
+          const appearedRoleMenus = appearedMenus.filter((menu) => menu.matches('[role="menu"]'));
+          session.menu =
+            (activeMenu && appearedMenus.includes(activeMenu) ? activeMenu : null) ||
+            (appearedRoleMenus.length === 1 ? appearedRoleMenus[0] : null) ||
+            (appearedMenus.length === 1 ? appearedMenus[0] : null);
+        }
+        if (session.menu && !isRendered(session.menu)) {
+          finishEditSession(session);
+          return;
+        }
+        const action = session.menu
+          ? visibleElement(editMessageActionSelector, session.menu)
+          : null;
+        if (action) {
+          activatingEditAction = true;
+          let clicked = false;
+          try {
+            clicked = clickEnabled(action);
+          } finally {
+            activatingEditAction = false;
+          }
+          if (clicked) {
+            session.phase = "opening-editor";
+            scheduleAttempt(() => attemptEditor(0), 0);
+            return;
+          }
+        }
+        if (attempt < 30) {
+          scheduleAttempt(() => attemptEditAction(attempt + 1), attempt);
+        } else finishEditSession(session, { closeMenu: true });
+      };
+
+      const attemptMoreActions = (attempt: number): void => {
+        cancelPendingEdit = null;
+        if (editSession !== session || session.phase !== "opening-menu") return;
+        const message = messageForOrigin(origin);
+        const row = message?.closest<HTMLElement>('[role="listitem"]') || message;
+        if (message && row && row !== focusedRow) {
+          focusedRow = row;
+          row.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+          row.focus({ preventScroll: true });
+        }
+        const visibleActions = Array.from(
+          document.querySelectorAll<HTMLElement>(moreMessageActionsSelector),
+        ).filter(isRendered);
+        const ownedAction = visibleActions.find((candidate) => {
+          const owner =
+            candidate.closest<HTMLElement>(messageRowSelector) ||
+            candidate
+              .closest<HTMLElement>('[role="listitem"]')
+              ?.querySelector<HTMLElement>(messageRowSelector);
+          return owner ? messageIdentity(owner) === origin.identity : false;
+        });
+        const active = document.activeElement;
+        const rowOwnsFocus = Boolean(
+          row && active instanceof Node && (active === row || row.contains(active)),
+        );
+        const action =
+          (row ? visibleElement(moreMessageActionsSelector, row) : null) ||
+          ownedAction ||
+          (rowOwnsFocus && visibleActions.length === 1 ? visibleActions[0] : null);
+        if (action) {
+          menusBeforeOpen = new Set(
+            Array.from(document.querySelectorAll<HTMLElement>(menuRootSelector)).filter(
+              isRendered,
+            ),
+          );
+          activatingEditAction = true;
+          let clicked = false;
+          try {
+            clicked = clickEnabled(action);
+          } finally {
+            activatingEditAction = false;
+          }
+          if (clicked) {
+            session.menuTrigger = action;
+            scheduleAttempt(() => attemptEditAction(0), 0);
+            return;
+          }
+        }
+        if (attempt < 30) {
+          scheduleAttempt(() => attemptMoreActions(attempt + 1), attempt);
+        } else finishEditSession(session);
+      };
+
+      attemptMoreActions(0);
+      return true;
     };
 
     const messageBodyElements = (message: HTMLElement): HTMLElement[] => {
@@ -1270,9 +1563,18 @@ export default definePlugin({
       return composerForSurface(insertSession.surface) === composer;
     };
 
+    const isEditEditor = (composer: HTMLElement): boolean => {
+      const editor = editSession?.editor;
+      return Boolean(
+        editSession?.phase === "editing" &&
+          editor &&
+          (editor === composer || editor.contains(composer) || composer.contains(editor)),
+      );
+    };
+
     const normalModeComposer = (target: EventTarget | null): HTMLElement | null => {
       const composer = composerFromTarget(target) || composerFromTarget(document.activeElement);
-      return composer && !isInsertComposer(composer) ? composer : null;
+      return composer && !isInsertComposer(composer) && !isEditEditor(composer) ? composer : null;
     };
 
     const leaveNormalModeComposer = (composer: HTMLElement): void => {
@@ -2324,6 +2626,45 @@ export default definePlugin({
         !event.defaultPrevented &&
         !event.isComposing;
       const targetElement = elementFromTarget(event.target);
+      if (
+        cancelPendingEditRestore &&
+        (keyCommand(event) || shouldSuppressNormalModeKey(event))
+      ) {
+        cancelEditRestore();
+      }
+      if (plainEscape && editSession) {
+        const session = editSession;
+        resetPrefixes();
+        if (session.phase !== "editing") {
+          const editor = editEditorForMessage(messageForOrigin(session.origin));
+          if (editor) bindEditEditor(session, editor);
+        }
+        if (session.phase === "editing") {
+          session.cancelRequested = true;
+          requestEditCancellation(session);
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+        if (session.phase === "opening-editor") {
+          session.cancelRequested = true;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+        finishEditSession(session, { closeMenu: true });
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (editSession && (editSession.phase !== "editing" || editSession.cancelRequested)) {
+        const pendingCommand = keyCommand(event);
+        if (pendingCommand || shouldSuppressNormalModeKey(event)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+        return;
+      }
       if (visibleElement(mediaViewerRootSelector)) {
         const viewerCommand = keyCommand(event);
         let handled = true;
@@ -2848,6 +3189,7 @@ export default definePlugin({
               : activate();
         }
         else if (command === "insert") handled = focusComposer();
+        else if (command === "edit") handled = openMessageEditor();
         else if (command === "react") handled = openReactionPicker();
         else if (command === "search") handled = openSearch();
         else if (command === "visual") handled = enterVisualMode();
@@ -2882,6 +3224,7 @@ export default definePlugin({
       resetPrefixes();
       cancelPendingMove();
       cancelDeferredFocus();
+      cancelEditRestore();
       cancelReactionRestore();
       cancelPendingReaction?.();
       cancelPendingReaction = null;
@@ -2889,11 +3232,15 @@ export default definePlugin({
       if (clickedMediaViewer) cancelMediaNavigation();
       if (
         activatingContentTarget ||
+        activatingEditAction ||
         activatingReactionAction ||
         clickedMediaViewer ||
         event.target.closest(emojiPickerRootSelector)
       ) {
         return;
+      }
+      if (editSession && editSession.phase !== "editing") {
+        finishEditSession(editSession, { closeMenu: true, restore: false });
       }
       pendingThreadMovements.length = 0;
       threadMovementInFlight = false;
@@ -3236,6 +3583,10 @@ export default definePlugin({
     });
     klack.cleanup(() => {
       cancelBoundaryRetry?.();
+      cancelPendingEdit?.();
+      cancelPendingEditCancel?.();
+      cancelPendingEditObserver?.();
+      cancelPendingEditRestore?.();
       cancelPendingMediaNavigation?.();
       cancelPendingReaction?.();
       cancelPendingReactionRestore?.();
@@ -3244,6 +3595,7 @@ export default definePlugin({
       cancelPendingThreadTeardown?.();
       clearCursor();
       resetPrefixes();
+      editSession = null;
       insertSession = null;
       pendingThreadMovements.length = 0;
       threadMovementInFlight = false;
