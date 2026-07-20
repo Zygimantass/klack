@@ -122,7 +122,11 @@ test("theme selector registry exposes compact-theme affordances", () => {
   assert.match(selectorFor("klack.loaded-indicator.button"), /LoadedIndicator:loaded-indicator/);
   assert.equal(
     selectorFor("slack.message.user-mention"),
-    ':is([data-qa="rich_text_message_mention_element"], .c-mrkdwn__mention, .c-member_slug[data-stringify-type="mention"])',
+    ':is(.c-mrkdwn__mention, [data-member-id][data-stringify-type="mention"], .c-member_slug[data-stringify-type="mention"])',
   );
-  assert.equal(selectorFor("slack.message.user-group-mention"), ".c-mrkdwn__user_group");
+  assert.equal(
+    selectorFor("slack.message.user-group-mention"),
+    ':is(.c-mrkdwn__user_group--mention, .c-mrkdwn__user_group[data-stringify-type="mention"], [data-user-group-id][data-stringify-type="mention"])',
+  );
+  assert.equal(selectorFor("klack.message.relevant-mention"), "[data-klack-relevant-mention]");
 });

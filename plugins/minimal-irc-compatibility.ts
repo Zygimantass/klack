@@ -1,7 +1,25 @@
 import { definePlugin, type Cleanup } from "klack/sdk";
 
+import {
+  classifySlackMention,
+  isRelevantSlackMention,
+  relevantUserGroupIds,
+  type SlackMention,
+} from "./lib/minimal-irc-compatibility";
+
 type ThemeManager = {
   isThemeEnabled(id: string): boolean;
+};
+
+type SlackDesktopDelegate = {
+  getCurrentUserId?(): Promise<string> | string;
+  getTokenForCurrentTeam?(): Promise<string> | string;
+};
+
+type SlackWindow = Window & {
+  desktopDelegate?: SlackDesktopDelegate;
+  desktopDelegates?: Record<string, SlackDesktopDelegate>;
+  navigation?: EventTarget;
 };
 
 type MessageDecoration = {
@@ -22,9 +40,30 @@ function visibleText(element: Element | null): string {
   return element?.textContent?.replace(/\s+/g, " ").trim() || "";
 }
 
+function activeSlackDelegate(): SlackDesktopDelegate | undefined {
+  const slackWindow = window as SlackWindow;
+  const team = location.pathname.match(/^\/client\/([^/]+)/)?.[1];
+  return (team && slackWindow.desktopDelegates?.[team]) || slackWindow.desktopDelegate;
+}
+
+function activeSlackTeam(): string {
+  return location.pathname.match(/^\/client\/([^/]+)/)?.[1] || "__default__";
+}
+
+function mentionFromElement(element: Element): SlackMention | null {
+  return classifySlackMention({
+    classes: Array.from(element.classList),
+    memberId: element.getAttribute("data-member-id"),
+    stringifyId: element.getAttribute("data-stringify-id"),
+    stringifyType: element.getAttribute("data-stringify-type"),
+    userGroupId: element.getAttribute("data-user-group-id"),
+  });
+}
+
 export default definePlugin({
   name: "MinimalIRCCompatibility",
-  description: "Adds message metadata used by the Minimal IRC theme while that theme is enabled.",
+  description:
+    "Adds message metadata and relevant-mention markers while the Minimal IRC theme is enabled.",
   setup(klack) {
     const messageSelector = klack.selectors.get("slack.message.row");
     const senderSelector = klack.selectors.get("slack.message.sender-name");
@@ -32,6 +71,8 @@ export default definePlugin({
     const timestampLabelSelector = klack.selectors.get("slack.message.timestamp-label");
     const indentSelector = klack.selectors.get("slack.message.indent");
     const bodySelector = klack.selectors.get("slack.message.body");
+    const userMentionSelector = klack.selectors.get("slack.message.user-mention");
+    const userGroupMentionSelector = klack.selectors.get("slack.message.user-group-mention");
     const attachmentSelector = klack.selectors.get("slack.attachment.collection");
     const filesSelector = klack.selectors.get("slack.file.collection");
     const surfaceSelector = [
@@ -44,7 +85,119 @@ export default definePlugin({
 
     const startDecorating = (): Cleanup => {
       const decorations = new Map<Element, MessageDecoration>();
+      const mentions = new Set<Element>();
       const sendersBySurface = new WeakMap<Element, Map<string, string>>();
+      let active = true;
+      let currentUserId = "";
+      let identityContext: string | null = null;
+      let identityGeneration = 0;
+      let identityLoading = false;
+      let identityReady = false;
+      let identityRetryCount = 0;
+      let cancelIdentityRetry: Cleanup | null = null;
+      let membershipAbort: AbortController | null = null;
+      let relevantGroupIds = new Set<string>();
+
+      const decorateMention = (mention: Element): void => {
+        if (
+          isRelevantSlackMention(mentionFromElement(mention), currentUserId, relevantGroupIds)
+        ) {
+          mention.setAttribute("data-klack-relevant-mention", "");
+        } else {
+          mention.removeAttribute("data-klack-relevant-mention");
+        }
+      };
+
+      const refreshMentions = (): void => mentions.forEach(decorateMention);
+
+      const loadMentionIdentity = async (
+        generation: number,
+        abort: AbortController,
+      ): Promise<"complete" | "retry" | "stale"> => {
+        const delegate = activeSlackDelegate();
+        const userId = await delegate?.getCurrentUserId?.();
+        if (!active || generation !== identityGeneration) return "stale";
+        if (typeof userId !== "string" || !userId) return "retry";
+        currentUserId = userId;
+        refreshMentions();
+
+        const token = await delegate?.getTokenForCurrentTeam?.();
+        if (!active || generation !== identityGeneration) return "stale";
+        if (typeof token !== "string" || !token) return "retry";
+        const body = new URLSearchParams({
+          include_users: "true",
+          token,
+        });
+        const response = await fetch("/api/usergroups.list", {
+          body,
+          credentials: "same-origin",
+          method: "POST",
+          signal: abort.signal,
+        });
+        if (!response.ok) return "retry";
+        const result = (await response.json()) as { ok?: unknown; usergroups?: unknown };
+        if (!active || generation !== identityGeneration) return "stale";
+        if (result.ok !== true) return "retry";
+        relevantGroupIds = relevantUserGroupIds(result.usergroups, currentUserId);
+        refreshMentions();
+        return "complete";
+      };
+
+      const scheduleIdentityRetry = (generation: number): void => {
+        identityLoading = false;
+        if (identityRetryCount >= 3) {
+          identityReady = true;
+          return;
+        }
+        const delays = [250, 1_000, 3_000] as const;
+        const delay = delays[identityRetryCount];
+        identityRetryCount += 1;
+        cancelIdentityRetry = klack.timers.timeout(() => {
+          cancelIdentityRetry = null;
+          if (active && generation === identityGeneration) ensureMentionIdentity();
+        }, delay);
+      };
+
+      function ensureMentionIdentity(): void {
+        if (!active) return;
+        const context = activeSlackTeam();
+        if (context !== identityContext) {
+          identityContext = context;
+          identityGeneration += 1;
+          identityLoading = false;
+          identityReady = false;
+          identityRetryCount = 0;
+          currentUserId = "";
+          relevantGroupIds = new Set();
+          cancelIdentityRetry?.();
+          cancelIdentityRetry = null;
+          membershipAbort?.abort();
+          membershipAbort = null;
+          refreshMentions();
+        }
+        if (identityLoading || identityReady || cancelIdentityRetry) return;
+
+        identityLoading = true;
+        const generation = identityGeneration;
+        const abort = new AbortController();
+        membershipAbort = abort;
+        void loadMentionIdentity(generation, abort)
+          .then((outcome) => {
+            if (!active || generation !== identityGeneration || outcome === "stale") return;
+            if (outcome === "complete") {
+              identityLoading = false;
+              identityReady = true;
+            } else scheduleIdentityRetry(generation);
+          })
+          .catch((error: unknown) => {
+            if (!active || generation !== identityGeneration) return;
+            if (error instanceof DOMException && error.name === "AbortError") return;
+            klack.logger.warn(
+              "[Klack] MinimalIRCCompatibility could not load user-group membership",
+            );
+            scheduleIdentityRetry(generation);
+          });
+      }
 
       const senderCache = (message: Element): Map<string, string> => {
         const surface = message.closest(surfaceSelector) || document.documentElement;
@@ -151,9 +304,64 @@ export default definePlugin({
             if (message) decorateMessage(message);
           },
         ),
+        klack.dom.watch(
+          `${userMentionSelector}, ${userGroupMentionSelector}`,
+          (mention) => {
+            ensureMentionIdentity();
+            mentions.add(mention);
+            decorateMention(mention);
+            const stopObserving = klack.dom.observe(
+              mention,
+              () => {
+                ensureMentionIdentity();
+                decorateMention(mention);
+              },
+              {
+                attributeFilter: [
+                  "class",
+                  "data-member-id",
+                  "data-stringify-id",
+                  "data-stringify-type",
+                  "data-user-group-id",
+                ],
+                attributes: true,
+              },
+            );
+            return () => {
+              stopObserving();
+              mentions.delete(mention);
+              mention.removeAttribute("data-klack-relevant-mention");
+            };
+          },
+          {
+            attributes: [
+              "class",
+              "data-member-id",
+              "data-stringify-id",
+              "data-stringify-type",
+              "data-user-group-id",
+            ],
+          },
+        ),
+        ...((window as SlackWindow).navigation
+          ? [
+              klack.events.on(
+                (window as SlackWindow).navigation as EventTarget,
+                "currententrychange",
+                () => queueMicrotask(ensureMentionIdentity),
+              ),
+            ]
+          : []),
+        klack.events.on(window, "popstate", () => queueMicrotask(ensureMentionIdentity)),
       ];
 
+      ensureMentionIdentity();
+
       return () => {
+        active = false;
+        identityGeneration += 1;
+        cancelIdentityRetry?.();
+        membershipAbort?.abort();
         [...cleanups].reverse().forEach((cleanup) => cleanup());
         [...decorations.keys()].forEach(removeDecoration);
       };

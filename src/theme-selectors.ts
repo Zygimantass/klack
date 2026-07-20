@@ -385,15 +385,21 @@ export const THEME_SELECTORS = {
   "slack.message.user-mention": selector(
     "User mention across Slack renderer generations.",
     [
-      qa("rich_text_message_mention_element"),
       slackClass(".c-mrkdwn__mention"),
+      structural('[data-member-id][data-stringify-type="mention"]'),
       structural('.c-member_slug[data-stringify-type="mention"]'),
     ],
     { surface: "message" },
   ),
-  "slack.message.user-group-mention": selector("User-group mention.", [slackClass(".c-mrkdwn__user_group")], {
-    surface: "message",
-  }),
+  "slack.message.user-group-mention": selector(
+    "User-group mention across Slack renderer generations.",
+    [
+      slackClass(".c-mrkdwn__user_group--mention"),
+      structural('.c-mrkdwn__user_group[data-stringify-type="mention"]'),
+      structural('[data-user-group-id][data-stringify-type="mention"]'),
+    ],
+    { surface: "message" },
+  ),
   "slack.message.truncated-link": selector("Truncated rich-text link.", [qa("rich_text_truncated_link_element")], {
     surface: "message",
   }),
@@ -1118,6 +1124,9 @@ export const THEME_SELECTORS = {
     surface: "message",
   }),
   "klack.message.sender": selector("Minimal message sender label contributed by Klack.", [klack("[data-klack-message-sender]")], {
+    surface: "message",
+  }),
+  "klack.message.relevant-mention": selector("A self or member-group mention annotated by Klack.", [klack("[data-klack-relevant-mention]")], {
     surface: "message",
   }),
 } as const satisfies Record<string, ThemeSelectorDefinition>;

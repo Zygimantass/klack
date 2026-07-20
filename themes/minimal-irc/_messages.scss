@@ -169,10 +169,29 @@
   #{selector("slack.attachment.text")},
   #{selector("slack.attachment.title")},
   #{selector("slack.attachment.slack-message-preview")}
-) :is(
+) :where(
   #{selector("slack.message.user-mention")},
   #{selector("slack.message.user-group-mention")}
 ) {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #8ab4c4 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-weight: inherit !important;
+  text-decoration: none !important;
+}
+
+#{selector("slack.message.row")} :is(
+  #{selector("slack.message.body")},
+  #{selector("slack.attachment.body")},
+  #{selector("slack.attachment.pretext")},
+  #{selector("slack.attachment.text")},
+  #{selector("slack.attachment.title")},
+  #{selector("slack.attachment.slack-message-preview")}
+) #{selector("klack.message.relevant-mention")} {
   margin: 0 !important;
   padding: 0 2px !important;
   border: 0 !important;
@@ -191,10 +210,7 @@
   #{selector("slack.attachment.text")},
   #{selector("slack.attachment.title")},
   #{selector("slack.attachment.slack-message-preview")}
-) :is(
-  #{selector("slack.message.user-mention")},
-  #{selector("slack.message.user-group-mention")}
-):hover {
+) #{selector("klack.message.relevant-mention")}:hover {
   color: var(--minimal-irc-attention) !important;
   background: rgba(250, 189, 47, 0.18) !important;
   text-decoration: none !important;
