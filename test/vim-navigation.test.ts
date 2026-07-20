@@ -5,8 +5,10 @@ import {
   appendCountDigit,
   countValue,
   keyCommand,
+  messagePermalinkFromUrl,
   movedIndex,
   movedVisualIndex,
+  normalYankTransition,
   shouldEnterGlobalSearchResults,
   shouldSuppressNormalModeKey,
   shouldTreatComposerAsNormalMode,
@@ -90,6 +92,40 @@ test("allows key repeat only for movement commands", () => {
   assert.equal(key("d", { ctrlKey: true, repeat: true }), "half-next");
   for (const value of ["h", "g", "z", "G", "H", "L", "i", "c", "v", "y", "/", ":", "l", "Enter", "Escape", "7"]) {
     assert.equal(key(value, { repeat: true }), null);
+  }
+});
+
+test("uses yy as the normal-mode copy-link sequence", () => {
+  assert.equal(normalYankTransition(false, "yank"), "arm");
+  assert.equal(normalYankTransition(true, "yank"), "copy-link");
+  assert.equal(normalYankTransition(true, "next"), "clear");
+  assert.equal(normalYankTransition(false, null), "clear");
+});
+
+test("accepts Slack message permalinks and preserves reply context", () => {
+  const base = "https://app.slack.com/client/E098H03GGE6/C09KGTZ4S01";
+  assert.equal(
+    messagePermalinkFromUrl(
+      "https://tempoxyz.slack.com/archives/C09KGTZ4S01/p1784297632066769",
+      base,
+    ),
+    "https://tempoxyz.slack.com/archives/C09KGTZ4S01/p1784297632066769",
+  );
+  assert.equal(
+    messagePermalinkFromUrl(
+      "/archives/C09KGTZ4S01/p1784297648387099?thread_ts=1784297632.066769&cid=C09KGTZ4S01",
+      "https://tempoxyz.slack.com/client/E098H03GGE6/C09KGTZ4S01",
+    ),
+    "https://tempoxyz.slack.com/archives/C09KGTZ4S01/p1784297648387099?thread_ts=1784297632.066769&cid=C09KGTZ4S01",
+  );
+  for (const value of [
+    "javascript:alert(1)",
+    "http://tempoxyz.slack.com/archives/C09KGTZ4S01/p1784297632066769",
+    "https://evil.example/archives/C09KGTZ4S01/p1784297632066769",
+    "https://tempoxyz.slack.com/client/E098H03GGE6/C09KGTZ4S01",
+    "https://tempoxyz.slack.com/archives/X09KGTZ4S01/p1784297632066769",
+  ]) {
+    assert.equal(messagePermalinkFromUrl(value, base), null);
   }
 });
 

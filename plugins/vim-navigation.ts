@@ -4,8 +4,10 @@ import {
   appendCountDigit,
   countValue,
   keyCommand,
+  messagePermalinkFromUrl,
   movedIndex,
   movedVisualIndex,
+  normalYankTransition,
   shouldEnterGlobalSearchResults,
   shouldSuppressNormalModeKey,
   shouldTreatComposerAsNormalMode,
@@ -433,6 +435,7 @@ export default definePlugin({
     let reactionSession: ReactionSession | null = null;
     let searchSession: SearchSession | null = null;
     let topPrefixPending = false;
+    let yankPrefixPending = false;
     let visualSessionToken = 0;
     let visualSession: VisualSession | null = null;
 
@@ -457,6 +460,7 @@ export default definePlugin({
       resetCount();
       centerPrefixPending = false;
       topPrefixPending = false;
+      yankPrefixPending = false;
     };
 
     const takeCount = (): number => {
@@ -1375,6 +1379,39 @@ export default definePlugin({
       }
       if (active?.isConnected) active.focus({ preventScroll: true });
       return copied;
+    };
+
+    const copySelectedMessageLink = (): boolean => {
+      if (cursor?.kind !== "message") return false;
+      const origin: CursorOrigin = { ...cursor, surface: surfaceForCursor(cursor) };
+      const message = messageForOrigin(origin);
+      if (!message) return false;
+      const timestamp = message.querySelector(timestampSelector);
+      const anchor =
+        timestamp instanceof HTMLAnchorElement
+          ? timestamp
+          : timestamp?.querySelector<HTMLAnchorElement>("a[href]") ||
+            message.querySelector<HTMLAnchorElement>("a[data-ts][href]");
+      const link = messagePermalinkFromUrl(anchor?.href, location.href);
+      if (!link) {
+        console.warn("[Klack] VimNavigation could not find the selected message link");
+        return true;
+      }
+      if (copyTextWithTextarea(link)) return true;
+
+      const clipboard = navigator.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== "function") {
+        console.warn("[Klack] VimNavigation could not copy the selected message link");
+        return true;
+      }
+      try {
+        void clipboard.writeText(link).catch(() => {
+          console.warn("[Klack] VimNavigation could not copy the selected message link");
+        });
+      } catch {
+        console.warn("[Klack] VimNavigation could not copy the selected message link");
+      }
+      return true;
     };
 
     const yankVisualSelection = (): boolean => {
@@ -3064,6 +3101,7 @@ export default definePlugin({
 
       const command = keyCommand(event);
       const visualMotion = visualMotionCommand(event);
+      if (command !== "yank") yankPrefixPending = false;
       const blocked = keyboardBlocked();
       const pane = threadPane();
       const activeElement = document.activeElement instanceof HTMLElement
@@ -3248,10 +3286,12 @@ export default definePlugin({
       const hadCenterPrefix = centerPrefixPending;
       const hadCount = countPrefix.length > 0;
       const hadTopPrefix = topPrefixPending;
+      const hadYankPrefix = yankPrefixPending;
       let handled = false;
       if (command === "center-prefix") {
         resetCount();
         topPrefixPending = false;
+        yankPrefixPending = false;
         if (!hadCenterPrefix) {
           centerPrefixPending = true;
           event.preventDefault();
@@ -3263,6 +3303,7 @@ export default definePlugin({
       } else if (command === "top-prefix") {
         resetCount();
         centerPrefixPending = false;
+        yankPrefixPending = false;
         if (!hadTopPrefix) {
           topPrefixPending = true;
           event.preventDefault();
@@ -3271,9 +3312,22 @@ export default definePlugin({
         }
         topPrefixPending = false;
         handled = moveToTop();
+      } else if (command === "yank" && cursor?.kind === "message") {
+        resetCount();
+        centerPrefixPending = false;
+        topPrefixPending = false;
+        const transition = normalYankTransition(hadYankPrefix, command);
+        yankPrefixPending = transition === "arm";
+        if (transition === "arm") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return;
+        }
+        handled = copySelectedMessageLink();
       } else {
         centerPrefixPending = false;
         topPrefixPending = false;
+        yankPrefixPending = false;
         const amount = takeCount();
         if (command === "next" || command === "previous") {
           const direction = command === "next" ? "next" : "previous";
@@ -3309,6 +3363,7 @@ export default definePlugin({
         !hadCenterPrefix &&
         !hadCount &&
         !hadTopPrefix &&
+        !hadYankPrefix &&
         !leftNormalComposer
       ) {
         return;

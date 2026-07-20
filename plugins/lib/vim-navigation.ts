@@ -66,6 +66,8 @@ export type NormalModeComposerContext = {
   ownedByInsertSession: boolean;
 };
 
+export type NormalYankTransition = "arm" | "clear" | "copy-link";
+
 export function shouldEnterGlobalSearchResults(
   input: GlobalSearchTransitionInput,
 ): boolean {
@@ -87,6 +89,39 @@ export function shouldTreatComposerAsNormalMode(
     !context.ownedByEditSession &&
     !context.ownedByInsertSession
   );
+}
+
+export function normalYankTransition(
+  pending: boolean,
+  command: VimCommand | null,
+): NormalYankTransition {
+  if (command !== "yank") return "clear";
+  return pending ? "copy-link" : "arm";
+}
+
+export function messagePermalinkFromUrl(
+  value: string | null | undefined,
+  baseUrl: string,
+): string | null {
+  const candidate = value?.trim();
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate, baseUrl);
+    if (url.protocol !== "https:") return null;
+    const host = url.hostname.toLocaleLowerCase();
+    if (
+      host !== "slack.com" &&
+      !host.endsWith(".slack.com") &&
+      host !== "slack-gov.com" &&
+      !host.endsWith(".slack-gov.com")
+    ) {
+      return null;
+    }
+    if (!/^\/archives\/[CDG][A-Z0-9]{8,}\/p\d{10,}$/.test(url.pathname)) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 export function keyCommand(

@@ -241,6 +241,7 @@ the Klack plugin manager, then use:
 | `:` | Open Slack's emoji-reaction picker for the selected message. |
 | `i` | Focus the composer for the active conversation or the selected thread. |
 | `c` | Edit the selected message when Slack permits editing it. |
+| `yy` | Copy the selected message permalink, including the reply context for a thread reply. |
 | `v` | Start visual selection at the current message's first character; press it again after moving to re-anchor the selection there. |
 | `[count]h` / `[count]l` | Move the visual selection endpoint by characters. |
 | `[count]w` / `[count]b` / `[count]e` | Move the visual selection endpoint by words. |
@@ -278,6 +279,11 @@ editor. Type normally, then use Slack's native save command or controls;
 `Escape` cancels the edit and restores the Vim cursor. If Slack does not offer
 its **Edit message** action for that row, VimNavigation leaves the message
 unchanged and restores the cursor.
+
+Press `yy` on a selected message to copy its permalink without moving the Vim
+cursor. On a reply inside an open thread, the copied URL retains Slack's thread
+context and opens that specific reply. Visual-mode `y` continues to copy only
+the selected message text.
 
 Press `v` on a selected message to start at its first text character without
 including its author, timestamp, reactions, or attachments. Move with `h`/`l`,
