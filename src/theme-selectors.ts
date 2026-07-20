@@ -384,7 +384,11 @@ export const THEME_SELECTORS = {
   }),
   "slack.message.user-mention": selector(
     "User mention across Slack renderer generations.",
-    [slackClass(".c-mrkdwn__mention"), slackClass(".c-member_slug"), slackClass(".p-rich_text_slug"), structural('[data-stringify-type="mention"]')],
+    [
+      qa("rich_text_message_mention_element"),
+      slackClass(".c-mrkdwn__mention"),
+      structural('.c-member_slug[data-stringify-type="mention"]'),
+    ],
     { surface: "message" },
   ),
   "slack.message.user-group-mention": selector("User-group mention.", [slackClass(".c-mrkdwn__user_group")], {

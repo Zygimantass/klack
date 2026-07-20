@@ -120,4 +120,9 @@ test("theme selector registry exposes compact-theme affordances", () => {
   assert.match(selectorFor("slack.composer.emoji-action"), /data-qa="emoji_toolbar_button"/);
   assert.match(selectorFor("slack.message.reaction"), /data-qa="reactji"/);
   assert.match(selectorFor("klack.loaded-indicator.button"), /LoadedIndicator:loaded-indicator/);
+  assert.equal(
+    selectorFor("slack.message.user-mention"),
+    ':is([data-qa="rich_text_message_mention_element"], .c-mrkdwn__mention, .c-member_slug[data-stringify-type="mention"])',
+  );
+  assert.equal(selectorFor("slack.message.user-group-mention"), ".c-mrkdwn__user_group");
 });
