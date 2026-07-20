@@ -227,43 +227,58 @@ the Klack plugin manager, then use:
 
 | Key | Action |
 | --- | --- |
-| `[count]j` / `[count]k` | Select the next or previous conversation or message; in link mode, cycle through links. For example, `10j` moves ten rows. |
+| `[count]j` / `[count]k` | Select the next or previous conversation or message; in content mode, cycle through links and images; in the image viewer, show the next or previous image. For example, `10j` moves ten rows. |
 | `gg` | Select the first row in the sidebar or the first message in an open thread. |
 | `G` | Select the last row in the active navigation surface. |
 | `zz` | Center the selected conversation or message in its scrollable view. |
 | `H` / `L` | Go back or forward in Slack's navigation history. |
-| `h` | Leave link mode, move from messages to the sidebar, or close an open thread. |
+| `h` | Leave content mode, close the image viewer, move from messages to the sidebar, or close an open thread. |
 | `l` | Open the selected conversation or message thread from normal mode. |
-| `Enter` | Enter link mode when the selected message contains links, otherwise open its thread; in link mode, open the highlighted link. |
+| `Enter` | Enter content mode when the selected message contains links or images, otherwise open its thread; in content mode, open the highlighted target. |
 | `{` / `}` | Move backward or forward by one viewport. |
 | `Ctrl+U` / `Ctrl+D` | Move backward or forward by half a viewport. |
 | `/` | Search conversation names from the sidebar, or open Slack's global search from a message surface. |
-| `i` | Focus the composer for the active conversation or thread. |
+| `:` | Open Slack's emoji-reaction picker for the selected message. |
+| `i` | Focus the composer for the active conversation or the selected thread. |
 | `v` | Start visual selection at the current message's first character; press it again after moving to re-anchor the selection there. |
 | `[count]h` / `[count]l` | Move the visual selection endpoint by characters. |
 | `[count]w` / `[count]b` / `[count]e` | Move the visual selection endpoint by words. |
+| `[count]W` / `[count]E` | Move the visual selection endpoint by whitespace-delimited WORDs. |
 | `0` / `$` / `o` | In visual mode, move to line start/end or swap the anchor and endpoint. |
 | `y` | Copy the visual-mode message selection as plain text and return to normal mode. |
-| `Escape` | Leave insert, link, or visual mode; close search and restore the Vim cursor; close an open thread; or clear the cursor. |
+| `Escape` | Leave insert, content, or visual mode; close the image viewer; close search and restore the Vim cursor; close an open thread; or clear the cursor. |
 
 Counts also multiply viewport motions, so `2}` moves forward two viewports.
 After using `i`, the first `Escape` restores the previous Vim cursor; press it
 again to close the thread or clear the cursor.
 
-On a selected message, press `Enter` to highlight its first content link. Use
-`j`/`k` (with optional counts) to cycle through the links, then `Enter` to open
-the highlighted link. Press `h` or `Escape` to return to the message without
-closing its thread. `l` never activates a highlighted link. Messages without
-content links retain the normal `Enter` behavior of opening their thread, and
-`l` always opens a thread from normal mode.
+After opening a thread, normal-mode `j`/`k` takes over its parent and replies
+even if Slack autofocuses the reply composer or a thread control. With no
+message row selected yet, `j` starts at the first visible row and `k` starts at
+the last visible reply; a focused control inside a row seeds navigation there.
+
+On a selected message, press `Enter` to highlight its first content link or
+uploaded image thumbnail. Use `j`/`k` (with optional counts) to cycle through
+mixed targets in document order, then `Enter` to open the highlighted target.
+An uploaded image opens in Slack's viewer; use counted `j`/`k` there for
+next/previous and `h` or `Escape` to return to the originating thumbnail. Press
+`h` or `Escape` again to return to the message. `l` never activates a
+highlighted target. Messages without content targets retain the normal `Enter`
+behavior of opening their thread, and `l` always opens a thread from normal
+mode. Native arrow keys keep their normal image-viewer behavior.
+
+Press `:` on a selected message to open Slack's emoji-reaction picker. The
+picker's search field and controls remain native, so type to search, use Slack's
+usual arrow/Enter controls to choose, or press `Escape` to cancel and resume
+from the same message.
 
 Press `v` on a selected message to start at its first text character without
 including its author, timestamp, reactions, or attachments. Move with `h`/`l`,
-`w`/`b`/`e`, `0`/`$`, and optional counts. To begin somewhere in the middle,
-move there and press `v` again: that character becomes the new anchor. Use `o`
-to swap the two ends, `y` to copy the selected text and return to normal mode,
-or `Escape` to cancel. Visual mode is scoped to one message; it does not extend
-across messages.
+`w`/`b`/`e`, whitespace-delimited `W`/`E`, `0`/`$`, and optional counts. To
+begin somewhere in the middle, move there and press `v` again: that character
+becomes the new anchor. Use `o` to swap the two ends, `y` to copy the selected
+text and return to normal mode, or `Escape` to cancel. Visual mode is scoped to
+one message; it does not extend across messages.
 
 Press `/` from the sidebar to reveal and focus Slack's conversation-name filter.
 Type a query, press `Enter` to enter its results, use `j`/`k` (with optional
@@ -298,11 +313,14 @@ open it. `gg` moves to the first sidebar row; it also moves to the first
 message in an open thread. Main-channel history is excluded because Slack
 loads older messages without a finite top. To open a thread, use `j`/`k` in
 the message transcript to highlight its parent message, then press `l`.
-`Enter` also opens the thread when that message has no eligible content link;
-otherwise it enters link mode. Once the thread opens, use
+`Enter` also opens the thread when that message has no eligible content target;
+otherwise it enters content mode. Once the thread opens, use
 `j`/`k` to navigate its messages and `i` to focus the thread reply composer.
 Press `Escape` to return to normal mode, then `h` to close the thread and
 restore the parent-message cursor.
+
+In Slack's Threads view, `i` resolves the reply composer inside the selected
+thread card, so it does not jump to the first thread's composer at the top.
 
 ## Themes
 

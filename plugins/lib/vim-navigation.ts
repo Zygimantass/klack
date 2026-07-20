@@ -15,6 +15,7 @@ export type VimCommand =
   | "page-next"
   | "page-previous"
   | "previous"
+  | "react"
   | "search"
   | "top-prefix"
   | "unwind"
@@ -22,6 +23,8 @@ export type VimCommand =
   | "yank";
 
 export type VisualMotion =
+  | "big-word-end"
+  | "big-word-next"
   | "character-next"
   | "character-previous"
   | "line-end"
@@ -99,6 +102,7 @@ export function keyCommand(
     event.shiftKey &&
     event.key !== "{" &&
     event.key !== "}" &&
+    event.key !== ":" &&
     event.key !== "/" &&
     event.key !== "G" &&
     event.key !== "H" &&
@@ -115,6 +119,7 @@ export function keyCommand(
   else if (event.key === "}") command = "page-next";
   else if (event.key === "{") command = "page-previous";
   else if (event.key === "/") command = "search";
+  else if (event.key === ":") command = "react";
   else if (event.key === "g") command = "top-prefix";
   else if (event.key === "z") command = "center-prefix";
   else if (event.key === "G") command = "bottom";
@@ -148,13 +153,17 @@ export function visualMotionCommand(event: VimKeyInput): VisualMotion | null {
   ) {
     return null;
   }
-  if (event.shiftKey && event.key !== "$") return null;
+  if (event.shiftKey && event.key !== "$" && event.key !== "E" && event.key !== "W") {
+    return null;
+  }
 
   if (event.key === "h") return "character-previous";
   if (event.key === "l") return "character-next";
   if (event.key === "w") return "word-next";
+  if (event.key === "W") return "big-word-next";
   if (event.key === "b") return "word-previous";
   if (event.key === "e") return "word-end";
+  if (event.key === "E") return "big-word-end";
   if (event.key === "0") return "line-start";
   if (event.key === "$") return "line-end";
   if (event.key === "o" && !event.repeat) return "swap-ends";
@@ -213,6 +222,10 @@ function isWordGrapheme(value: string): boolean {
   return /[\p{L}\p{N}_]/u.test(value);
 }
 
+function isBlankGrapheme(value: string): boolean {
+  return /^\s+$/u.test(value);
+}
+
 export function movedVisualIndex(
   graphemes: readonly string[],
   current: number,
@@ -235,6 +248,28 @@ export function movedVisualIndex(
   }
 
   for (let step = 0; step < distance; step += 1) {
+    if (motion === "big-word-next") {
+      if (!isBlankGrapheme(graphemes[index])) {
+        while (index < graphemes.length - 1 && !isBlankGrapheme(graphemes[index])) {
+          index += 1;
+        }
+      }
+      while (index < graphemes.length - 1 && isBlankGrapheme(graphemes[index])) index += 1;
+      continue;
+    }
+
+    if (motion === "big-word-end") {
+      const atWordEnd =
+        !isBlankGrapheme(graphemes[index]) &&
+        (index === graphemes.length - 1 || isBlankGrapheme(graphemes[index + 1]));
+      if (atWordEnd && index < graphemes.length - 1) index += 1;
+      while (index < graphemes.length - 1 && isBlankGrapheme(graphemes[index])) index += 1;
+      while (index < graphemes.length - 1 && !isBlankGrapheme(graphemes[index + 1])) {
+        index += 1;
+      }
+      continue;
+    }
+
     if (motion === "word-previous") {
       index = Math.max(0, index - 1);
       while (index > 0 && !isWordGrapheme(graphemes[index])) index -= 1;

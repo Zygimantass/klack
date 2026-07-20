@@ -34,6 +34,7 @@ test("maps unmodified Vim navigation keys", () => {
   assert.equal(key("Escape"), "unwind");
   assert.equal(key("/"), "search");
   assert.equal(key("/", { shiftKey: true }), "search");
+  assert.equal(key(":", { shiftKey: true }), "react");
   assert.equal(key("g"), "top-prefix");
   assert.equal(key("z"), "center-prefix");
   assert.equal(key("G", { shiftKey: true }), "bottom");
@@ -53,6 +54,7 @@ test("maps unmodified Vim navigation keys", () => {
   assert.equal(key("d", { ctrlKey: true, shiftKey: true }), null);
   assert.equal(key("d", { metaKey: true }), null);
   assert.equal(key("i", { shiftKey: true }), null);
+  assert.equal(key(":", { shiftKey: true, metaKey: true }), null);
 
   for (const value of ["J", "K", " ", "ArrowDown", "x"]) {
     assert.equal(key(value), null);
@@ -83,7 +85,7 @@ test("allows key repeat only for movement commands", () => {
   assert.equal(key("k", { repeat: true }), "previous");
   assert.equal(key("}", { repeat: true, shiftKey: true }), "page-next");
   assert.equal(key("d", { ctrlKey: true, repeat: true }), "half-next");
-  for (const value of ["h", "g", "z", "G", "H", "L", "i", "v", "y", "/", "l", "Enter", "Escape", "7"]) {
+  for (const value of ["h", "g", "z", "G", "H", "L", "i", "v", "y", "/", ":", "l", "Enter", "Escape", "7"]) {
     assert.equal(key(value, { repeat: true }), null);
   }
 });
@@ -92,8 +94,12 @@ test("maps visual-mode character and word motions", () => {
   assert.equal(visualMotionCommand({ key: "h" }), "character-previous");
   assert.equal(visualMotionCommand({ key: "l", repeat: true }), "character-next");
   assert.equal(visualMotionCommand({ key: "w" }), "word-next");
+  assert.equal(visualMotionCommand({ key: "W", shiftKey: true }), "big-word-next");
+  assert.equal(visualMotionCommand({ key: "W", shiftKey: true, repeat: true }), "big-word-next");
   assert.equal(visualMotionCommand({ key: "b" }), "word-previous");
   assert.equal(visualMotionCommand({ key: "e" }), "word-end");
+  assert.equal(visualMotionCommand({ key: "E", shiftKey: true }), "big-word-end");
+  assert.equal(visualMotionCommand({ key: "E", shiftKey: true, metaKey: true }), null);
   assert.equal(visualMotionCommand({ key: "0" }), "line-start");
   assert.equal(visualMotionCommand({ key: "$", shiftKey: true }), "line-end");
   assert.equal(visualMotionCommand({ key: "o" }), "swap-ends");
@@ -160,7 +166,7 @@ test("moves within list boundaries without wrapping", () => {
   assert.equal(movedIndex(5, 2, "next", 10), 4);
 });
 
-test("cycles through links with counted wraparound", () => {
+test("cycles through content targets with counted wraparound", () => {
   assert.equal(wrappedIndex(0, 0, "next"), -1);
   assert.equal(wrappedIndex(3, 0, "previous"), 2);
   assert.equal(wrappedIndex(3, 2, "next"), 0);
@@ -181,6 +187,17 @@ test("moves visual selection endpoints by characters, words, and hard lines", ()
   assert.equal(movedVisualIndex(graphemes, 9, "line-start"), 8);
   assert.equal(movedVisualIndex(graphemes, 1, "line-end"), 6);
   assert.equal(movedVisualIndex(graphemes, 9, "line-end"), 12);
+
+  const words = Array.from("one-two three\nfour");
+  assert.equal(movedVisualIndex(words, 0, "word-next"), 4);
+  assert.equal(movedVisualIndex(words, 0, "big-word-next"), 8);
+  assert.equal(movedVisualIndex(words, 0, "big-word-next", 2), 14);
+  assert.equal(movedVisualIndex(words, 0, "big-word-end"), 6);
+  assert.equal(movedVisualIndex(words, 0, "big-word-end", 2), 12);
+  const atomicAlt = ["image preview", "x", "\u00a0", "next"];
+  assert.equal(movedVisualIndex(atomicAlt, 0, "big-word-next"), 3);
+  assert.equal(movedVisualIndex(atomicAlt, 0, "big-word-end"), 1);
+  assert.equal(movedVisualIndex(words, words.length - 1, "big-word-next"), words.length - 1);
 });
 
 test("preserves a reply's parent timestamp when opening its thread", () => {

@@ -400,6 +400,9 @@ export const THEME_SELECTORS = {
   "slack.message.actions": selector("Message action toolbar.", [slackClass(".c-message_actions__container")], {
     surface: "message",
   }),
+  "slack.message.add-reaction-action": selector("Add-reaction message action.", [qa("add_reaction")], {
+    surface: "message",
+  }),
   "slack.message.day-divider": selector("Transcript day divider.", [slackClass(".c-message_list__day_divider")], {
     surface: "message",
   }),
@@ -844,6 +847,26 @@ export const THEME_SELECTORS = {
   ),
   "slack.dialog.header": selector("Slack dialog header.", [slackClass(".c-sk-modal_header")], {
     surface: "dialog",
+  }),
+  "slack.media-viewer.root": selector("Image and media viewer dialog.", [slackClass(".p-media_viewer_modal")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.previous": selector("Previous-media viewer action.", [slackClass(".p-media_viewer_modal__navigation__button--previous")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.next": selector("Next-media viewer action.", [slackClass(".p-media_viewer_modal__navigation__button--next")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.close": selector("Media-viewer close action.", [slackClass(".p-media_viewer_modal__tabs_close")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.image": selector("Current media-viewer image.", [qa("image_viewer_image")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
   }),
   "slack.preferences.root": selector("Slack preferences dialog.", [slackClass(".p-prefs_dialog__modal")], {
     cardinality: "zero-or-one",
