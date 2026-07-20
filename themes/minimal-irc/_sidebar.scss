@@ -59,16 +59,46 @@
 }
 
 #{selector("slack.sidebar.root")} #{selector("slack.sidebar.item-unread")} {
-  color: var(--minimal-irc-unread) !important;
+  color: var(--minimal-irc-attention) !important;
+  background: var(--minimal-irc-attention-soft) !important;
+  box-shadow: inset 3px 0 0 var(--minimal-irc-attention) !important;
   font-weight: 700 !important;
+}
+
+#{selector("slack.sidebar.root")} #{selector("slack.sidebar.item-unread")} :is(
+  #{selector("slack.sidebar.item-name")},
+  #{selector("slack.sidebar.item-icon")},
+  #{selector("slack.sidebar.item-suffix")}
+) {
+  color: var(--minimal-irc-attention) !important;
+  font-weight: 700 !important;
+}
+
+#{selector("slack.sidebar.root")} #{selector("slack.sidebar.item-unread")}:hover {
+  background: rgba(250, 189, 47, 0.18) !important;
 }
 
 #{selector("slack.sidebar.item-icon")} {
   color: #56636c !important;
 }
 
-#{selector("slack.sidebar.item-suffix")},
-#{selector("slack.sidebar.root")} #{selector("slack.sidebar.mention-badge")} {
+#{selector("slack.sidebar.item-suffix")} {
   transform: scale(0.78);
   transform-origin: right center;
+}
+
+#{selector("slack.sidebar.item-suffix")}:has(#{selector("slack.sidebar.mention-badge")}) {
+  transform: none !important;
+}
+
+#{selector("slack.sidebar.root")} #{selector("slack.sidebar.mention-badge")} {
+  min-width: 18px !important;
+  height: 18px !important;
+  padding: 0 4px !important;
+  border: 1px solid var(--minimal-irc-attention) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-attention-ink) !important;
+  background: var(--minimal-irc-attention) !important;
+  font: 700 11px/16px var(--minimal-irc-font-family) !important;
+  transform: none !important;
 }

@@ -113,3 +113,11 @@ test("theme selector registry exposes ordered, composable candidates", () => {
   assert.equal(THEME_SELECTORS["klack.plugin-manager.dialog"].candidates[0].stability, "owned");
   assert.equal(THEME_SELECTORS["slack.message.row"].required, true);
 });
+
+test("theme selector registry exposes compact-theme affordances", () => {
+  assert.match(selectorFor("slack.channel-header.members-action"), /data-qa="avatar_stack"/);
+  assert.match(selectorFor("slack.composer.actions-buttons"), /data-qa="wysiwyg-container_toolbar-buttons"/);
+  assert.match(selectorFor("slack.composer.emoji-action"), /data-qa="emoji_toolbar_button"/);
+  assert.match(selectorFor("slack.message.reaction"), /data-qa="reactji"/);
+  assert.match(selectorFor("klack.loaded-indicator.button"), /LoadedIndicator:loaded-indicator/);
+});

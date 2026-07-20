@@ -48,10 +48,66 @@
   white-space: nowrap !important;
 }
 
-#{selector("slack.channel-header.root")} :is(
-  #{selector("slack.channel-header.actions")},
-  #{selector("slack.channel-header.favorite-action")}
-),
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.actions")} {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 0 !important;
+  margin-left: auto !important;
+  color: var(--minimal-irc-muted) !important;
+  background: transparent !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.actions")} > :not(
+  #{selector("slack.channel-header.members-action")}
+):not(:has(#{selector("slack.channel-header.members-action")})) {
+  display: none !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.actions")} > :has(
+  #{selector("slack.channel-header.members-action")}
+) {
+  display: block !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.members-action")} {
+  display: inline-flex !important;
+  min-width: 36px !important;
+  height: 24px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 0 6px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-text) !important;
+  background: var(--minimal-irc-raised) !important;
+  box-shadow: none !important;
+  font: 700 var(--minimal-irc-meta-size)/22px var(--minimal-irc-font-family) !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.members-action")}:hover {
+  border-color: var(--minimal-irc-accent) !important;
+  color: var(--minimal-irc-unread) !important;
+  background: var(--minimal-irc-bg) !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.members-action")} :is(
+  .p-avatar_stack__stack__user_icon,
+  .p-avatar_stack__stack__avatars,
+  .p-avatar_stack__count,
+  svg
+) {
+  color: inherit !important;
+  font: inherit !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.members-action")} :is(img, .c-avatar) {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+#{selector("slack.channel-header.root")} #{selector("slack.channel-header.favorite-action")},
 #{selector("slack.channel-header.tabs")},
 #{selector("slack.channel-header.top-banners")},
 #{selector("slack.channel-header.bookmark-banners")} {

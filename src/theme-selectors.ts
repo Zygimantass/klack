@@ -269,6 +269,11 @@ export const THEME_SELECTORS = {
     cardinality: "zero-or-one",
     surface: "channel-header",
   }),
+  "slack.channel-header.members-action": selector(
+    "Channel members and member-count action.",
+    [qa("avatar_stack"), slackClass(".p-avatar_stack--details")],
+    { cardinality: "zero-or-one", surface: "channel-header" },
+  ),
   "slack.channel-header.favorite-action": selector("Favorite/star channel action.", [qa("entity-header-star-button")], {
     cardinality: "zero-or-one",
     surface: "channel-header",
@@ -392,6 +397,19 @@ export const THEME_SELECTORS = {
     surface: "message",
   }),
   "slack.message.reactions": selector("Message reaction bar.", [slackClass(".c-reaction_bar")], {
+    surface: "message",
+  }),
+  "slack.message.reaction": selector(
+    "An emoji reaction on a message.",
+    [qa("reactji"), qa("channel-message-reaction"), slackClass(".c-reaction")],
+    { surface: "message" },
+  ),
+  "slack.message.reaction-add": selector(
+    "Add an emoji reaction to a message.",
+    [qa("add_reaction_button"), slackClass(".c-reaction_add")],
+    { surface: "message" },
+  ),
+  "slack.message.reaction-count": selector("Message reaction count.", [slackClass(".c-reaction__count")], {
     surface: "message",
   }),
   "slack.message.reply-bar": selector("Message thread-reply summary.", [slackClass(".c-message__reply_bar")], {
@@ -550,6 +568,16 @@ export const THEME_SELECTORS = {
   "slack.composer.actions-toolbar": selector(
     "Composer action toolbar.",
     [aria('[role="toolbar"][aria-label="Composer actions"]'), slackClass(".c-wysiwyg_container__footer")],
+    { cardinality: "zero-or-one", surface: "composer" },
+  ),
+  "slack.composer.actions-buttons": selector(
+    "Composer action-button group.",
+    [qa("wysiwyg-container_toolbar-buttons"), slackClass(".c-wysiwyg_container__toolbar_buttons")],
+    { cardinality: "zero-or-one", surface: "composer" },
+  ),
+  "slack.composer.emoji-action": selector(
+    "Composer emoji picker action.",
+    [qa("emoji_toolbar_button"), slackClass(".c-wysiwyg_container__button--emoji")],
     { cardinality: "zero-or-one", surface: "composer" },
   ),
   "slack.composer.input-shell": selector("Composer editor shell.", [slackClass(".c-texty_input_unstyled__container")], {
@@ -945,6 +973,9 @@ export const THEME_SELECTORS = {
   "slack.autocomplete.current-status": selector("Autocomplete member status.", [slackClass(".c-member__current-status")], {
     surface: "autocomplete",
   }),
+  "slack.emoji.image": selector("Rendered Slack emoji image.", [qa("emoji"), slackClass(".c-emoji")], {
+    surface: "emoji",
+  }),
   "slack.emoji-picker.root": selector("Emoji picker.", [slackClass(".p-emoji_picker")], {
     cardinality: "zero-or-one",
     surface: "emoji-picker",
@@ -958,6 +989,11 @@ export const THEME_SELECTORS = {
     surface: "emoji-picker",
   }),
 
+  "klack.loaded-indicator.button": selector(
+    "First-install Klack loaded indicator.",
+    [klack('[data-klack-button="LoadedIndicator:loaded-indicator"]')],
+    { cardinality: "zero-or-one", surface: "loaded-indicator" },
+  ),
   "klack.plugin-manager.trigger": selector("Plugin manager top-nav trigger.", [klack("[data-klack-plugin-manager-trigger]")], {
     cardinality: "zero-or-one",
     surface: "plugin-manager",
