@@ -768,7 +768,9 @@ export default definePlugin({
     };
 
     const cancelEditorRoot = (editorRoot: HTMLElement): boolean => {
-      const cancel = editorRoot ? visibleElement(editCancelSelector, editorRoot) : null;
+      // Minimal themes can visually hide Slack's confirmation controls while
+      // the native buttons remain the authoritative edit actions.
+      const cancel = editorRoot.querySelector<HTMLElement>(editCancelSelector);
       if (!cancel) return false;
       activatingEditAction = true;
       try {
