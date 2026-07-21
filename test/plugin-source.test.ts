@@ -3,30 +3,57 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 import { pluginEvaluationSource } from "../src/plugin-source";
 import { loadPlugins } from "../src/plugins";
 
-test("loads the default export from a bundled TypeScript plugin", () => {
-  const [plugin] = loadPlugins({
-    directories: [path.resolve("plugins")],
-    sdkPath: path.resolve("dist", "sdk.js"),
-  });
-  let loaded: { extension: unknown; sourceName: string } | undefined;
+const REPOSITORY_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const BUILT_IN_PLUGINS = path.join(REPOSITORY_ROOT, "plugins");
+const SDK_PATH = path.join(REPOSITORY_ROOT, "dist", "sdk.js");
 
-  vm.runInNewContext(pluginEvaluationSource(plugin), {
-    Klack: {
-      loadPlugin(extension: unknown) {
-        loaded = { extension, sourceName: plugin.name };
-      },
+test("loads every bundled TypeScript plugin", () => {
+  const errors: Array<{ error: unknown; pluginPath: string }> = [];
+  const plugins = loadPlugins({
+    directories: [BUILT_IN_PLUGINS],
+    onError(pluginPath, error) {
+      errors.push({ error, pluginPath });
     },
+    sdkPath: SDK_PATH,
   });
+  const loaded: Array<{ extension: unknown; sourceName: string }> = [];
 
-  assert.ok(loaded);
-  assert.equal(loaded.sourceName, "loaded-indicator.js");
-  assert.equal((loaded.extension as { name?: unknown }).name, "LoadedIndicator");
-  assert.equal(typeof (loaded.extension as { setup?: unknown }).setup, "function");
+  for (const plugin of plugins) {
+    vm.runInNewContext(pluginEvaluationSource(plugin), {
+      Klack: {
+        loadPlugin(extension: unknown) {
+          loaded.push({ extension, sourceName: plugin.name });
+        },
+      },
+    });
+  }
+
+  assert.deepEqual(errors, []);
+  assert.deepEqual(
+    loaded.map(({ sourceName }) => sourceName),
+    plugins.map(({ name }) => name),
+  );
+  loaded.forEach(({ extension }) => {
+    const name = (extension as { name?: unknown }).name;
+    assert.equal(typeof name, "string");
+    assert.match(name as string, /^[A-Za-z0-9_-]+$/);
+    assert.equal(typeof (extension as { setup?: unknown }).setup, "function");
+  });
+  assert.equal(
+    new Set(loaded.map(({ extension }) => (extension as { name: string }).name)).size,
+    loaded.length,
+  );
+
+  const vimNavigation = loaded.find(({ sourceName }) => sourceName === "vim-navigation.js");
+  assert.ok(vimNavigation);
+  assert.equal((vimNavigation.extension as { name?: unknown }).name, "VimNavigation");
+  assert.equal((vimNavigation.extension as { defaultEnabled?: unknown }).defaultEnabled, false);
 });
 
 test("loads a zero-build CommonJS plugin definition", (t) => {
@@ -40,7 +67,7 @@ test("loads a zero-build CommonJS plugin definition", (t) => {
 
   const [plugin] = loadPlugins({
     directories: [directory],
-    sdkPath: path.resolve("dist", "sdk.js"),
+    sdkPath: SDK_PATH,
   });
 
   vm.runInNewContext(pluginEvaluationSource(plugin), {
@@ -94,7 +121,7 @@ test("loads TypeScript from a user plugin directory and overrides matching built
 
   const [plugin] = loadPlugins({
     directories: [builtInDirectory, userDirectory],
-    sdkPath: path.resolve("dist", "sdk.js"),
+    sdkPath: SDK_PATH,
   });
   let extension: { name?: unknown } | undefined;
   vm.runInNewContext(pluginEvaluationSource(plugin), {

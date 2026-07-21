@@ -318,6 +318,15 @@ export const THEME_SELECTORS = {
     surface: "channel-header",
   }),
 
+  "slack.channel.preview-action": selector(
+    "A non-member channel preview action.",
+    [
+      qa("message-pane-input-preview-join-channel"),
+      qa("message-pane-input-preview-channel-details"),
+    ],
+    { cardinality: "zero-or-one", surface: "message" },
+  ),
+
   "slack.message.pane": selector("Primary message transcript pane.", [qa("message_pane"), slackClass(".p-message_pane")], {
     cardinality: "exactly-one",
     required: true,
@@ -400,6 +409,25 @@ export const THEME_SELECTORS = {
   "slack.message.actions": selector("Message action toolbar.", [slackClass(".c-message_actions__container")], {
     surface: "message",
   }),
+  "slack.message.add-reaction-action": selector("Add-reaction message action.", [qa("add_reaction")], {
+    surface: "message",
+  }),
+  "slack.message.more-actions": selector("More message actions control.", [qa("more_message_actions")], {
+    surface: "message",
+  }),
+  "slack.message.edit-action": selector("Edit-message menu action.", [qa("edit_message")], {
+    cardinality: "zero-or-one",
+    surface: "menu",
+  }),
+  "slack.message.editor": selector("Inline message editor.", [qa("message_editor")], {
+    cardinality: "zero-or-one",
+    surface: "message",
+  }),
+  "slack.message.edit-cancel": selector(
+    "Cancel control in the inline message editor.",
+    [slackClass(".c-wysiwyg_container__suffix__confirmation-buttons .c-button--outline")],
+    { cardinality: "zero-or-one", surface: "message" },
+  ),
   "slack.message.day-divider": selector("Transcript day divider.", [slackClass(".c-message_list__day_divider")], {
     surface: "message",
   }),
@@ -844,6 +872,26 @@ export const THEME_SELECTORS = {
   ),
   "slack.dialog.header": selector("Slack dialog header.", [slackClass(".c-sk-modal_header")], {
     surface: "dialog",
+  }),
+  "slack.media-viewer.root": selector("Image and media viewer dialog.", [slackClass(".p-media_viewer_modal")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.previous": selector("Previous-media viewer action.", [slackClass(".p-media_viewer_modal__navigation__button--previous")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.next": selector("Next-media viewer action.", [slackClass(".p-media_viewer_modal__navigation__button--next")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.close": selector("Media-viewer close action.", [slackClass(".p-media_viewer_modal__tabs_close")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
+  }),
+  "slack.media-viewer.image": selector("Current media-viewer image.", [qa("image_viewer_image")], {
+    cardinality: "zero-or-one",
+    surface: "media-viewer",
   }),
   "slack.preferences.root": selector("Slack preferences dialog.", [slackClass(".p-prefs_dialog__modal")], {
     cardinality: "zero-or-one",

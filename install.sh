@@ -100,7 +100,7 @@ command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v tar >/dev/null 2>&1 || fail "tar is required"
 command -v node >/dev/null 2>&1 || fail "Node.js 24 or newer is required: https://nodejs.org/"
 
-NODE_MAJOR=$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null) ||
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null) ||
   fail "could not determine the installed Node.js version"
 [ "$NODE_MAJOR" -ge 24 ] || fail "Node.js 24 or newer is required (found $(node --version))"
 

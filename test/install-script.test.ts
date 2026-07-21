@@ -85,6 +85,8 @@ function releaseFixture(t: test.TestContext, validChecksum = true) {
   const binDirectory = path.join(root, "bin");
   const environment = {
     ...process.env,
+    FORCE_COLOR: "1",
+    NO_COLOR: "",
     KLACK_ALLOW_INSECURE_DOWNLOADS: "1",
     KLACK_ARCH: "arm64",
     KLACK_BIN_DIR: binDirectory,

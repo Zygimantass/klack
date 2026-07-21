@@ -203,6 +203,129 @@ It provides searchable, persistent enable/disable controls for built-in and
 user plugins and themes. The manager itself stays enabled so the controls
 remain accessible.
 
+### Vim navigation
+
+The opt-in **VimNavigation** plugin adds a visual keyboard cursor across the
+sidebar, message transcript, Threads view, and an open thread. Enable it from
+the Klack plugin manager, then use:
+
+| Key | Action |
+| --- | --- |
+| `[count]j` / `[count]k` | Select the next or previous conversation or message; in content mode, cycle through links and images; in the image viewer, show the next or previous image. For example, `10j` moves ten rows. |
+| `gg` | Select the first row in the sidebar or the first message in an open thread. |
+| `G` | Select the last row in the active navigation surface. |
+| `zz` | Center the selected conversation or message in its scrollable view. |
+| `H` / `L` | Go back or forward in Slack's navigation history. |
+| `h` | Leave content mode, close the image viewer, move from messages to the sidebar, or close an open thread. |
+| `l` | Open the selected conversation or message thread from normal mode. |
+| `Enter` | Enter content mode when the selected message contains links or images, otherwise open its thread; in content mode, open the highlighted target. |
+| `{` / `}` | Move backward or forward by one viewport. |
+| `Ctrl+U` / `Ctrl+D` | Move backward or forward by half a viewport. |
+| `/` | Search conversation names from the sidebar, or open Slack's global search from a message surface. |
+| `:` | Open Slack's emoji-reaction picker for the selected message. |
+| `i` | Focus the composer for the active conversation or the selected thread. |
+| `c` | Edit the selected message when Slack permits editing it. |
+| `yy` | Copy the selected message permalink, including the reply context for a thread reply. |
+| `v` | Start visual selection at the current message's first character; press it again after moving to re-anchor the selection there. |
+| `[count]h` / `[count]l` | Move the visual selection endpoint by characters. |
+| `[count]w` / `[count]b` / `[count]e` | Move the visual selection endpoint by words. |
+| `[count]W` / `[count]E` | Move the visual selection endpoint by whitespace-delimited WORDs. |
+| `0` / `$` / `o` | In visual mode, move to line start/end or swap the anchor and endpoint. |
+| `y` | Copy the visual-mode message selection as plain text and return to normal mode. |
+| `Escape` | Leave insert, content, or visual mode; close the image viewer; close search and restore the Vim cursor; close an open thread; leave sidebar navigation for the visible transcript; or clear the cursor. |
+
+Counts also multiply viewport motions, so `2}` moves forward two viewports.
+After using `i`, the first `Escape` restores the previous Vim cursor; press it
+again to close the thread or clear the cursor.
+
+After opening a thread, normal-mode `j`/`k` takes over its parent and replies
+even if Slack autofocuses the reply composer or a thread control. With no
+message row selected yet, `j` starts at the first visible row and `k` starts at
+the last visible reply; a focused control inside a row seeds navigation there.
+
+On a selected message, press `Enter` to highlight its first content link or
+uploaded image thumbnail. Use `j`/`k` (with optional counts) to cycle through
+mixed targets in document order, then `Enter` to open the highlighted target.
+An uploaded image opens in Slack's viewer; use counted `j`/`k` there for
+next/previous and `h` or `Escape` to return to the originating thumbnail. Press
+`h` or `Escape` again to return to the message. `l` never activates a
+highlighted target. Messages without content targets retain the normal `Enter`
+behavior of opening their thread, and `l` always opens a thread from normal
+mode. Native arrow keys keep their normal image-viewer behavior.
+
+Press `:` on a selected message to open Slack's emoji-reaction picker. The
+picker's search field and controls remain native, so type to search, use Slack's
+usual arrow/Enter controls to choose, or press `Escape` to cancel and resume
+from the same message.
+
+Press `c` on one of your editable messages to enter Slack's inline message
+editor. Type normally, then use Slack's native save command or controls;
+`Escape` cancels the edit and restores the Vim cursor. If Slack does not offer
+its **Edit message** action for that row, VimNavigation leaves the message
+unchanged and restores the cursor.
+
+Press `yy` on a selected message to copy its permalink without moving the Vim
+cursor. On a reply inside an open thread, the copied URL retains Slack's thread
+context and opens that specific reply. Visual-mode `y` continues to copy only
+the selected message text.
+
+Press `v` on a selected message to start at its first text character without
+including its author, timestamp, reactions, or attachments. Move with `h`/`l`,
+`w`/`b`/`e`, whitespace-delimited `W`/`E`, `0`/`$`, and optional counts. To
+begin somewhere in the middle, move there and press `v` again: that character
+becomes the new anchor. Use `o` to swap the two ends, `y` to copy the selected
+text and return to normal mode, or `Escape` to cancel. Visual mode is scoped to
+one message; it does not extend across messages.
+
+Press `/` from the sidebar to reveal and focus Slack's conversation-name filter.
+Type a query, press `Enter` to enter its results, use `j`/`k` (with optional
+counts) to move, and press `Enter` again to open the selected conversation.
+`l` is consumed while navigating filtered results so it cannot leak into the
+current message. Press `/` to edit the query again, or `Escape` to cancel the
+filter and restore the previous sidebar cursor. After a searched conversation
+has opened, `Escape` leaves any remaining sidebar navigation state for the
+visible transcript, so the next `j`/`k` browses its messages without finding the
+conversation again and pressing `l`.
+
+Press `/` from the message transcript, Threads view, or an open thread to open
+global Slack search with its input focused immediately. Press `Escape` to close
+search and restore the Vim cursor to its previous surface and row. Search uses
+native typing immediately, so `i` is inserted into the query rather than acting
+as the insert-mode command. Submit with `Enter`; when Slack shows the results,
+the first match receives the Vim cursor. Use counted `j`/`k`, `gg`/`G`, viewport
+motions, or `zz` to browse matches, then press `Enter` to open the selected
+result's thread. Thread navigation and `i` work normally; closing the thread
+returns to the same search result. `l` is consumed in result mode so it cannot
+leak into the channel underneath. Press `Escape` or `H` from the result list to
+leave search and restore the original cursor. To constrain global search to one
+channel, use Slack's `in:channel-name search terms` syntax in that field.
+
+VimNavigation is modal: it remains in normal mode even when Slack leaves the
+message composer focused. Normal-mode keys move the Vim cursor without changing
+the draft, and other text-editing keys are suppressed until `i` explicitly
+enters insert mode. Other inputs, links, buttons, dialogs, menus, and suggestion
+lists retain their native behavior. Other modified keys are left alone;
+`Ctrl+U` and `Ctrl+D` are captured only on a navigation surface.
+
+For channel navigation, press `h` to move into the sidebar, use `j`/`k` to
+place the highlighted Vim cursor on a channel, then press `l` or `Enter` to
+open it. In a non-member channel preview, Vim navigation still owns its normal
+keys while Slack's **Join channel** action keeps native `Enter` behavior. `gg`
+moves to the first sidebar row; it also moves to the first
+message in an open thread. Main-channel history is excluded because Slack
+loads older messages without a finite top. To open a thread, use `j`/`k` in
+the message transcript to highlight its parent message, then press `l`.
+`Enter` also opens the thread when that message has no eligible content target;
+otherwise it enters content mode. Once the thread opens, use
+`j`/`k` to navigate its messages and `i` to focus the thread reply composer.
+Press `Escape` to return to normal mode, then `h` to close the thread and
+restore the parent-message cursor.
+
+In Slack's Threads view, `k` expands a crossed **Show more replies** boundary
+before continuing to the newly revealed replies. `i` resolves the reply
+composer inside the selected thread card, so it does not jump to the first
+thread's composer at the top.
+
 ## Themes
 
 Klack discovers `~/.klack/themes/**/*.theme.css` at startup. Themes have their
