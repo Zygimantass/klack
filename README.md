@@ -248,7 +248,7 @@ the Klack plugin manager, then use:
 | `[count]W` / `[count]E` | Move the visual selection endpoint by whitespace-delimited WORDs. |
 | `0` / `$` / `o` | In visual mode, move to line start/end or swap the anchor and endpoint. |
 | `y` | Copy the visual-mode message selection as plain text and return to normal mode. |
-| `Escape` | Leave insert, content, or visual mode; close the image viewer; close search and restore the Vim cursor; close an open thread; or clear the cursor. |
+| `Escape` | Leave insert, content, or visual mode; close the image viewer; close search and restore the Vim cursor; close an open thread; leave sidebar navigation for the visible transcript; or clear the cursor. |
 
 Counts also multiply viewport motions, so `2}` moves forward two viewports.
 After using `i`, the first `Escape` restores the previous Vim cursor; press it
@@ -298,7 +298,10 @@ Type a query, press `Enter` to enter its results, use `j`/`k` (with optional
 counts) to move, and press `Enter` again to open the selected conversation.
 `l` is consumed while navigating filtered results so it cannot leak into the
 current message. Press `/` to edit the query again, or `Escape` to cancel the
-filter and restore the previous sidebar cursor.
+filter and restore the previous sidebar cursor. After a searched conversation
+has opened, `Escape` leaves any remaining sidebar navigation state for the
+visible transcript, so the next `j`/`k` browses its messages without finding the
+conversation again and pressing `l`.
 
 Press `/` from the message transcript, Threads view, or an open thread to open
 global Slack search with its input focused immediately. Press `Escape` to close

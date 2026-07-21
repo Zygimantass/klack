@@ -66,7 +66,26 @@ export type NormalModeComposerContext = {
   ownedByInsertSession: boolean;
 };
 
+export type NormalUnwindInput = {
+  hasCursor: boolean;
+  hasThreadPane: boolean;
+  sidebarActive: boolean;
+};
+
+export type NormalUnwindAction =
+  | "clear-cursor"
+  | "close-thread"
+  | "enter-transcript"
+  | "none";
+
 export type NormalYankTransition = "arm" | "clear" | "copy-link";
+
+export function normalUnwindAction(input: NormalUnwindInput): NormalUnwindAction {
+  if (input.hasThreadPane) return "close-thread";
+  if (input.sidebarActive) return "enter-transcript";
+  if (input.hasCursor) return "clear-cursor";
+  return "none";
+}
 
 export function shouldEnterGlobalSearchResults(
   input: GlobalSearchTransitionInput,

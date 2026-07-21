@@ -9,6 +9,7 @@ import {
   messagePermalinkFromUrl,
   movedIndex,
   movedVisualIndex,
+  normalUnwindAction,
   normalYankTransition,
   previousMovementCrossesGap,
   shouldEnterGlobalSearchResults,
@@ -103,6 +104,50 @@ test("takes Vim commands back from passive channel-preview focus except native E
   assert.equal(shouldOwnChannelPreviewFocus("activate", "Enter"), false);
   assert.equal(shouldOwnChannelPreviewFocus(null, "j"), false);
   assert.equal(shouldOwnChannelPreviewFocus(null, "Enter"), false);
+});
+
+test("chooses the normal-mode Escape action by navigation priority", () => {
+  for (const input of [
+    { hasCursor: false, hasThreadPane: true, sidebarActive: false },
+    { hasCursor: true, hasThreadPane: true, sidebarActive: false },
+    { hasCursor: false, hasThreadPane: true, sidebarActive: true },
+    { hasCursor: true, hasThreadPane: true, sidebarActive: true },
+  ]) {
+    assert.equal(normalUnwindAction(input), "close-thread");
+  }
+
+  assert.equal(
+    normalUnwindAction({
+      hasCursor: false,
+      hasThreadPane: false,
+      sidebarActive: true,
+    }),
+    "enter-transcript",
+  );
+  assert.equal(
+    normalUnwindAction({
+      hasCursor: true,
+      hasThreadPane: false,
+      sidebarActive: true,
+    }),
+    "enter-transcript",
+  );
+  assert.equal(
+    normalUnwindAction({
+      hasCursor: true,
+      hasThreadPane: false,
+      sidebarActive: false,
+    }),
+    "clear-cursor",
+  );
+  assert.equal(
+    normalUnwindAction({
+      hasCursor: false,
+      hasThreadPane: false,
+      sidebarActive: false,
+    }),
+    "none",
+  );
 });
 
 test("extracts Slack channel ids only from client channel routes", () => {

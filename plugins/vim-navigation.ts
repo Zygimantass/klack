@@ -8,6 +8,7 @@ import {
   messagePermalinkFromUrl,
   movedIndex,
   movedVisualIndex,
+  normalUnwindAction,
   normalYankTransition,
   previousMovementCrossesGap,
   shouldEnterGlobalSearchResults,
@@ -3041,10 +3042,33 @@ export default definePlugin({
     };
 
     const unwind = (): boolean => {
-      if (threadPane()) return closeThread();
-      if (!cursor) return false;
-      clearCursor();
-      return true;
+      const activeElement = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+      const sidebarHasPassiveFocus = Boolean(
+        activeElement?.closest(sidebarRootSelector) &&
+          !activeElement.closest(TEXT_ENTRY_TARGET_SELECTOR),
+      );
+      const action = normalUnwindAction({
+        hasCursor: cursor !== null,
+        hasThreadPane: threadPane() !== null,
+        sidebarActive:
+          preferredSurface === "sidebar" ||
+          cursor?.kind === "sidebar" ||
+          sidebarHasPassiveFocus,
+      });
+      if (action === "close-thread") return closeThread();
+      if (action === "enter-transcript") {
+        clearCursor();
+        preferredSurface = visibleElement(threadsViewSelector) ? "threads" : "main";
+        if (sidebarHasPassiveFocus) activeElement?.blur();
+        return true;
+      }
+      if (action === "clear-cursor") {
+        clearCursor();
+        return true;
+      }
+      return false;
     };
 
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -3468,7 +3492,7 @@ export default definePlugin({
             command === "next" ? "next" : "previous",
             takeCount(),
           );
-        } else if (command) cancelMainTransition();
+        } else if (command && command !== "unwind") cancelMainTransition();
         if (queued) {
           event.preventDefault();
           event.stopImmediatePropagation();
