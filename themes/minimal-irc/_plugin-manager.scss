@@ -1,5 +1,22 @@
 @use "theme-selectors" as *;
 
+/* Keep the first-install proof visible without covering the composer. */
+#{selector("klack.loaded-indicator.button")} {
+  top: 4px !important;
+  right: 100px !important;
+  bottom: auto !important;
+  display: inline-flex !important;
+  height: 22px !important;
+  align-items: center !important;
+  padding: 0 8px !important;
+  border: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: none !important;
+  font: 700 11px/20px var(--minimal-irc-font-family) !important;
+}
+
 #{selector("klack.plugin-manager.trigger")} {
   height: 22px !important;
   border-radius: 0 !important;

@@ -44,22 +44,107 @@
 }
 
 #{selector("slack.app.root")} #{selector("slack.composer.editor-shell")} {
+  position: relative !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
 
-#{selector("slack.app.root")} #{selector("slack.composer.editor-shell")} :is(
-  #{selector("slack.composer.formatting-toolbar")},
-  #{selector("slack.composer.actions-toolbar")}
+#{selector("slack.app.root")} #{selector("slack.composer.editor-shell")} #{selector("slack.composer.formatting-toolbar")} {
+  display: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.actions-toolbar")} {
+  position: absolute !important;
+  z-index: 2 !important;
+  top: 0 !important;
+  right: 0 !important;
+  grid-area: auto !important;
+  display: flex !important;
+  width: 100% !important;
+  height: var(--minimal-irc-ui-line-height) !important;
+  min-height: 0 !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.actions-toolbar")} > :not(
+  #{selector("slack.composer.actions-buttons")}
 ) {
   display: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.actions-buttons")} {
+  display: flex !important;
+  width: 100% !important;
+  height: var(--minimal-irc-ui-line-height) !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.actions-toolbar")} :has(
+  > #{selector("slack.composer.emoji-action")}
+) {
+  display: flex !important;
+  width: 100% !important;
+  height: var(--minimal-irc-ui-line-height) !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.actions-toolbar")} :has(
+  > #{selector("slack.composer.emoji-action")}
+) > :not(#{selector("slack.composer.emoji-action")}) {
+  display: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.actions-toolbar")} :is(button, [role="button"]):not(
+  #{selector("slack.composer.emoji-action")}
+) {
+  display: none !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.emoji-action")} {
+  display: inline-flex !important;
+  width: 24px !important;
+  height: var(--minimal-irc-ui-line-height) !important;
+  min-width: 24px !important;
+  min-height: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-left: 1px solid var(--minimal-irc-border) !important;
+  border-radius: 0 !important;
+  color: var(--minimal-irc-muted) !important;
+  background: var(--minimal-irc-panel) !important;
+  box-shadow: none !important;
+  pointer-events: auto !important;
+}
+
+#{selector("slack.app.root")} #{selector("slack.composer.emoji-action")}:hover {
+  color: var(--minimal-irc-attention) !important;
+  background: var(--minimal-irc-raised) !important;
 }
 
 #{selector("slack.app.root")} #{selector("slack.composer.input-shell")} {
   position: relative;
   min-height: var(--minimal-irc-ui-line-height) !important;
+  padding-right: 24px !important;
 }
 
 #{selector("slack.app.root")} #{selector("slack.composer.input-shell")}::before {
@@ -84,7 +169,7 @@
 #{selector("slack.app.root")} #{selector("slack.composer.placeholder")} {
   top: 0 !important;
   left: 10px !important;
-  right: 0 !important;
+  right: 24px !important;
   bottom: auto !important;
   color: #74818b !important;
   font: var(--minimal-irc-text-size)/var(--minimal-irc-ui-line-height) ui-monospace, "SFMono-Regular", Menlo, monospace !important;

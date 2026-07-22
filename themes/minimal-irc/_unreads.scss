@@ -6,9 +6,9 @@
 }
 
 #{selector("slack.unreads.new-header")} {
-  border-color: var(--minimal-irc-border) !important;
-  color: var(--minimal-irc-text) !important;
-  background: var(--minimal-irc-panel) !important;
+  border-color: var(--minimal-irc-attention) !important;
+  color: var(--minimal-irc-attention) !important;
+  background: var(--minimal-irc-attention-soft) !important;
 }
 
 #{selector("slack.unreads.new-header")} :is(button, span, div) {
